@@ -1,0 +1,414 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Section Management</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        .section-card {
+            transition: transform 0.3s;
+            margin-bottom: 20px;
+        }
+        .section-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+        }
+        .add-section-form {
+            background-color: #f8f9fa;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 30px;
+        }
+        .section-header {
+            margin-bottom: 30px;
+            border-bottom: 2px solid #dee2e6;
+            padding-bottom: 15px;
+        }
+        .main-content {
+            margin-left: 250px; /* Same as sidebar width */
+            padding: 20px;
+        }
+        
+        /* Improved dropdown positioning styles */
+        .card-header .dropdown {
+            position: static;
+        }
+        
+        .card-header {
+            position: relative;
+        }
+        
+        .dropdown-menu {
+            position: absolute;
+            top: auto !important;
+            right: 10px !important;
+            left: auto !important;
+            z-index: 2000;
+            transform: none !important;
+            margin-top: 0 !important;
+        }
+        
+        /* Remove Bootstrap's default dropdown arrow */
+        .dropdown-toggle::after {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container-fluid">
+        <div class="row">
+            <!-- Include the sidebar -->
+            {% include 'structures/sidebar.html' %}
+            
+            <!-- Main Content -->
+            <div class="col main-content">
+                <div class="container py-5">
+                    <div class="section-header">
+                        <h1 class="text-center mb-4">Section Management</h1>
+                        <p class="text-center text-muted">Create and manage school sections, year levels, and advisers</p>
+                    </div>
+
+                    <!-- Add Section Form -->
+                    <div class="add-section-form">
+                        <h3 class="mb-4"><i class="fas fa-plus-circle me-2"></i>Add New Section</h3>
+                        <form method="POST" action="{% url 'add_section' %}">
+                            {% csrf_token %}
+                            <div class="row g-3">
+                                <div class="col-md-4">
+                                    <label for="section_id" class="form-label">Section</label>
+                                    <input type="text" class="form-control" id="section_id" name="section_id" placeholder="e.g. SEC001" required>
+                                </div>
+                                <!-- <div class="col-md-4">
+                                    <label for="subject" class="form-label">Subject</label>
+                                    <select class="form-select" id="subject" name="subject" required>
+                                        <option value="" selected disabled>Select Subject</option>
+                                        {% for subject in subjects %}
+                                        <option value="{{ subject.id }}">{{ subject.name }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div> -->
+                                <div class="col-md-4">
+                                    <label for="grade_level" class="form-label">Grade Level</label>
+                                    <select class="form-select" id="grade_level" name="grade_level" required>
+                                        <option value="" selected disabled>Select Grade Level</option>
+                                        <option value="Grade 7">Grade 7</option>
+                                        <option value="Grade 8">Grade 8</option>
+                                        <option value="Grade 9">Grade 9</option>
+                                        <option value="Grade 10">Grade 10</option>
+                                        <option value="Grade 11">Grade 11</option>
+                                        <option value="Grade 12">Grade 12</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-4">
+                                    <label for="adviser" class="form-label">Adviser</label>
+                                    <select class="form-select" id="adviser" name="adviser" required>
+                                        <option value="" selected disabled>Select Adviser</option>
+                                        {% for teacher in available_teachers %}
+                                        <option value="{{ teacher.id }}">{{ teacher.first_name }} {{ teacher.last_name }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                                <div class="col-12 mt-4">
+                                    <button type="submit" class="btn btn-primary">
+                                        <i class="fas fa-save me-2"></i>Create Section
+                                    </button>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+
+                    <!-- Messages -->
+                    {% if messages %}
+                    <div class="messages">
+                        {% for message in messages %}
+                        <div class="alert alert-{% if message.tags == 'error' %}danger{% else %}{{ message.tags }}{% endif %} alert-dismissible fade show" role="alert">
+                            {{ message }}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+
+                    <!-- Search and Filter -->
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="fas fa-search"></i></span>
+                                <input type="text" class="form-control" id="searchSection" placeholder="Search sections...">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="input-group">
+                                <span class="input-group-text">Filter by Grade</span>
+                                <select class="form-select" id="filterGradeLevel">
+                                    <option value="all" selected>All Grade Levels</option>
+                                    <option value="Grade 7">Grade 7</option>
+                                    <option value="Grade 8">Grade 8</option>
+                                    <option value="Grade 9">Grade 9</option>
+                                    <option value="Grade 10">Grade 10</option>
+                                    <option value="Grade 11">Grade 11</option>
+                                    <option value="Grade 12">Grade 12</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Sections Card View -->
+                    <h3 class="mb-4"><i class="fas fa-list-alt me-2"></i>Available Sections</h3>
+                    <div class="row" id="sectionsContainer">
+                        {% if sections %}
+                            {% for section in sections %}
+                            <div class="col-md-4 section-item" data-grade="{{ section.grade_level }}">
+                                <div class="card section-card">
+                                    <div class="card-header {% cycle 'bg-primary' 'bg-success' 'bg-info' 'bg-warning' 'bg-danger' 'bg-secondary' %} text-white">
+                                        <div class="d-flex justify-content-between align-items-center">
+                                            <h5 class="card-title mb-0">{{ section.grade_level }}</h5>
+                                            <div class="dropdown">
+                                                <button class="btn btn-sm text-white dropdown-toggle" type="button" id="dropdownMenuButton{{ section.id }}" data-bs-toggle="dropdown" aria-expanded="false">
+                                                    <i class="fas fa-ellipsis-v"></i>
+                                                </button>
+                                                <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="dropdownMenuButton{{ section.id }}">
+                                                    <li>
+                                                        <button class="dropdown-item" data-bs-toggle="modal" data-bs-target="#editSectionModal{{ section.id }}">
+                                                            <i class="fas fa-edit me-2"></i> Edit
+                                                        </button>
+                                                    </li>
+                                                    <li>
+                                                        <button class="dropdown-item text-danger" onclick="confirmDelete('{{ section.id }}', '{{ section.section_id }}')">
+                                                            <i class="fas fa-trash me-2"></i> Delete
+                                                        </button>
+                                                    </li>
+                                                </ul>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="card-body">
+                                        <p class="card-text"><strong>Section:</strong> {{ section.section_id }}</p>
+                                        <!-- <p class="card-text"><strong>Grade Level:</strong> {{ section.grade_level }}</p> -->
+                                        <p class="card-text"><strong>Adviser:</strong> {{ section.adviser.first_name }} {{ section.adviser.last_name }}</p>
+                                        <p class="card-text"><small class="text-muted">Created: {{ section.created_at|date:"M d, Y" }}</small></p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Edit Modal for each section -->
+                            <div class="modal fade" id="editSectionModal{{ section.id }}" tabindex="-1" aria-labelledby="editSectionModalLabel{{ section.id }}" aria-hidden="true">
+                                <div class="modal-dialog">
+                                    <div class="modal-content">
+                                        <div class="modal-header">
+                                            <h5 class="modal-title" id="editSectionModalLabel{{ section.id }}">Edit Section</h5>
+                                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                        </div>
+                                        <form method="POST" action="{% url 'edit_section' pk=section.id %}">
+                                            {% csrf_token %}
+                                            <div class="modal-body">
+                                                <input type="hidden" name="section_id" value="{{ section.section_id }}">
+                                                
+                                                <div class="mb-3">
+                                                    <label for="edit_grade_level{{ section.id }}" class="form-label">Grade Level</label>
+                                                    <select class="form-select" id="edit_grade_level{{ section.id }}" name="grade_level" required>
+                                                        <option value="Grade 7" {% if section.grade_level == 'Grade 7' %}selected{% endif %}>Grade 7</option>
+                                                        <option value="Grade 8" {% if section.grade_level == 'Grade 8' %}selected{% endif %}>Grade 8</option>
+                                                        <option value="Grade 9" {% if section.grade_level == 'Grade 9' %}selected{% endif %}>Grade 9</option>
+                                                        <option value="Grade 10" {% if section.grade_level == 'Grade 10' %}selected{% endif %}>Grade 10</option>
+                                                        <option value="Grade 11" {% if section.grade_level == 'Grade 11' %}selected{% endif %}>Grade 11</option>
+                                                        <option value="Grade 12" {% if section.grade_level == 'Grade 12' %}selected{% endif %}>Grade 12</option>
+                                                    </select>
+                                                </div>
+                                                
+                                                <div class="mb-3">
+                                                    <label for="edit_adviser{{ section.id }}" class="form-label">Adviser</label>
+                                                    <select class="form-select" id="edit_adviser{{ section.id }}" name="adviser" required>
+                                                        {% for teacher in teachers %}
+                                                        <option value="{{ teacher.id }}" {% if section.adviser.id == teacher.id %}selected{% endif %}>
+                                                            {{ teacher.first_name }} {{ teacher.last_name }}
+                                                        </option>
+                                                        {% endfor %}
+                                                    </select>
+                                                </div>
+                                            </div>
+                                            <div class="modal-footer">
+                                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                                <button type="submit" class="btn btn-primary">Save Changes</button>
+                                            </div>
+                                        </form>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        {% else %}
+                            <div id="emptyState" class="text-center py-5 col-12">
+                                <i class="fas fa-folder-open fa-4x text-muted mb-3"></i>
+                                <h4>No Sections Available</h4>
+                                <p class="text-muted">Create a new section to get started</p>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Delete Confirmation Modal -->
+    <div class="modal fade" id="deleteConfirmModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Confirm Deletion</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p>Are you sure you want to delete the section <span id="sectionToDelete"></span>?</p>
+                    <p class="text-danger">This action cannot be undone.</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <form id="deleteForm" method="POST" action="{% url 'delete_section' pk=0 %}">
+                        {% csrf_token %}
+                        <input type="hidden" id="deleteSectionId" name="section_id" value="">
+                        <button type="submit" class="btn btn-danger">Delete</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- JavaScript for functionality -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const searchSection = document.getElementById('searchSection');
+            const filterGradeLevel = document.getElementById('filterGradeLevel');
+            const sectionItems = document.querySelectorAll('.section-item');
+            
+            // Completely replace Bootstrap's dropdown behavior
+            document.querySelectorAll('.dropdown-toggle').forEach(function(dropdownToggle) {
+                // Remove Bootstrap's data attributes to prevent its default behavior
+                dropdownToggle.removeAttribute('data-bs-toggle');
+                
+                dropdownToggle.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    
+                    const dropdownMenu = this.nextElementSibling;
+                    
+                    // Close all other dropdowns
+                    document.querySelectorAll('.dropdown-menu.show').forEach(function(menu) {
+                        if (menu !== dropdownMenu) {
+                            menu.classList.remove('show');
+                        }
+                    });
+                    
+                    // Toggle current dropdown
+                    dropdownMenu.classList.toggle('show');
+                });
+            });
+            
+            // Close dropdowns when clicking outside
+            document.addEventListener('click', function(e) {
+                if (!e.target.closest('.dropdown')) {
+                    document.querySelectorAll('.dropdown-menu.show').forEach(function(menu) {
+                        menu.classList.remove('show');
+                    });
+                }
+            });
+            
+            // Search and filter functionality
+            function filterSections() {
+                const searchTerm = searchSection.value.toLowerCase();
+                const gradeFilter = filterGradeLevel.value;
+                
+                sectionItems.forEach(item => {
+                    const sectionText = item.textContent.toLowerCase();
+                    const gradeLevel = item.getAttribute('data-grade');
+                    
+                    const matchesSearch = sectionText.includes(searchTerm);
+                    const matchesGrade = gradeFilter === 'all' || gradeLevel === gradeFilter;
+                    
+                    if (matchesSearch && matchesGrade) {
+                        item.style.display = '';
+                    } else {
+                        item.style.display = 'none';
+                    }
+                });
+                
+                // Check if any sections are visible
+                const visibleSections = document.querySelectorAll('.section-item[style=""]');
+                const emptyState = document.getElementById('emptyState');
+                
+                if (visibleSections.length === 0 && emptyState) {
+                    emptyState.style.display = '';
+                } else if (emptyState) {
+                    emptyState.style.display = 'none';
+                }
+            }
+            
+            if (searchSection) {
+                searchSection.addEventListener('input', filterSections);
+            }
+            
+            if (filterGradeLevel) {
+                filterGradeLevel.addEventListener('change', filterSections);
+            }
+            
+            // Auto-dismiss alerts after 5 seconds
+            const alerts = document.querySelectorAll('.alert');
+            alerts.forEach(alert => {
+                setTimeout(() => {
+                    const bsAlert = new bootstrap.Alert(alert);
+                    bsAlert.close();
+                }, 5000);
+            });
+            
+            // Grade level and adviser filtering
+            const gradeLevel = document.getElementById('grade_level');
+            const adviserSelect = document.getElementById('adviser');
+            
+            if (gradeLevel && adviserSelect) {
+                gradeLevel.addEventListener('change', function() {
+                    const selectedGrade = this.value;
+                    
+                    // Store original options
+                    if (!adviserSelect.dataset.originalOptions) {
+                        adviserSelect.dataset.originalOptions = adviserSelect.innerHTML;
+                    }
+                    
+                    // Reset to original options
+                    adviserSelect.innerHTML = adviserSelect.dataset.originalOptions;
+                    
+                    // Filter out advisers who already have a section in this grade level
+                    const options = adviserSelect.querySelectorAll('option');
+                    options.forEach(option => {
+                        if (option.value === '') return; // Skip the placeholder
+                        
+                        const teacherId = parseInt(option.value);
+                        const adviserGradeLevels = JSON.parse('{{ adviser_grade_levels|escapejs }}' || '{}');
+                        
+                        if (adviserGradeLevels[teacherId] && adviserGradeLevels[teacherId].includes(selectedGrade)) {
+                            option.disabled = true;
+                            option.textContent += ' (Already an adviser for ' + selectedGrade + ')';
+                        }
+                    });
+                });
+            }
+            
+            // Delete confirmation
+            window.confirmDelete = function(sectionId, sectionName) {
+                document.getElementById('sectionToDelete').textContent = sectionName;
+                document.getElementById('deleteSectionId').value = sectionId;
+                
+                // Update the form action with the correct section ID
+                const deleteForm = document.getElementById('deleteForm');
+                deleteForm.action = "{% url 'delete_section' pk=0 %}".replace('0', sectionId);
+                
+                // Show the modal
+                const deleteModal = new bootstrap.Modal(document.getElementById('deleteConfirmModal'));
+                deleteModal.show();
+            }
+        });
+    </script>
+</body>
+</html>

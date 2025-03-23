@@ -1,0 +1,708 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  {% load static %}
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <title>Teacher - My Subjects & Students</title>
+  <style>
+    /* Global Reset */
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      font-family: 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', sans-serif;
+      background-color: #f4f4f4;
+      line-height: 1.6;
+      padding: 0;
+      overflow-x: hidden;
+    }
+    
+    .layout-wrapper {
+      width: 100%;
+      margin: 0 auto;
+      padding: 0;
+      transition: all 0.3s ease;
+    }
+    
+    /* Improved desktop responsiveness */
+    @media (min-width: 992px) {
+      .layout-wrapper {
+        margin-left: 250px; /* Sidebar width */
+        width: calc(100% - 250px);
+        padding: 0 20px; /* Add padding for desktop */
+        overflow-x: hidden; /* Prevent horizontal scrolling */
+      }
+      
+      main {
+        max-width: 100%; /* Changed from 1200px to ensure content fits */
+        margin: 0 auto 70px;
+        padding: 0 10px; /* Add some padding */
+      }
+      
+      .card {
+        margin-bottom: 30px; /* More spacing between cards on desktop */
+        width: 100%; /* Ensure cards don't overflow */
+        max-width: 1100px; /* Add max-width to prevent stretching too wide */
+        margin-left: 50px;
+        margin-right: 100px;
+      }
+    }
+    
+    /* Fix for mobile view */
+    @media (max-width: 991px) {
+      .layout-wrapper {
+        width: 100%;
+        padding: 0 10px;
+      }
+      
+      main {
+        padding: 0 5px;
+      }
+    }
+    
+    header {
+      text-align: center;
+      padding: 20px;
+      background: linear-gradient(90deg, rgb(255, 17, 166) 0%, #c226ad 100%);
+      color: #fff;
+      border-radius: 0 0 15px 15px;
+      margin-bottom: 20px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+    }
+    
+    main {
+      padding: 0 15px;
+      margin-bottom: 70px; /* Space for mobile nav */
+    }
+    
+    .card {
+      background: white;
+      border-radius: 15px;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+      margin-bottom: 20px;
+      overflow: hidden;
+      border: none;
+    }
+    
+    .card-header {
+      background: rgba(255, 17, 166, 0.1);
+      padding: 15px 20px;
+      border-bottom: 1px solid rgba(0,0,0,0.05);
+    }
+    
+    .card-header h2 {
+      margin: 0;
+      font-size: 1.25rem;
+      font-weight: 600;
+      color: #333;
+    }
+    
+    .card-body {
+      padding: 20px;
+    }
+    
+    /* Subject cards */
+    .subject-card {
+      border-radius: 12px;
+      border: 1px solid #eee;
+      margin-bottom: 20px;
+      transition: all 0.3s ease;
+    }
+    
+    .subject-card:hover {
+      box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+      transform: translateY(-2px);
+    }
+    
+    .subject-header {
+      padding: 15px;
+      background: rgba(255, 17, 166, 0.05);
+      border-radius: 12px 12px 0 0;
+      cursor: pointer;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    
+    .subject-header h3 {
+      margin: 0;
+      font-size: 1.1rem;
+      font-weight: 600;
+      color: #333;
+    }
+    
+    .subject-info {
+      font-size: 0.9rem;
+      color: #666;
+      font-weight: normal;
+      margin-left: 10px;
+    }
+    
+    .subject-section {
+      color: #555;
+    }
+    
+    .subject-time {
+      color: #666;
+    }
+    
+    .subject-header .badge {
+      background: linear-gradient(90deg, rgb(255, 17, 166) 0%, #c226ad 100%);
+      color: white;
+      font-weight: 500;
+      padding: 5px 10px;
+    }
+    
+    .subject-body {
+      padding: 0;
+      max-height: 0;
+      overflow: hidden;
+      transition: max-height 0.5s ease;
+    }
+    
+    .subject-body.active {
+      max-height: 2000px; /* Large enough to show all content */
+      padding: 15px;
+    }
+    
+    /* Table styles - improved for responsiveness */
+    .table-container {
+      overflow-x: auto;
+      border-radius: 8px;
+      width: 100%;
+      max-width: 100%; /* Ensure table container doesn't overflow */
+      margin-bottom: 10px; /* Add some space at the bottom */
+    }
+    
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 10px;
+      table-layout: fixed; /* Helps with column width control */
+      font-size: 0.95rem; /* Slightly reduce font size to help fit content */
+    }
+    
+    table thead {
+      background-color: rgba(255, 17, 166, 0.05);
+    }
+    
+    table th, table td {
+      padding: 12px;
+      text-align: left;
+      word-wrap: break-word; /* Prevents text from overflowing */
+    }
+    
+    table th {
+      font-weight: 600;
+      color: #333;
+    }
+    
+    table td {
+      border-top: 1px solid #eee;
+    }
+    
+    /* Responsive table adjustments */
+    @media (min-width: 992px) {
+      table th:nth-child(1) { width: 12%; } /* Student ID */
+      table th:nth-child(2) { width: 20%; } /* Name */
+      table th:nth-child(3) { width: 15%; } /* Section */
+      table th:nth-child(4) { width: 15%; } /* Status */
+      table th:nth-child(5) { width: 15%; } /* Grade */
+      table th:nth-child(6) { width: 15%; } /* Actions */
+    }
+    
+    @media (max-width: 991px) {
+      .table-container {
+        overflow-x: auto;
+      }
+      
+      table {
+        min-width: 700px; /* Ensures table doesn't get too compressed */
+      }
+      
+      .btn-sm {
+        padding: 0.25rem 0.5rem;
+        font-size: 0.75rem;
+      }
+    }
+    
+    /* Status badges */
+    .status-badge {
+      padding: 5px 10px;
+      border-radius: 20px;
+      font-size: 0.8rem;
+      font-weight: 500;
+    }
+    
+    .status-badge.not-graded {
+      background-color: #f8f9fa;
+      color: #6c757d;
+    }
+    
+    .status-badge.graded {
+      background-color: #d1e7dd;
+      color: #0f5132;
+    }
+    
+    /* Empty state */
+    .empty-state {
+      text-align: center;
+      padding: 40px 20px;
+      color: #6c757d;
+    }
+    
+    .empty-state i {
+      font-size: 3rem;
+      margin-bottom: 15px;
+      color: #dee2e6;
+    }
+    
+    /* Search and filter */
+    .filters {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+    
+    .search-box {
+      flex: 1;
+      min-width: 200px;
+      position: relative;
+    }
+    
+    .search-box input {
+      width: 100%;
+      padding: 12px 15px 12px 40px;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      font-size: 1rem;
+      background-color: #f9f9f9;
+    }
+    
+    .search-box i {
+      position: absolute;
+      left: 15px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: #aaa;
+    }
+    
+    .filter-dropdown {
+      min-width: 150px;
+    }
+    
+    .filter-dropdown select {
+      width: 100%;
+      padding: 12px;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      font-size: 1rem;
+      background-color: #f9f9f9;
+      appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='%23aaa' viewBox='0 0 16 16'%3E%3Cpath d='M7.247 11.14 2.451 5.658C1.885 5.013 2.345 4 3.204 4h9.592a1 1 0 0 1 .753 1.659l-4.796 5.48a1 1 0 0 1-1.506 0z'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: calc(100% - 12px) center;
+      padding-right: 35px;
+    }
+    
+    /* Improved responsive adjustments */
+    @media (min-width: 768px) {
+      .filters {
+        flex-direction: row;
+        align-items: center;
+      }
+      
+      .search-box {
+        flex: 3;
+      }
+      
+      .filter-dropdown {
+        flex: 1;
+      }
+    }
+    
+    @media (max-width: 768px) {
+      .filters {
+        flex-direction: column;
+      }
+      
+      .search-box, .filter-dropdown {
+        width: 100%;
+      }
+    }
+    
+    /* Grade input modal */
+    .modal {
+      display: none;
+      position: fixed;
+      z-index: 1000;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0,0,0,0.5);
+    }
+    
+    .modal-content {
+      background-color: white;
+      margin: 10% auto;
+      padding: 20px;
+      border-radius: 15px;
+      width: 90%;
+      max-width: 500px;
+      box-shadow: 0 5px 20px rgba(0,0,0,0.2);
+    }
+    
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+    }
+    
+    .modal-header h3 {
+      margin: 0;
+      font-size: 1.2rem;
+    }
+    
+    .close-modal {
+      font-size: 1.5rem;
+      cursor: pointer;
+      color: #aaa;
+      transition: color 0.3s;
+    }
+    
+    .close-modal:hover {
+      color: #333;
+    }
+    
+    .modal-body form {
+      display: flex;
+      flex-direction: column;
+    }
+    
+    .modal-body label {
+      margin: 10px 0 5px;
+      font-weight: 500;
+    }
+    
+    .modal-body input {
+      padding: 12px;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      font-size: 1rem;
+    }
+    
+    .modal-footer {
+      margin-top: 20px;
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+    }
+    
+    .btn {
+      padding: 10px 20px;
+      border-radius: 8px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.3s;
+    }
+    
+    .btn-primary {
+      background: linear-gradient(90deg, rgb(255, 17, 166) 0%, #c226ad 100%);
+      color: white;
+      border: none;
+    }
+    
+    .btn-secondary {
+      background-color: #f8f9fa;
+      color: #6c757d;
+      border: 1px solid #ddd;
+    }
+    
+    .btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+    }
+    
+    /* Modal improvements for desktop */
+    @media (min-width: 992px) {
+      .modal-content {
+        margin: 5% auto;
+        max-width: 600px;
+        padding: 30px;
+      }
+    }
+  </style>
+</head>
+<body>
+  {% include 'structures/sidebars.html' %}
+  
+  <div class="layout-wrapper">
+    <header>
+      <h1>My Subjects & Students</h1>
+    </header>
+    
+    <main>
+      <div class="card">
+        <div class="card-header">
+          <h2><i class="fas fa-book me-2"></i>Subjects I Teach</h2>
+        </div>
+        <div class="card-body">
+          <div class="filters">
+            <div class="search-box">
+              <i class="fas fa-search"></i>
+              <input type="text" id="studentSearch" placeholder="Search students...">
+            </div>
+            <div class="filter-dropdown">
+              <select id="sectionFilter">
+                <option value="">All Sections</option>
+                {% for section in teacher_sections %}
+                <option value="{{ section.section_id }}">{{ section.grade_level }} - {{ section.section_id }}</option>
+                {% endfor %}
+              </select>
+            </div>
+          </div>
+          
+          {% if teacher_subjects %}
+            {% for subject in teacher_subjects %}
+            <div class="subject-card">
+              <div class="subject-header" onclick="toggleSubject(this)">
+                <h3>
+                  {{ subject.name }} 
+                  <span class="subject-info">
+                    <span class="subject-section">{{ subject.section.section_id|default:"No section" }}</span> | 
+                    <span class="subject-time">{{ subject.start_time|default:"" }} - {{ subject.end_time|default:"No schedule" }}</span>
+                  </span>
+                </h3>
+                <span class="badge">{{ subject.subject_id }}</span>
+              </div>
+              <div class="subject-body">
+                <div class="table-container">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>Student ID</th>
+                        <th>Name</th>
+                        <th>Section</th>
+                        <th>Status</th>
+                        <th>Grade</th>
+                        <th>Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {% for student_info in subject.students_info %}
+                      <tr class="student-row" data-section="{{ student_info.section.section_id }}">
+                        <td>{{ student_info.student.student_id }}</td>
+                        <td>{{ student_info.student.last_name }}, {{ student_info.student.first_name }}</td>
+                        <td>{{ student_info.section.grade_level }} - {{ student_info.section.section_id }}</td>
+                        <td>
+                          {% if student_info.enrollment_status %}
+                            <span class="badge bg-info">{{ student_info.enrollment_status }}</span>
+                            <small class="d-block text-muted">{{ student_info.school_year }}</small>
+                          {% else %}
+                            <span class="badge bg-secondary">Unknown</span>
+                          {% endif %}
+                        </td>
+                        <td>
+                          {% if student_info.current_grade %}
+                            <span class="status-badge graded">{{ student_info.current_grade }}</span>
+                          {% else %}
+                            <span class="status-badge not-graded">Not graded</span>
+                          {% endif %}
+                        </td>
+                        <td>
+                          <button class="btn btn-sm btn-primary" 
+                                  onclick="openGradeModal('{{ student_info.student.student_id }}', '{{ student_info.student.first_name }} {{ student_info.student.last_name }}', '{{ subject.subject_id }}', '{{ subject.name }}')">
+                            <i class="fas fa-edit"></i> Grade
+                          </button>
+                        </td>
+                      </tr>
+                      {% empty %}
+                      <tr>
+                        <td colspan="6">
+                          <div class="empty-state">
+                            <i class="fas fa-user-graduate"></i>
+                            <p>No students enrolled in this subject.</p>
+                          </div>
+                        </td>
+                      </tr>
+                      {% endfor %}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+            {% endfor %}
+          {% else %}
+            <div class="empty-state">
+              <i class="fas fa-book"></i>
+              <h3>No subjects assigned</h3>
+              <p>You are not currently assigned to teach any subjects.</p>
+            </div>
+          {% endif %}
+        </div>
+      </div>
+      
+      <!-- New card for advisory students -->
+      <div class="card mt-4">
+        <div class="card-header">
+          <h2><i class="fas fa-users me-2"></i>My Advisory Students</h2>
+        </div>
+        <div class="card-body">
+          {% if teacher_sections %}
+            {% for section in teacher_sections %}
+              <div class="subject-card">
+                <div class="subject-header" onclick="toggleSubject(this)">
+                  <h3>{{ section.grade_level }} - {{ section.section_id }}</h3>
+                  <span class="badge">Advisory Class</span>
+                </div>
+                <div class="subject-body">
+                  <div class="table-container">
+                    <table>
+                      <thead>
+                        <tr>
+                          <th>Student ID</th>
+                          <th>Name</th>
+                          <th>Status</th>
+                          <th>School Year</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {% for student_info in advisory_students %}
+                          {% if student_info.section.id == section.id %}
+                          <tr class="student-row" data-section="{{ student_info.section.section_id }}">
+                            <td>{{ student_info.student.student_id }}</td>
+                            <td>{{ student_info.student.last_name }}, {{ student_info.student.first_name }}</td>
+                            <td>
+                              <span class="badge bg-info">{{ student_info.enrollment_status }}</span>
+                            </td>
+                            <td>{{ student_info.school_year }}</td>
+                          </tr>
+                          {% endif %}
+                        {% empty %}
+                          <tr>
+                            <td colspan="4">
+                              <div class="empty-state">
+                                <i class="fas fa-user-graduate"></i>
+                                <p>No students enrolled in this section.</p>
+                              </div>
+                            </td>
+                          </tr>
+                        {% endfor %}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            {% endfor %}
+          {% else %}
+            <div class="empty-state">
+              <i class="fas fa-users"></i>
+              <h3>No advisory sections assigned</h3>
+              <p>You are not currently assigned as an adviser to any section.</p>
+            </div>
+          {% endif %}
+        </div>
+      </div>
+    </main>
+  </div>
+  
+  <!-- Grade Input Modal -->
+  <div id="gradeModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>Enter Grade</h3>
+        <span class="close-modal" onclick="closeGradeModal()">&times;</span>
+      </div>
+      <div class="modal-body">
+        <form id="gradeForm" method="POST">
+          {% csrf_token %}
+          <input type="hidden" id="studentId" name="student">
+          <input type="hidden" id="subjectCode" name="course">
+          
+          <div id="studentInfo" class="mb-3"></div>
+          
+          <label for="gradeInput">Grade:</label>
+          <input type="text" id="gradeInput" name="grade" required placeholder="Enter grade (e.g. 90, A)">
+          
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" onclick="closeGradeModal()">Cancel</button>
+            <button type="submit" class="btn btn-primary">Submit Grade</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+  
+  <script>
+    // Toggle subject body visibility
+    function toggleSubject(element) {
+      const subjectBody = element.nextElementSibling;
+      subjectBody.classList.toggle('active');
+    }
+    
+    // Search functionality
+    document.getElementById('studentSearch').addEventListener('input', function() {
+      const searchTerm = this.value.toLowerCase();
+      const rows = document.querySelectorAll('.student-row');
+      
+      rows.forEach(row => {
+        const studentName = row.children[1].textContent.toLowerCase();
+        const studentId = row.children[0].textContent.toLowerCase();
+        
+        if (studentName.includes(searchTerm) || studentId.includes(searchTerm)) {
+          row.style.display = '';
+        } else {
+          row.style.display = 'none';
+        }
+      });
+    });
+    
+    // Section filter
+    document.getElementById('sectionFilter').addEventListener('change', function() {
+      const selectedSection = this.value;
+      const rows = document.querySelectorAll('.student-row');
+      
+      rows.forEach(row => {
+        if (!selectedSection || row.dataset.section === selectedSection) {
+          row.style.display = '';
+        } else {
+          row.style.display = 'none';
+        }
+      });
+    });
+    
+    // Grade modal functions
+    function openGradeModal(studentId, studentName, subjectCode, subjectName) {
+      document.getElementById('studentId').value = studentId;
+      document.getElementById('subjectCode').value = subjectCode;
+      document.getElementById('studentInfo').innerHTML = `
+        <p><strong>Student:</strong> ${studentName}</p>
+        <p><strong>Subject:</strong> ${subjectName} (${subjectCode})</p>
+      `;
+      document.getElementById('gradeModal').style.display = 'block';
+    }
+    
+    function closeGradeModal() {
+      document.getElementById('gradeModal').style.display = 'none';
+      document.getElementById('gradeForm').reset();
+    }
+    
+    // Close modal when clicking outside
+    window.onclick = function(event) {
+      const modal = document.getElementById('gradeModal');
+      if (event.target === modal) {
+        closeGradeModal();
+      }
+    }
+  </script>
+</body>
+</html> 

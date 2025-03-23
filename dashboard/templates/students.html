@@ -1,0 +1,584 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Students</title>
+    {% load static %}
+    <!-- <link rel="stylesheet" href="{% static 'css/sidebar.css' %}"> -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+    <style>
+        .card {
+            border-radius: 0.75rem;
+            box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+            transition: all 0.3s ease;
+        }
+        .card:hover {
+            box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+            transform: translateY(-3px);
+        }
+        .table-responsive {
+            border-radius: 0.5rem;
+            overflow: hidden;
+        }
+        .btn {
+            border-radius: 0.5rem;
+            padding: 0.5rem 1rem;
+        }
+        .btn-group .btn {
+            border-radius: 0.375rem;
+        }
+        .form-control, .form-select {
+            border-radius: 0.5rem;
+            padding: 0.5rem 1rem;
+        }
+        .badge {
+            padding: 0.5em 0.75em;
+            font-weight: 500;
+        }
+        .modal-content {
+            border-radius: 0.75rem;
+            border: none;
+        }
+        .modal-header {
+            border-top-left-radius: 0.75rem;
+            border-top-right-radius: 0.75rem;
+        }
+        .main-content {
+            background-color: #f8f9fa;
+            min-height: 100vh;
+        }
+        .content-container {
+            background-color: white;
+            border-radius: 1rem;
+            box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+        }
+    </style>
+</head>
+<body>
+    <div class="layout-wrapper">
+        {% include 'structures/sidebar.html' %}
+        <div class="main-content">
+       
+            
+            <!-- Display Django Messages -->
+            {% if messages %}
+            <div id="messages-container" class="container mt-3">
+                {% for message in messages %}
+                    <div class="alert alert-{{ message.tags }} alert-dismissible fade show shadow-sm" role="alert">
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+
+            <div class="content-container p-4">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h2 class="mb-0">Students Management</h2>
+                    <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addStudentModal">
+                        <i class="fas fa-plus me-2"></i> Add Student
+                    </button>
+                </div>
+                <div class="row mb-4">
+                    <div class="col-md-4">
+                        <form method="GET" action="{% url 'students' %}" class="d-flex">
+                            <select name="school_year" class="form-select me-2 shadow-sm">
+                                <option value="">All School Years</option>
+                                {% for year in school_years %}
+                                    <option value="{{ year }}" {% if selected_year == year %}selected{% endif %}>{{ year }}</option>
+                                {% endfor %}
+                            </select>
+                            <button type="submit" class="btn btn-primary shadow-sm">
+                                <i class="fas fa-filter me-2"></i> Filter
+                            </button>
+                        </form>
+                    </div>
+                    <div class="col-md-8">
+                        <div class="input-group shadow-sm">
+                            <input type="text" id="student-search" class="form-control" placeholder="Search students...">
+                            <button class="btn btn-outline-primary" type="button" id="search-button">
+                                <i class="fas fa-search"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <div class="card border-0 shadow-sm">
+                    <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <table class="table table-hover mb-0">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th class="ps-4">Student ID</th>
+                                        <th>Name</th>
+                                        <th>Gender</th>
+                                        <th>Email</th>
+                                        <th>Mobile</th>
+                                        <th>Status</th>
+                                        <th class="text-center">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for student in students %}
+                                    <tr>
+                                        <td class="ps-4">{{ student.student_id }}</td>
+                                        <td>{{ student.first_name }} {{ student.middle_name }} {{ student.last_name }}</td>
+                                        <td>{{ student.gender }}</td>
+                                        <td>{{ student.email }}</td>
+                                        <td>{{ student.mobile_number }}</td>
+                                        <td>
+                                            <span class="badge {% if student.status == 'Enrolled' %}bg-success{% elif student.status == 'Not Enrolled' %}bg-secondary{% elif student.status == 'Transferred' %}bg-warning text-dark{% elif student.status == 'Dropped' %}bg-danger{% endif %} rounded-pill">
+                                                {{ student.status }}
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <div class="btn-group d-flex justify-content-center">
+                                                <button class="btn btn-sm btn-outline-info view-student-btn" data-bs-toggle="modal" data-bs-target="#viewStudentModal" 
+                                                    data-student-id="{{ student.student_id }}"
+                                                    data-name="{{ student.first_name }} {{ student.middle_name }} {{ student.last_name }}"
+                                                    data-gender="{{ student.gender }}"
+                                                    data-email="{{ student.email }}"
+                                                    data-mobile="{{ student.mobile_number }}"
+                                                    data-status="{{ student.status }}">
+                                                    <i class="fas fa-eye"></i>
+                                                </button>
+                                                <button class="btn btn-sm btn-outline-warning edit-student-btn" data-bs-toggle="modal" data-bs-target="#editStudentModal" 
+                                                    data-student-id="{{ student.student_id }}"
+                                                    data-name="{{ student.first_name }} {{ student.middle_name }} {{ student.last_name }}"
+                                                    data-gender="{{ student.gender }}"
+                                                    data-email="{{ student.email }}"
+                                                    data-mobile="{{ student.mobile_number }}"
+                                                    data-status="{{ student.status }}">
+                                                    <i class="fas fa-edit"></i>
+                                                </button>
+                                                {% if not student.has_account %}
+                                                <button class="btn btn-sm btn-outline-primary create-account-btn" data-bs-toggle="modal" data-bs-target="#createAccountModal"
+                                                    data-student-id="{{ student.id }}"
+                                                    data-student-name="{{ student.first_name }} {{ student.last_name }}"
+                                                    data-student-email="{{ student.email }}">
+                                                    <i class="fas fa-user-plus"></i>
+                                                </button>
+                                                {% else %}
+                                                <button class="btn btn-sm btn-outline-success" disabled>
+                                                    <i class="fas fa-check-circle"></i>
+                                                </button>
+                                                {% endif %}
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- View Student Modal -->
+    <div class="modal fade" id="viewStudentModal" tabindex="-1" aria-labelledby="viewStudentModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title" id="viewStudentModalLabel">Student Details</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="d-flex align-items-center mb-4">
+                        <div class="bg-light rounded-circle p-3 me-3">
+                            <i class="fas fa-user-graduate fa-2x text-primary"></i>
+                        </div>
+                        <div>
+                            <h4 class="mb-0" id="modal-student-name"></h4>
+                            <span class="badge bg-primary rounded-pill" id="modal-student-id"></span>
+                        </div>
+                    </div>
+                    
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <p><i class="fas fa-venus-mars text-secondary me-2"></i> <strong>Gender:</strong> <span id="modal-student-gender"></span></p>
+                        </div>
+                        <div class="col-md-6">
+                            <p><i class="fas fa-envelope text-secondary me-2"></i> <strong>Email:</strong> <span id="modal-student-email"></span></p>
+                        </div>
+                        <div class="col-md-6">
+                            <p><i class="fas fa-mobile-alt text-secondary me-2"></i> <strong>Mobile:</strong> <span id="modal-student-mobile"></span></p>
+                        </div>
+                        <div class="col-md-6">
+                            <p><i class="fas fa-info-circle text-secondary me-2"></i> <strong>Status:</strong> <span id="modal-student-status"></span></p>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Student Modal -->
+    <div class="modal fade" id="editStudentModal" tabindex="-1" aria-labelledby="editStudentModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header bg-warning">
+                    <h5 class="modal-title" id="editStudentModalLabel">Edit Student</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="edit-student-form" method="POST" action="{% url 'edit_student' %}">
+                        {% csrf_token %}
+                        <div class="mb-3">
+                            <label for="edit-student-id" class="form-label">Student ID</label>
+                            <input type="text" id="edit-student-id" name="student_id" class="form-control" readonly>
+                        </div>
+                        <div class="mb-3">
+                            <label for="edit-student-name" class="form-label">Name</label>
+                            <input type="text" id="edit-student-name" name="name" class="form-control">
+                        </div>
+                        <div class="mb-3">
+                            <label for="edit-student-gender" class="form-label">Gender</label>
+                            <select id="edit-student-gender" name="gender" class="form-select">
+                                <option value="Male">Male</option>
+                                <option value="Female">Female</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label for="edit-student-email" class="form-label">Email</label>
+                            <input type="email" id="edit-student-email" name="email" class="form-control">
+                        </div>
+                        <div class="mb-3">
+                            <label for="edit-student-mobile" class="form-label">Mobile</label>
+                            <input type="text" id="edit-student-mobile" name="mobile_number" class="form-control">
+                        </div>
+                        <div class="mb-3">
+                            <label for="edit-student-status" class="form-label">Status</label>
+                            <select id="edit-student-status" name="status" class="form-select">
+                                <option value="Not Enrolled">Not Enrolled</option>
+                                <option value="Enrolled">Enrolled</option>
+                                <option value="Transferred">Transferred</option>
+                                <option value="Dropped">Dropped</option>
+                            </select>
+                        </div>
+                        <div class="modal-footer px-0 pb-0">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                            <button type="submit" class="btn btn-primary">Save Changes</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Student Modal -->
+    <div class="modal fade" id="addStudentModal" tabindex="-1" aria-labelledby="addStudentModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title" id="addStudentModalLabel">Add Student</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="add-student-form" method="POST" action="{% url 'add_student' %}">
+                        {% csrf_token %}
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="student-id" class="form-label">Student ID</label>
+                                    <input type="text" id="student-id" name="student_id" class="form-control" required>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="school-year" class="form-label">School Year</label>
+                                    <select id="school-year" name="school_year" class="form-select" required>
+                                        <option value="">Select School Year</option>
+                                        {% for year in school_years %}
+                                            <option value="{{ year }}">{{ year }}</option>
+                                        {% endfor %}
+                                        <!-- Add current and next school years if not in the list -->
+                                        {% now "Y" as current_year %}
+                                        {% with next_year=current_year|add:"1" %}
+                                            <option value="{{ current_year }}-{{ next_year }}">{{ current_year }}-{{ next_year }}</option>
+                                        {% endwith %}
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="first-name" class="form-label">First Name</label>
+                                    <input type="text" id="first-name" name="first_name" class="form-control" required>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="middle-name" class="form-label">Middle Name</label>
+                                    <input type="text" id="middle-name" name="middle_name" class="form-control">
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="last-name" class="form-label">Last Name</label>
+                                    <input type="text" id="last-name" name="last_name" class="form-control" required>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="gender" class="form-label">Gender</label>
+                                    <select id="gender" name="gender" class="form-select" required>
+                                        <option value="">Select Gender</option>
+                                        <option value="Male">Male</option>
+                                        <option value="Female">Female</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="religion" class="form-label">Religion</label>
+                                    <input type="text" id="religion" name="religion" class="form-control" required>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="date-of-birth" class="form-label">Date of Birth</label>
+                                    <input type="date" id="date-of-birth" name="date_of_birth" class="form-control" required>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="email" class="form-label">Email</label>
+                                    <input type="email" id="email" name="email" class="form-control" required>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="mobile-number" class="form-label">Mobile Number</label>
+                                    <input type="text" id="mobile-number" name="mobile_number" class="form-control" required>
+                                </div>
+                            </div>
+                            <div class="col-12">
+                                <div class="mb-3">
+                                    <label for="address" class="form-label">Address</label>
+                                    <textarea id="address" name="address" class="form-control" rows="3" required></textarea>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="modal-footer px-0 pb-0">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                            <button type="submit" class="btn btn-primary">Add Student</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Auto-refresh script: Reload page after 1 second if messages exist -->
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            const messageContainer = document.getElementById("messages-container");
+            if (messageContainer) {
+                setTimeout(() => {
+                    window.location.reload();
+                }, 1000);
+            }
+        });
+    </script>
+    
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            document.querySelectorAll(".view-student-btn").forEach(button => {
+                button.addEventListener("click", function() {
+                    document.getElementById("modal-student-id").textContent = this.getAttribute("data-student-id");
+                    document.getElementById("modal-student-name").textContent = this.getAttribute("data-name");
+                    document.getElementById("modal-student-gender").textContent = this.getAttribute("data-gender");
+                    document.getElementById("modal-student-email").textContent = this.getAttribute("data-email");
+                    document.getElementById("modal-student-mobile").textContent = this.getAttribute("data-mobile");
+                    document.getElementById("modal-student-status").textContent = this.getAttribute("data-status");
+                });
+            });
+            
+            document.querySelectorAll(".edit-student-btn").forEach(button => {
+                button.addEventListener("click", function() {
+                    document.getElementById("edit-student-id").value = this.getAttribute("data-student-id");
+                    document.getElementById("edit-student-name").value = this.getAttribute("data-name");
+                    document.getElementById("edit-student-gender").value = this.getAttribute("data-gender");
+                    document.getElementById("edit-student-email").value = this.getAttribute("data-email");
+                    document.getElementById("edit-student-mobile").value = this.getAttribute("data-mobile");
+                    document.getElementById("edit-student-status").value = this.getAttribute("data-status");
+                });
+            });
+            
+            // Search functionality
+            const searchInput = document.getElementById('student-search');
+            const searchButton = document.getElementById('search-button');
+            const studentRows = document.querySelectorAll('tbody tr');
+            
+            function filterStudents() {
+                const searchTerm = searchInput.value.toLowerCase();
+                
+                studentRows.forEach(row => {
+                    const studentId = row.cells[0].textContent.toLowerCase();
+                    const name = row.cells[1].textContent.toLowerCase();
+                    const email = row.cells[3].textContent.toLowerCase();
+                    
+                    if (studentId.includes(searchTerm) || name.includes(searchTerm) || email.includes(searchTerm)) {
+                        row.style.display = '';
+                    } else {
+                        row.style.display = 'none';
+                    }
+                });
+            }
+            
+            if (searchInput) {
+                searchInput.addEventListener('input', filterStudents);
+            }
+            
+            if (searchButton) {
+                searchButton.addEventListener('click', filterStudents);
+            }
+        });
+    </script>
+    
+    <!-- Create Account Modal -->
+    <div class="modal fade" id="createAccountModal" tabindex="-1" aria-labelledby="createAccountModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-lg">
+            <div class="modal-content">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title" id="createAccountModalLabel">Create Student Account</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="create-account-form" method="POST" action="/administrator/create-student-account/" enctype="multipart/form-data">
+                        {% csrf_token %}
+                        <input type="hidden" id="account-student-id" name="student_id">
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                <!-- Student Information Section -->
+                                <h6 class="fw-bold mb-3 border-bottom pb-2">Student Information</h6>
+                                
+                                <div class="mb-3">
+                                    <label for="account-student-name" class="form-label">Student Name</label>
+                                    <input type="text" id="account-student-name" class="form-control" readonly>
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <label for="account-email" class="form-label">Email</label>
+                                    <input type="email" id="account-email" name="email" class="form-control" required>
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <label for="account-contact" class="form-label">Contact Number</label>
+                                    <input type="text" id="account-contact" name="contact_number" class="form-control" required>
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <label for="student-photo" class="form-label">Student Photo</label>
+                                    <input type="file" id="student-photo" name="student_photo" class="form-control" accept="image/*">
+                                    <div class="form-text">Upload a profile photo (optional)</div>
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <label for="account-username" class="form-label">Username</label>
+                                    <input type="text" id="account-username" name="username" class="form-control" required>
+                                    <div class="form-text">Username must be unique and will be used for login.</div>
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <label for="account-password" class="form-label">Password</label>
+                                    <input type="password" id="account-password" name="password" class="form-control" required>
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <label for="account-confirm-password" class="form-label">Confirm Password</label>
+                                    <input type="password" id="account-confirm-password" name="confirm_password" class="form-control" required>
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <!-- Guardian Information Section -->
+                                <h6 class="fw-bold mb-3 border-bottom pb-2">Guardian Information</h6>
+                                
+                                <div class="mb-3">
+                                    <label for="guardian-first-name" class="form-label">First Name</label>
+                                    <input type="text" id="guardian-first-name" name="guardian_first_name" class="form-control" required>
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <label for="guardian-middle-name" class="form-label">Middle Name</label>
+                                    <input type="text" id="guardian-middle-name" name="guardian_middle_name" class="form-control">
+                                    <div class="form-text">Optional</div>
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <label for="guardian-last-name" class="form-label">Last Name</label>
+                                    <input type="text" id="guardian-last-name" name="guardian_last_name" class="form-control" required>
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <label for="guardian-contact" class="form-label">Contact Number</label>
+                                    <input type="text" id="guardian-contact" name="guardian_contact" class="form-control" required>
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <label for="guardian-relationship" class="form-label">Relationship to Student</label>
+                                    <select id="guardian-relationship" name="guardian_relationship" class="form-select" required>
+                                        <option value="">Select Relationship</option>
+                                        <option value="Parent">Parent</option>
+                                        <option value="Guardian">Guardian</option>
+                                        <option value="Sibling">Sibling</option>
+                                        <option value="Relative">Other Relative</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="modal-footer px-0 pb-0 mt-3">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                            <button type="submit" class="btn btn-primary">Create Account</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            // Existing scripts...
+            
+            // Account creation modal
+            document.querySelectorAll(".create-account-btn").forEach(button => {
+                button.addEventListener("click", function() {
+                    const studentId = this.getAttribute("data-student-id");
+                    const studentName = this.getAttribute("data-student-name");
+                    const studentEmail = this.getAttribute("data-student-email");
+                    
+                    document.getElementById("account-student-id").value = studentId;
+                    document.getElementById("account-student-name").value = studentName;
+                    document.getElementById("account-email").value = studentEmail;
+                    
+                    // Generate a suggested username from email
+                    const suggestedUsername = studentEmail.split('@')[0];
+                    document.getElementById("account-username").value = suggestedUsername;
+                });
+            });
+            
+            // Form validation for password matching
+            document.getElementById("create-account-form").addEventListener("submit", function(e) {
+                const password = document.getElementById("account-password").value;
+                const confirmPassword = document.getElementById("account-confirm-password").value;
+                
+                if (password !== confirmPassword) {
+                    e.preventDefault();
+                    alert("Passwords do not match!");
+                }
+            });
+        });
+    </script>
+    
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

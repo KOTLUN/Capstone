@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    {% load static %}
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Subject Management</title>
+    <link rel="stylesheet" href="{% static 'styles.css' %}">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="{% static 'css/sidebar.css' %}">
+    <style>
+        html, body {
+            height: 100%;
+            margin: 0;
+            padding: 0;
+        }
+        
+        .page-wrapper {
+            display: flex;
+            min-height: 100vh;
+        }
+        
+        .main-content {
+            margin-left: 250px; /* Same as sidebar width */
+            flex: 1;
+            padding: 0;
+            background: #f8f9fa;
+        }
+        
+        header {
+            background: #007BFF;
+            color: white;
+            padding: 10px 20px;
+            text-align: center;
+        }
+        
+        main {
+            padding: 20px;
+            background: white;
+            border-radius: 5px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            margin: 20px;
+        }
+        
+        h2 {
+            color: #333;
+        }
+        
+        form {
+            margin-bottom: 20px;
+        }
+        
+        input[type="text"] {
+            padding: 10px;
+            width: calc(100% - 22px);
+            margin-right: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+        
+        button {
+            padding: 10px 15px;
+            background: #28a745;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        
+        button:hover {
+            background: #218838;
+        }
+        
+        ul {
+            list-style-type: none;
+            padding: 0;
+        }
+        
+        li {
+            padding: 10px;
+            background: #e9ecef;
+            margin: 5px 0;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+    <div class="page-wrapper">
+        <!-- Include only the sidebar content, not the entire HTML structure -->
+        {% include 'structures/sidebar.html' %}
+
+        <!-- Main content area -->
+        <div class="main-content">
+            <header>
+                <h1>Manage Subjects</h1>
+            </header>
+            <main>
+                <div class="row">
+                    <!-- Add Subject Card -->
+                    <div class="col-md-4 mb-4">
+                        <div class="card">
+                            <div class="card-header bg-primary text-white">
+                                <h5 class="card-title mb-0">Add New Subject</h5>
+                            </div>
+                            <div class="card-body">
+                                {% if messages %}
+                                    {% for message in messages %}
+                                        <div class="alert alert-{% if message.tags %}{{ message.tags }}{% else %}warning{% endif %} alert-dismissible fade show" role="alert">
+                                            {{ message }}
+                                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                                        </div>
+                                    {% endfor %}
+                                {% endif %}
+                                <form action="{% url 'add_subject' %}" method="POST" id="addSubjectForm">
+                                    {% csrf_token %}
+                                    <div class="mb-3">
+                                        <label for="subjectId" class="form-label">Subject ID</label>
+                                        <input type="text" class="form-control" id="subjectId" name="subject_id" placeholder="Enter subject ID" required>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="subjectName" class="form-label">Subject Name</label>
+                                        <input type="text" class="form-control" id="subjectName" name="subject_name" placeholder="Enter subject name" required>
+                                    </div>
+                                    <button type="submit" class="btn btn-success w-100">
+                                        <i class="fas fa-plus-circle me-2"></i>Add Subject
+                                    </button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Subject List Card -->
+                    <div class="col-md-8 mb-4">
+                        <div class="card">
+                            <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                                <h5 class="card-title mb-0">Existing Subjects</h5>
+                                <div class="input-group w-50">
+                                    <input type="text" class="form-control" id="searchSubject" placeholder="Search subjects...">
+                                    <button class="btn btn-outline-light" type="button">
+                                        <i class="fas fa-search"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="card-body">
+                                {% if subjects %}
+                                <div class="table-responsive">
+                                    <table class="table table-hover">
+                                        <thead>
+                                            <tr>
+                                                <th>Subject ID</th>
+                                                <th>Subject Name</th>
+                                                <th>Actions</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {% for subject in subjects %}
+                                            <tr>
+                                                <td>{{ subject.subject_id }}</td>
+                                                <td>{{ subject.name }}</td>
+                                                <td>
+                                                    <button class="btn btn-sm btn-info me-1" title="Edit">
+                                                        <i class="fas fa-edit"></i>
+                                                    </button>
+                                                    <button class="btn btn-sm btn-danger" title="Delete">
+                                                        <i class="fas fa-trash-alt"></i>
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                            {% endfor %}
+                                        </tbody>
+                                    </table>
+                                </div>
+                                {% else %}
+                                <div class="alert alert-info">
+                                    <i class="fas fa-info-circle me-2"></i>No subjects have been added yet.
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+    
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Auto-dismiss Django messages after 1.5 seconds
+            const djangoMessages = document.querySelectorAll('.alert-dismissible');
+            djangoMessages.forEach(message => {
+                setTimeout(() => {
+                    message.classList.remove('show');
+                    setTimeout(() => message.remove(), 150);
+                }, 1500);
+            });
+            
+            const form = document.getElementById('addSubjectForm');
+            
+            form.addEventListener('submit', function(event) {
+                event.preventDefault();
+                
+                const subjectId = document.getElementById('subjectId').value.trim();
+                const subjectName = document.getElementById('subjectName').value.trim();
+                
+                // Get all existing subject IDs and names from the table
+                const existingIds = Array.from(document.querySelectorAll('table tbody tr td:first-child')).map(td => td.textContent.trim());
+                const existingNames = Array.from(document.querySelectorAll('table tbody tr td:nth-child(2)')).map(td => td.textContent.trim());
+                
+                // Check if subject ID or name already exists
+                if (existingIds.includes(subjectId)) {
+                    showAlert('Subject ID already exists!', 'danger');
+                    return;
+                }
+                
+                if (existingNames.includes(subjectName)) {
+                    showAlert('Subject name already exists!', 'danger');
+                    return;
+                }
+                
+                // If no duplicates, submit the form
+                form.submit();
+            });
+            
+            // Function to show alert message
+            function showAlert(message, type) {
+                const alertDiv = document.createElement('div');
+                alertDiv.className = `alert alert-${type} alert-dismissible fade show`;
+                alertDiv.role = 'alert';
+                alertDiv.innerHTML = `
+                    ${message}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                `;
+                
+                // Insert alert before the form
+                const cardBody = form.parentElement;
+                cardBody.insertBefore(alertDiv, form);
+                
+                // Auto dismiss after 1.5 seconds (changed from 5 seconds)
+                setTimeout(() => {
+                    alertDiv.classList.remove('show');
+                    setTimeout(() => alertDiv.remove(), 150);
+                }, 1500);
+            }
+            
+            // Search functionality
+            const searchInput = document.getElementById('searchSubject');
+            if (searchInput) {
+                searchInput.addEventListener('input', function() {
+                    const searchTerm = this.value.toLowerCase();
+                    const rows = document.querySelectorAll('table tbody tr');
+                    
+                    rows.forEach(row => {
+                        const id = row.querySelector('td:first-child').textContent.toLowerCase();
+                        const name = row.querySelector('td:nth-child(2)').textContent.toLowerCase();
+                        
+                        if (id.includes(searchTerm) || name.includes(searchTerm)) {
+                            row.style.display = '';
+                        } else {
+                            row.style.display = 'none';
+                        }
+                    });
+                });
+            }
+        });
+    </script>
+</body>
+</html>

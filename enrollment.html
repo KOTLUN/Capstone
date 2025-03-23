@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Student Enrollment</title>
+    <style>
+        .form-group {
+            margin-bottom: 15px;
+        }
+        .form-control {
+            width: 100%;
+            padding: 8px;
+            margin-top: 5px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+        th {
+            background-color: #f4f4f4;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>Student Enrollment Form</h2>
+        
+        <!-- Add a button to show available students -->
+        <button type="button" id="showStudentsBtn" class="btn btn-info">Show Available Students</button>
+        
+        <!-- Add a table to display students -->
+        <div id="studentList" style="display: none; margin: 20px 0;">
+            <h3>Available Students</h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Student ID</th>
+                        <th>Student Name</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody id="studentTableBody">
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Section selection form will appear after selecting a student -->
+        <div id="sectionSelectionForm" style="display: none;">
+            <h3>Select Section for: <span id="selectedStudentName"></span></h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Section ID</th>
+                        <th>Subject</th>
+                        <th>Grade Level</th>
+                        <th>Adviser</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody id="sectionTableBody">
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        let selectedStudent = null;
+
+        // Fetch and display available students
+        async function fetchStudents() {
+            try {
+                const response = await fetch('/api/available-students/');
+                const students = await response.json();
+                const tableBody = document.getElementById('studentTableBody');
+                tableBody.innerHTML = '';
+                
+                students.forEach(student => {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td>${student.student_id}</td>
+                        <td>${student.first_name} ${student.last_name}</td>
+                        <td>
+                            <button class="btn btn-primary btn-sm" 
+                                    onclick="selectStudent('${student.id}', '${student.first_name} ${student.last_name}')">
+                                Select Student
+                            </button>
+                        </td>
+                    `;
+                    tableBody.appendChild(row);
+                });
+            } catch (error) {
+                console.error('Error fetching students:', error);
+            }
+        }
+
+        // Fetch and display available sections
+        async function fetchSections() {
+            try {
+                const response = await fetch('/api/available-sections/');
+                const sections = await response.json();
+                const tableBody = document.getElementById('sectionTableBody');
+                tableBody.innerHTML = '';
+                
+                sections.forEach(section => {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td>${section.section_id}</td>
+                        <td>${section.subject_name}</td>
+                        <td>${section.grade_level}</td>
+                        <td>${section.adviser_name}</td>
+                        <td>
+                            <button class="btn btn-success btn-sm" 
+                                    onclick="enrollStudent('${section.id}')">
+                                Enroll
+                            </button>
+                        </td>
+                    `;
+                    tableBody.appendChild(row);
+                });
+            } catch (error) {
+                console.error('Error fetching sections:', error);
+            }
+        }
+
+        // Handle student selection
+        function selectStudent(studentId, studentName) {
+            selectedStudent = studentId;
+            document.getElementById('selectedStudentName').textContent = studentName;
+            document.getElementById('sectionSelectionForm').style.display = 'block';
+            fetchSections();
+        }
+
+        // Handle enrollment
+        async function enrollStudent(sectionId) {
+            if (!selectedStudent) {
+                alert('Please select a student first');
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/enroll/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCookie('csrftoken')
+                    },
+                    body: JSON.stringify({
+                        student_id: selectedStudent,
+                        section_id: sectionId
+                    })
+                });
+
+                const data = await response.json();
+                
+                if (response.ok) {
+                    alert('Student enrolled successfully!');
+                    // Reset the form
+                    selectedStudent = null;
+                    document.getElementById('studentList').style.display = 'none';
+                    document.getElementById('sectionSelectionForm').style.display = 'none';
+                } else {
+                    alert(data.message || 'Failed to enroll student');
+                }
+            } catch (error) {
+                console.error('Error enrolling student:', error);
+                alert('An error occurred while enrolling the student');
+            }
+        }
+
+        // Show students button click handler
+        document.getElementById('showStudentsBtn').addEventListener('click', () => {
+            const studentList = document.getElementById('studentList');
+            studentList.style.display = studentList.style.display === 'none' ? 'block' : 'none';
+            if (studentList.style.display === 'block') {
+                fetchStudents();
+            }
+        });
+
+        // Get CSRF token from cookies
+        function getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+    </script>
+</body>
+</html> 

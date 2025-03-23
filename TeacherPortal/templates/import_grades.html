@@ -1,0 +1,573 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Import Grades</title>
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="{% static 'css/sidebar.css' %}">
+    <!-- Custom CSS -->
+    <style>
+        body {
+            padding: 0;
+            background-color: #f8f9fa;
+            overflow-x: hidden;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        .card {
+            margin-bottom: 20px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        .modal-xl {
+            max-width: 90%;
+        }
+        .table-responsive {
+            max-height: 500px;
+            overflow-y: auto;
+        }
+        .bg-warning {
+            background-color: #fff3cd !important;
+        }
+        .bg-light {
+            background-color: #e9ecef !important;
+        }
+        /* Ensure full height for HTML and Body */
+        html, body {
+          height: 100%;
+          margin: 0;
+          padding: 0;
+          overflow-x: hidden;
+        }
+
+        /* Flex container for sidebar and main content */
+        .page-wrapper {
+          display: flex;
+          min-height: 100vh;
+        }
+
+        /* Sidebar styling */
+        .sidebar {
+          position: fixed; /* Fixes sidebar to the viewport */
+          top: 0;
+          left: 0;
+          background: linear-gradient(180deg, rgb(255, 17, 166) 0%, #9a9ca8 100%); /* Pink Gradient */
+          width: 250px; /* Adjust width as needed */
+          height: 100vh; /* Full viewport height */
+          overflow-y: auto; /* Scroll if content exceeds viewport */
+          z-index: 1050; /* Higher than most elements */
+          transition: all 0.3s ease;
+        }
+
+        /* Main content offset to account for sidebar width */
+        .main-content {
+          margin-left: 250px; /* Same as sidebar width */
+          flex: 1;
+          padding: 20px;
+          background: #f8f9fa;
+          transition: margin-left 0.3s ease;
+        }
+
+        /* Mobile styles */
+        @media (max-width: 768px) {
+          .sidebar {
+            transform: translateX(-100%);
+            width: 80%; /* Wider on mobile for better touch targets */
+            box-shadow: 2px 0 10px rgba(0,0,0,0.2);
+          }
+          
+          .sidebar.show {
+            transform: translateX(0);
+          }
+          
+          .main-content {
+            margin-left: 0;
+            padding: 15px;
+          }
+          
+          .sidebar-toggle {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+          }
+        }
+        
+        /* CSV Template button styling */
+        .btn-download-template {
+            background-color: #28a745;
+            color: white;
+            margin-bottom: 15px;
+        }
+        
+        /* Tab styling */
+        .nav-tabs .nav-link {
+            color: #495057;
+            font-weight: 500;
+        }
+        .nav-tabs .nav-link.active {
+            color: rgb(255, 17, 166);
+            border-color: #dee2e6 #dee2e6 #fff;
+            border-top: 3px solid rgb(255, 17, 166);
+        }
+    </style>
+</head>
+<body>
+  <div class="container-fluid">
+    <div class="row">
+      <!-- Mobile Sidebar Toggle Button -->
+      <button class="sidebar-toggle" id="sidebarToggle">
+        <i class="fas fa-bars"></i>
+      </button>
+      
+      <!-- Sidebar -->
+      <div class="col-md-3 col-lg-2 sidebar p-0" id="sidebar">
+        <div class="d-flex flex-column">
+          <div class="p-3 text-white text-center">
+            <img class="logo-img" style="height:50%; width:50%; margin: 10px 0;" src="{% static 'img/logo1.png' %}" alt="Profile Image">
+            <h3 class="school-name">Sta. Catalina Science High School</h3>
+          </div>
+          <nav class="nav flex-column">
+            <a href="{% url 'profile' %}" class="nav-link {% if request.path == '/profile/' %}active{% endif %}">
+              <i class="fas fa-user"></i> <span>Profile</span>
+            </a>
+            <a href="{% url 'teacher_subjects' %}" class="nav-link {% if request.path == '/teacher_subjects/' %}active{% endif %}">
+              <i class="fas fa-book"></i> <span>Subjects & Advisory</span>
+            </a>  
+            <a href="{% url 'teacher_schedule' %}" class="nav-link {% if request.path == '/teacher_schedule/' %}active{% endif %}">
+              <i class="fas fa-calendar-alt"></i> <span>Schedule</span>
+            </a>
+            <a href="{% url 'import_grades' %}" class="nav-link {% if request.path == '/import_grades/' %}active{% endif %}">
+              <i class="fas fa-file-import"></i> <span>Import Grades</span>
+            </a>
+            <a href="#" class="nav-link" data-bs-toggle="modal" data-bs-target="#logoutModal">
+              <i class="fas fa-sign-out-alt"></i> <span>Logout</span>
+            </a>
+          </nav>
+        </div>
+      </div>
+      
+      <!-- Mobile Bottom Navigation -->
+      <div class="mobile-nav d-md-none">
+        <a href="{% url 'profile' %}" class="{% if request.path == '/profile/' %}active{% endif %}">
+          <i class="fas fa-user"></i>
+          <span>Profile</span>
+        </a>
+        <a href="{% url 'grades' %}" class="{% if request.path == '/grades/' %}active{% endif %}">
+          <i class="fas fa-chart-line"></i>
+          <span>Grades</span>
+        </a>
+        <a href="#" data-bs-toggle="modal" data-bs-target="#logoutModal">
+          <i class="fas fa-sign-out-alt"></i>
+          <span>Logout</span>
+        </a>
+      </div>
+      
+      <!-- Main Content -->
+      <div class="main-content">
+        <div class="container mt-4">
+            <h2>Import Grades</h2>
+            
+            <!-- Tabs for Import/Download -->
+            <ul class="nav nav-tabs mb-4" id="gradeTabs" role="tablist">
+              <li class="nav-item" role="presentation">
+                <button class="nav-link active" id="import-tab" data-bs-toggle="tab" data-bs-target="#import" type="button" role="tab" aria-controls="import" aria-selected="true">
+                  <i class="fas fa-file-import me-2"></i>Import Grades
+                </button>
+              </li>
+              <li class="nav-item" role="presentation">
+                <button class="nav-link" id="template-tab" data-bs-toggle="tab" data-bs-target="#template" type="button" role="tab" aria-controls="template" aria-selected="false">
+                  <i class="fas fa-file-csv me-2"></i>Download Template
+                </button>
+              </li>
+            </ul>
+            
+            <div class="tab-content" id="gradeTabsContent">
+              <!-- Import Tab -->
+              <div class="tab-pane fade show active" id="import" role="tabpanel" aria-labelledby="import-tab">
+                <div class="card">
+                    <div class="card-header">
+                        <h5>Upload Excel File with Grades</h5>
+                    </div>
+                    <div class="card-body">
+                        <form id="gradeImportForm" action="{% url 'upload_grades' %}" method="post" enctype="multipart/form-data">
+                            {% csrf_token %}
+                            
+                            <div class="form-group mb-3">
+                                <label for="subject">Subject</label>
+                                <select class="form-control" id="subject" name="subject" required>
+                                    <option value="">Select Subject</option>
+                                    {% for subject in subjects %}
+                                    <option value="{{ subject.id }}">{{ subject.name }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            
+                            <div class="form-group mb-3">
+                                <label for="quarter">Quarter</label>
+                                <select class="form-control" id="quarter" name="quarter" required>
+                                    <option value="">Select Quarter</option>
+                                    <option value="1">First Quarter</option>
+                                    <option value="2">Second Quarter</option>
+                                    <option value="3">Third Quarter</option>
+                                    <option value="4">Fourth Quarter</option>
+                                </select>
+                            </div>
+                            
+                            <div class="form-group mb-3">
+                                <label for="school_year">School Year</label>
+                                <input type="text" class="form-control" id="school_year" name="school_year" placeholder="e.g. 2023-2024" required>
+                            </div>
+                            
+                            <div class="form-group mb-3">
+                                <label for="grades_file">Excel File</label>
+                                <input type="file" class="form-control" id="grades_file" name="grades_file" accept=".xls,.xlsx,.csv" required>
+                                <small class="form-text text-muted">Upload Excel file (.xls, .xlsx) or CSV file (.csv) with student grades</small>
+                            </div>
+                            
+                            <button type="submit" class="btn btn-primary">Upload and Process</button>
+                        </form>
+                    </div>
+                </div>
+              </div>
+              
+              <!-- Template Tab -->
+              <div class="tab-pane fade" id="template" role="tabpanel" aria-labelledby="template-tab">
+                <div class="card">
+                    <div class="card-header">
+                        <h5>Download CSV Template for Grades</h5>
+                    </div>
+                    <div class="card-body">
+                        <p class="mb-4">Generate a CSV template with your enrolled students for easy grade entry. The template will include only students enrolled in the selected subject.</p>
+                        
+                        <form id="templateForm">
+                            <div class="form-group mb-3">
+                                <label for="template_subject">Subject</label>
+                                <select class="form-control" id="template_subject" name="template_subject" required>
+                                    <option value="">Select Subject</option>
+                                    {% for subject in subjects %}
+                                    <option value="{{ subject.id }}">{{ subject.name }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            
+                            <div class="form-group mb-3">
+                                <label for="template_quarter">Quarter</label>
+                                <select class="form-control" id="template_quarter" name="template_quarter" required>
+                                    <option value="">Select Quarter</option>
+                                    <option value="1">First Quarter</option>
+                                    <option value="2">Second Quarter</option>
+                                    <option value="3">Third Quarter</option>
+                                    <option value="4">Fourth Quarter</option>
+                                </select>
+                            </div>
+                            
+                            <div class="form-group mb-3">
+                                <label for="template_school_year">School Year</label>
+                                <input type="text" class="form-control" id="template_school_year" name="template_school_year" placeholder="e.g. 2023-2024" required>
+                            </div>
+                            
+                            <button type="button" id="generateTemplate" class="btn btn-success">
+                                <i class="fas fa-download me-2"></i>Generate Template
+                            </button>
+                        </form>
+                    </div>
+                </div>
+              </div>
+            </div>
+            
+            {% if messages %}
+            <div class="messages mt-4">
+                {% for message in messages %}
+                <div class="alert alert-{{ message.tags }}">
+                    {{ message }}
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Logout Confirmation Modal -->
+  <div class="modal fade" id="logoutModal" tabindex="-1" aria-labelledby="logoutModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header" style="background: linear-gradient(90deg, rgb(255, 17, 166) 0%, #c226ad 100%); color: white;">
+          <h5 class="modal-title" id="logoutModalLabel"><i class="fas fa-sign-out-alt me-2"></i>Logout Confirmation</h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <p class="mb-0">Are you sure you want to logout from your account?</p>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+          <a href="{% url 'logout' %}" class="btn" style="background: linear-gradient(90deg, rgb(255, 17, 166) 0%, #c226ad 100%); color: white;">Yes, Logout</a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Preview Modal -->
+  <div class="modal fade" id="previewModal" tabindex="-1" role="dialog" aria-labelledby="previewModalLabel" aria-hidden="true">
+      <div class="modal-dialog modal-xl" role="document">
+          <div class="modal-content">
+              <div class="modal-header">
+                  <h5 class="modal-title" id="previewModalLabel">Preview Grades for Import</h5>
+                  <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+              </div>
+              <div class="modal-body" id="previewModalBody">
+                  <div class="text-center">
+                      <div class="spinner-border" role="status">
+                          <span class="visually-hidden">Loading...</span>
+                      </div>
+                      <p>Processing Excel file...</p>
+                  </div>
+              </div>
+              <div class="modal-footer">
+                  <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                  <button type="button" class="btn btn-primary" id="confirmImport">Confirm Import</button>
+              </div>
+          </div>
+      </div>
+  </div>
+
+  <!-- jQuery and Bootstrap JS -->
+  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  
+  <script>
+    // Toggle sidebar on mobile
+    document.addEventListener('DOMContentLoaded', function() {
+      const sidebarToggle = document.getElementById('sidebarToggle');
+      const sidebar = document.getElementById('sidebar');
+      
+      if (sidebarToggle && sidebar) {
+        sidebarToggle.addEventListener('click', function() {
+          sidebar.classList.toggle('show');
+        });
+        
+        // Close sidebar when clicking outside
+        document.addEventListener('click', function(event) {
+          if (sidebar.classList.contains('show') && 
+              !sidebar.contains(event.target) && 
+              event.target !== sidebarToggle) {
+            sidebar.classList.remove('show');
+          }
+        });
+      }
+    });
+
+    $(document).ready(function() {
+        // Handle form submission
+        $('#gradeImportForm').on('submit', function(e) {
+            e.preventDefault();
+            
+            // Show the modal with loading spinner
+            var previewModal = new bootstrap.Modal(document.getElementById('previewModal'));
+            previewModal.show();
+            
+            // Submit the form via AJAX
+            var formData = new FormData(this);
+            
+            $.ajax({
+                url: "{% url 'upload_grades_ajax' %}",
+                type: "POST",
+                data: formData,
+                processData: false,
+                contentType: false,
+                success: function(response) {
+                    if (response.status === 'success') {
+                        // Create tabs for raw data and matched data
+                        var previewHtml = '<div class="card mb-4">' +
+                            '<div class="card-header"><h5>Import Details</h5></div>' +
+                            '<div class="card-body"><div class="row">' +
+                            '<div class="col-md-6">' +
+                            '<p><strong>Subject:</strong> ' + response.subject_name + '</p>' +
+                            '<p><strong>Quarter:</strong> ' + response.quarter + '</p>' +
+                            '</div><div class="col-md-6">' +
+                            '<p><strong>School Year:</strong> ' + response.school_year + '</p>' +
+                            '<p><strong>Total Students Matched:</strong> ' + response.count + '</p>' +
+                            '</div></div></div></div>';
+                        
+                        // Add tabs for raw data and matched data
+                        previewHtml += '<ul class="nav nav-tabs" id="previewTabs" role="tablist">' +
+                            '<li class="nav-item" role="presentation">' +
+                            '<button class="nav-link active" id="raw-tab" data-bs-toggle="tab" data-bs-target="#raw-data" type="button" role="tab">Excel Data</button>' +
+                            '</li>' +
+                            '<li class="nav-item" role="presentation">' +
+                            '<button class="nav-link" id="matched-tab" data-bs-toggle="tab" data-bs-target="#matched-data" type="button" role="tab">Matched Students</button>' +
+                            '</li>' +
+                            '</ul>';
+                        
+                        previewHtml += '<div class="tab-content" id="previewTabsContent">';
+                        
+                        // Raw data tab
+                        previewHtml += '<div class="tab-pane fade show active" id="raw-data" role="tabpanel">';
+                        if (response.raw_data && response.raw_data.length > 0) {
+                            previewHtml += '<div class="card mt-3"><div class="card-header">' +
+                                '<h5>Excel File Contents</h5></div><div class="card-body">' +
+                                '<div class="table-responsive"><table class="table table-striped">' +
+                                '<thead><tr><th>' + response.columns.name + '</th><th>' + response.columns.grade + '</th></tr></thead><tbody>';
+                            
+                            $.each(response.raw_data, function(index, item) {
+                                previewHtml += '<tr>' +
+                                    '<td>' + item.name + '</td>' +
+                                    '<td>' + item.grade + '</td></tr>';
+                            });
+                            
+                            previewHtml += '</tbody></table></div></div></div>';
+                        } else {
+                            previewHtml += '<div class="alert alert-warning mt-3">No data found in the Excel file.</div>';
+                        }
+                        previewHtml += '</div>';
+                        
+                        // Matched data tab
+                        previewHtml += '<div class="tab-pane fade" id="matched-data" role="tabpanel">';
+                        if (response.preview_data && response.preview_data.length > 0) {
+                            previewHtml += '<div class="card mt-3"><div class="card-header">' +
+                                '<h5>Students Matched for Import</h5></div><div class="card-body">' +
+                                '<div class="table-responsive"><table class="table table-striped">' +
+                                '<thead><tr><th>Student Name</th><th>' + response.subject_name + ' Grade</th><th>Section</th></tr></thead><tbody>';
+                            
+                            $.each(response.preview_data, function(index, item) {
+                                previewHtml += '<tr>' +
+                                    '<td>' + item.student_name + '</td>' +
+                                    '<td>' + item.grade + '</td>' +
+                                    '<td>' + item.section + '</td></tr>';
+                            });
+                            
+                            previewHtml += '</tbody></table></div></div></div>';
+                        } else {
+                            previewHtml += '<div class="alert alert-warning mt-3">No students could be matched with the data in the Excel file.</div>';
+                            $('#confirmImport').hide();
+                        }
+                        previewHtml += '</div>';
+                        
+                        previewHtml += '</div>'; // Close tab content
+                        
+                        $('#previewModalBody').html(previewHtml);
+                        
+                        // Show confirm button only if we have matched students
+                        if (response.preview_data && response.preview_data.length > 0) {
+                            $('#confirmImport').show();
+                        } else {
+                            $('#confirmImport').hide();
+                        }
+                    } else {
+                        // Show error message
+                        $('#previewModalBody').html('<div class="alert alert-danger">' + response.message + '</div>');
+                        $('#confirmImport').hide();
+                    }
+                },
+                error: function(xhr, status, error) {
+                    // Show error message
+                    $('#previewModalBody').html('<div class="alert alert-danger">Error processing file: ' + error + '</div>');
+                    $('#confirmImport').hide();
+                }
+            });
+        });
+        
+        // Handle confirm import button
+        $('#confirmImport').on('click', function() {
+            $.ajax({
+                url: "{% url 'confirm_import_grades_ajax' %}",
+                type: "POST",
+                data: {
+                    csrfmiddlewaretoken: $('input[name=csrfmiddlewaretoken]').val()
+                },
+                success: function(response) {
+                    if (response.status === 'success') {
+                        // Close modal
+                        var previewModal = bootstrap.Modal.getInstance(document.getElementById('previewModal'));
+                        previewModal.hide();
+                        
+                        // Show success message
+                        alert('Successfully imported ' + response.count + ' grades');
+                        
+                        // Reload page
+                        location.reload();
+                    } else {
+                        // Show error message
+                        alert('Error: ' + response.message);
+                    }
+                },
+                error: function(xhr, status, error) {
+                    // Show error message
+                    alert('Error importing grades: ' + error);
+                }
+            });
+        });
+        
+        // Handle template generation
+        $('#generateTemplate').on('click', function() {
+            var subject = $('#template_subject').val();
+            var quarter = $('#template_quarter').val();
+            var schoolYear = $('#template_school_year').val();
+            
+            if (!subject || !quarter || !schoolYear) {
+                alert('Please fill in all fields to generate a template');
+                return;
+            }
+            
+            // Show loading indicator
+            $(this).html('<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Generating...');
+            $(this).prop('disabled', true);
+            
+            // Request the template
+            $.ajax({
+                url: "{% url 'generate_grade_template' %}",
+                type: "GET",
+                data: {
+                    subject: subject,
+                    quarter: quarter,
+                    school_year: schoolYear
+                },
+                success: function(response) {
+                    if (response.status === 'success') {
+                        // Create a CSV file from the data
+                        var csvContent = "data:text/csv;charset=utf-8,";
+                        
+                        // Add headers - only Student Name and Subject
+                        csvContent += "Student Name," + response.subject_name + "\n";
+                        
+                        // Add student rows
+                        $.each(response.students, function(index, student) {
+                            csvContent += student.student_name + ",\n";
+                        });
+                        
+                        // Create download link
+                        var encodedUri = encodeURI(csvContent);
+                        var link = document.createElement("a");
+                        link.setAttribute("href", encodedUri);
+                        link.setAttribute("download", response.subject_name + "_Q" + quarter + "_" + schoolYear + "_template.csv");
+                        document.body.appendChild(link);
+                        
+                        // Download the file
+                        link.click();
+                        
+                        // Reset button
+                        $('#generateTemplate').html('<i class="fas fa-download me-2"></i>Generate Template');
+                        $('#generateTemplate').prop('disabled', false);
+                    } else {
+                        alert('Error: ' + response.message);
+                        $('#generateTemplate').html('<i class="fas fa-download me-2"></i>Generate Template');
+                        $('#generateTemplate').prop('disabled', false);
+                    }
+                },
+                error: function(xhr, status, error) {
+                    alert('Error generating template: ' + error);
+                    $('#generateTemplate').html('<i class="fas fa-download me-2"></i>Generate Template');
+                    $('#generateTemplate').prop('disabled', false);
+                }
+            });
+        });
+    });
+  </script>
+</body>
+</html> 
