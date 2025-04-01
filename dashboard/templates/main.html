@@ -28,9 +28,9 @@
                         <div class="card-body d-flex justify-content-between align-items-start p-4">
                             <div>
                                 <h6 class="card-subtitle mb-2 text-white-50">Total Students</h6>
-                                <h2 class="card-title mb-0 fw-bold">10</h2>
+                                <h2 class="card-title mb-0 fw-bold">{{ total_students }}</h2>
                                 <p class="card-text mt-2 mb-0">
-                                    <span class="badge bg-white text-primary">+5% </span>
+                                    <span class="badge bg-white text-primary">{{ student_growth }}% </span>
                                     <small class="text-white-50">from last month</small>
                                 </p>
                             </div>
@@ -45,9 +45,9 @@
                         <div class="card-body d-flex justify-content-between align-items-start p-4">
                             <div>
                                 <h6 class="card-subtitle mb-2 text-white-50">Total Teachers</h6>
-                                <h2 class="card-title mb-0 fw-bold">56</h2>
+                                <h2 class="card-title mb-0 fw-bold">{{ total_teachers }}</h2>
                                 <p class="card-text mt-2 mb-0">
-                                    <span class="badge bg-white text-success">+2% </span>
+                                    <span class="badge bg-white text-success">{{ teacher_growth }}% </span>
                                     <small class="text-white-50">from last month</small>
                                 </p>
                             </div>
@@ -62,31 +62,14 @@
                         <div class="card-body d-flex justify-content-between align-items-start p-4">
                             <div>
                                 <h6 class="card-subtitle mb-2 text-white-50">Strand & Sections</h6>
-                                <h2 class="card-title mb-0 fw-bold">24</h2>
+                                <h2 class="card-title mb-0 fw-bold">{{ total_sections }}</h2>
                                 <p class="card-text mt-2 mb-0">
-                                    <span class="badge bg-white text-warning">+3% </span>
+                                    <span class="badge bg-white text-warning">{{ section_growth }}% </span>
                                     <small class="text-white-50">from last month</small>
                                 </p>
                             </div>
                             <div class="icon-box">
                                 <i class="fas fa-school fa-3x opacity-25"></i>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-3 mb-4">
-                    <div class="card bg-info text-white border-0 rounded-4 shadow-sm h-100">
-                        <div class="card-body d-flex justify-content-between align-items-start p-4">
-                            <div>
-                                <h6 class="card-subtitle mb-2 text-white-50">Attendance Rate</h6>
-                                <h2 class="card-title mb-0 fw-bold">95%</h2>
-                                <p class="card-text mt-2 mb-0">
-                                    <span class="badge bg-white text-info">+1% </span>
-                                    <small class="text-white-50">from last month</small>
-                                </p>
-                            </div>
-                            <div class="icon-box">
-                                <i class="fas fa-chart-line fa-3x opacity-25"></i>
                             </div>
                         </div>
                     </div>

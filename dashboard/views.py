@@ -6,9 +6,12 @@ from django.contrib.auth.decorators import login_required
 from django.db.models import Count
 from django.conf import settings
 from django.http import JsonResponse
-from datetime import datetime
+from datetime import datetime, timedelta
 from django.db import transaction
 from django.db import models
+from django.views.decorators.http import require_POST
+import json
+from django.core.serializers.json import DjangoJSONEncoder
 
 
 # Create your views here.
@@ -19,14 +22,25 @@ def students_view(request):
     # Get all students
     students = Student.objects.all()
     
-    # Get unique school years from the Student model
-    school_years = Student.objects.exclude(school_year__isnull=True).values_list(
-        'school_year', flat=True).distinct().order_by('-school_year')
+    # Get unique school years from both Student and Enrollment models
+    student_years = set(Student.objects.exclude(school_year__isnull=True)
+                       .values_list('school_year', flat=True)
+                       .distinct())
+    enrollment_years = set(Enrollment.objects.values_list('school_year', flat=True)
+                         .distinct())
+    
+    # Combine and sort school years
+    school_years = sorted(student_years.union(enrollment_years), reverse=True)
     
     # Filter by school year if provided
     selected_year = request.GET.get('school_year')
     if selected_year:
-        students = students.filter(school_year=selected_year)
+        # Filter students who either have the school year directly set
+        # or have an enrollment for that school year
+        students = students.filter(
+            models.Q(school_year=selected_year) |
+            models.Q(enrollments__school_year=selected_year)
+        ).distinct()
     
     context = {
         'students': students,
@@ -361,9 +375,26 @@ def add_enrollment(request):
             section_id = request.POST.get('section')
             school_year = request.POST.get('school_year')
             
+            # Debug information
+            print(f"Received data - student_id: {student_id}, section_id: {section_id}, school_year: {school_year}")
+            
             # Get the student and section objects
             student = Student.objects.get(id=student_id)
-            section = Sections.objects.get(id=section_id)
+            
+            # Make sure we're getting the section correctly
+            try:
+                section = Sections.objects.get(id=section_id)
+                print(f"Found section: {section}")
+            except Sections.DoesNotExist:
+                # Try to find by section_id instead of id
+                try:
+                    section = Sections.objects.get(section_id=section_id)
+                    print(f"Found section by section_id: {section}")
+                except Sections.DoesNotExist:
+                    # List all available sections for debugging
+                    all_sections = list(Sections.objects.all().values('id', 'section_id'))
+                    print(f"Available sections: {all_sections}")
+                    raise Sections.DoesNotExist(f"Section with ID {section_id} not found. Available sections: {all_sections}")
             
             # Check if the student is already enrolled in this section for this school year
             if Enrollment.objects.filter(student=student, section=section, school_year=school_year).exists():
@@ -416,8 +447,8 @@ def add_enrollment(request):
             
         except Student.DoesNotExist:
             messages.error(request, 'Student not found!')
-        except Sections.DoesNotExist:
-            messages.error(request, 'Section not found!')
+        except Sections.DoesNotExist as e:
+            messages.error(request, f'Section not found! {str(e)}')
         except Exception as e:
             messages.error(request, f'Error adding enrollment: {str(e)}')
     
@@ -940,57 +971,29 @@ def submit_grade(request):
 def schedule_view(request):
     """View function for displaying the schedule page."""
     schedules = Schedules.objects.all().select_related('subject', 'teacher_id', 'section')
-    teachers = Teachers.objects.all()
-    subjects = Subject.objects.all()
+    
+    # Fetch all required data from models
+    teachers = Teachers.objects.all().order_by('first_name', 'last_name')
+    subjects = Subject.objects.all().order_by('name')
+    sections = Sections.objects.all().order_by('grade_level', 'section_id')
     grade_levels = Sections.objects.values_list('grade_level', flat=True).distinct().order_by('grade_level')
+    
+    sections_json = json.dumps([{
+        'id': section.id,
+        'section_id': section.section_id,
+        'grade_level': section.grade_level
+    } for section in sections], cls=DjangoJSONEncoder)
     
     context = {
         'schedules': schedules,
         'teachers': teachers,
         'subjects': subjects,
+        'sections': sections,
         'grade_levels': grade_levels,
+        'sections_json': sections_json,
     }
     return render(request, 'schedules.html', context)
 
-def add_schedule(request):
-    """View function to add a new schedule."""
-    if request.method == 'POST':
-        try:
-            teacher_id = request.POST.get('teacher_id')
-            subject_id = request.POST.get('subject')
-            grade_level = request.POST.get('grade_level')
-            section_id = request.POST.get('section')
-            day = request.POST.get('day')
-            start_time = request.POST.get('start_time')
-            end_time = request.POST.get('end_time')
-            room = request.POST.get('room')
-            
-            # Convert time strings to time objects
-            start_time_obj = datetime.strptime(start_time, '%H:%M').time()
-            end_time_obj = datetime.strptime(end_time, '%H:%M').time()
-            
-            # Get the teacher, subject, and section objects
-            teacher = Teachers.objects.get(id=teacher_id)
-            subject = Subject.objects.get(id=subject_id)
-            section = Sections.objects.get(id=section_id)
-            
-            # Create the schedule
-            Schedules.objects.create(
-                teacher_id=teacher,
-                subject=subject,
-                grade_level=grade_level,
-                section=section,
-                day=day,
-                start_time=start_time_obj,
-                end_time=end_time_obj,
-                room=room
-            )
-            
-            messages.success(request, f"Schedule for {teacher.first_name} {teacher.last_name} added successfully!")
-        except Exception as e:
-            messages.error(request, f"Error adding schedule: {str(e)}")
-    
-    return redirect('schedules')
 
 def get_teachers(request):
     """API endpoint to get all teachers."""
@@ -1008,12 +1011,206 @@ def get_grade_levels(request):
     return JsonResponse({'grade_levels': grade_levels})
 
 def get_sections_by_grade(request):
-    """API endpoint to get sections for a specific grade level."""
+    """Get sections for a specific grade level."""
     grade_level = request.GET.get('grade_level')
-    sections = list(Sections.objects.filter(grade_level=grade_level).values('id', 'section_id'))
-    return JsonResponse({'sections': sections})
+    
+    if grade_level:
+        try:
+            # Convert to integer
+            grade_level = int(grade_level)
+            
+            # Get sections for this grade level
+            sections = Sections.objects.filter(grade_level=grade_level)
+            sections_data = list(sections.values('id', 'section_id'))
+            
+            # Return JSON response
+            return JsonResponse({'sections': sections_data})
+        except Exception as e:
+            print(f"Error in get_sections_by_grade: {e}")
+    
+    # Return empty list if no grade level or error
+    return JsonResponse({'sections': []})
 
 def get_sections(request):
     """API endpoint to get all sections with their grade levels."""
     sections = list(Sections.objects.values('id', 'section_id', 'grade_level'))
     return JsonResponse({'sections': sections})
+
+def get_schedules(request):
+    """API endpoint to get all schedules."""
+    schedules = Schedules.objects.select_related('teacher_id', 'subject', 'section').all()
+    schedule_data = [{
+        'id': schedule.id,
+        'teacher_name': f"{schedule.teacher_id.first_name} {schedule.teacher_id.last_name}",
+        'subject_name': schedule.subject.name,
+        'grade_level': schedule.grade_level,
+        'section_id': schedule.section.section_id,
+        'day': schedule.day,
+        'start_time': schedule.start_time.strftime('%H:%M'),
+        'end_time': schedule.end_time.strftime('%H:%M'),
+        'room': schedule.room
+    } for schedule in schedules]
+    return JsonResponse({'schedules': schedule_data})
+
+def filter_schedules(request):
+    """API endpoint to get filtered schedules."""
+    teacher = request.GET.get('teacher')
+    grade_level = request.GET.get('grade_level')
+    section = request.GET.get('section')
+    day = request.GET.get('day')
+
+    schedules = Schedules.objects.select_related('teacher_id', 'subject', 'section').all()
+
+    if teacher:
+        schedules = schedules.filter(teacher_id=teacher)
+    if grade_level:
+        schedules = schedules.filter(grade_level=grade_level)
+    if section:
+        schedules = schedules.filter(section=section)
+    if day:
+        schedules = schedules.filter(day=day)
+
+    schedule_data = [{
+        'id': schedule.id,
+        'teacher_name': f"{schedule.teacher_id.first_name} {schedule.teacher_id.last_name}",
+        'subject_name': schedule.subject.name,
+        'grade_level': schedule.grade_level,
+        'section_id': schedule.section.section_id,
+        'day': schedule.day,
+        'start_time': schedule.start_time.strftime('%H:%M'),
+        'end_time': schedule.end_time.strftime('%H:%M'),
+        'room': schedule.room
+    } for schedule in schedules]
+    return JsonResponse({'schedules': schedule_data})
+
+def get_all_sections(request):
+    """Get all sections for client-side filtering."""
+    try:
+        sections = list(Sections.objects.all().values('id', 'section_id', 'grade_level'))
+        return JsonResponse({'success': True, 'sections': sections})
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)})
+
+def add_schedule(request):
+    if request.method == 'POST':
+        try:
+            teacher_id = request.POST.get('teacher_id')
+            subject_id = request.POST.get('subject')
+            grade_level = request.POST.get('grade_level')
+            section_id = request.POST.get('section')
+            day = request.POST.get('day')
+            start_time = request.POST.get('start_time')
+            end_time = request.POST.get('end_time')
+            room = request.POST.get('room')
+            
+            # Get the teacher, subject, and section objects
+            teacher = Teachers.objects.get(id=teacher_id)
+            subject = Subject.objects.get(id=subject_id)
+            section = Sections.objects.get(id=section_id)
+            
+            # Create the schedule
+            schedule = Schedules.objects.create(
+                teacher_id=teacher,
+                subject=subject,
+                grade_level=grade_level,
+                section=section,
+                day=day,
+                start_time=start_time,
+                end_time=end_time,
+                room=room
+            )
+            
+            return JsonResponse({'success': True})
+            
+        except Exception as e:
+            return JsonResponse({'success': False, 'message': str(e)})
+    
+    return JsonResponse({'success': False, 'message': 'Invalid request method'})
+
+def get_available_time_slots(request):
+    """API endpoint to get available time slots for a given day and teacher."""
+    teacher_id = request.GET.get('teacher_id')
+    day = request.GET.get('day')
+    section_id = request.GET.get('section_id')
+    subject_id = request.GET.get('subject')
+    grade_level = request.GET.get('grade_level')
+    room = request.GET.get('room')
+
+    # Check if subject is already assigned to this section
+    if section_id and subject_id:
+        existing_subject = Schedules.objects.filter(
+            section_id=section_id,
+            subject_id=subject_id
+        ).first()
+        
+        if existing_subject:
+            return JsonResponse({
+                'error': 'This subject is already assigned to this section',
+                'time_slots': []
+            }, status=400)
+
+    # Define all possible time slots (8 AM to 5 PM)
+    time_slots = []
+    start = datetime.strptime('08:00', '%H:%M')
+    end = datetime.strptime('17:00', '%H:%M')
+    
+    # Create 1-hour time slots
+    current = start
+    while current < end:
+        next_slot = current + timedelta(hours=1)
+        if current.hour != 12:  # Skip lunch break
+            time_slots.append({
+                'start': current.strftime('%H:%M'),
+                'end': next_slot.strftime('%H:%M'),
+                'display': f"{current.strftime('%I:%M %p')} - {next_slot.strftime('%I:%M %p')}"
+            })
+        current = next_slot
+
+    available_slots = []
+    for slot in time_slots:
+        slot_start = datetime.strptime(slot['start'], '%H:%M').time()
+        slot_end = datetime.strptime(slot['end'], '%H:%M').time()
+        
+        is_available = True
+        
+        if day:
+            # Check room conflicts
+            if room:
+                room_schedules = Schedules.objects.filter(
+                    day=day,
+                    room=room
+                )
+                if room_schedules.filter(
+                    models.Q(start_time__lt=slot_end) & 
+                    models.Q(end_time__gt=slot_start)
+                ).exists():
+                    is_available = False
+            
+            # Check teacher conflicts
+            if is_available and teacher_id:
+                teacher_schedules = Schedules.objects.filter(
+                    teacher_id=teacher_id,
+                    day=day
+                )
+                if teacher_schedules.filter(
+                    models.Q(start_time__lt=slot_end) & 
+                    models.Q(end_time__gt=slot_start)
+                ).exists():
+                    is_available = False
+            
+            # Check section conflicts
+            if is_available and section_id:
+                section_schedules = Schedules.objects.filter(
+                    section_id=section_id,
+                    day=day
+                )
+                if section_schedules.filter(
+                    models.Q(start_time__lt=slot_end) & 
+                    models.Q(end_time__gt=slot_start)
+                ).exists():
+                    is_available = False
+        
+        if is_available:
+            available_slots.append(slot)
+
+    return JsonResponse({'time_slots': available_slots})

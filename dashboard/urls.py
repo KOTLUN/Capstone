@@ -46,6 +46,10 @@ urlpatterns = [
     path('add-grade/', views.add_grade, name='add_grade'),
     path('student-profile/<int:student_id>/', views.student_profile_view, name='student_profile'),
     path('get_sections/', views.get_sections, name='get_sections'),
+    path('schedules/', views.schedule_view, name='schedules'),
+    path('add_schedule/', views.add_schedule, name='add_schedule'),
+    path('get_sections_by_grade/', views.get_sections_by_grade, name='get_sections_by_grade'),
+    path('get_available_time_slots/', views.get_available_time_slots, name='get_available_time_slots'),
 ]
 
 if settings.DEBUG:

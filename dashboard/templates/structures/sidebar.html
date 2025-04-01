@@ -166,6 +166,9 @@ html, body {
             <a href="{% url 'sections' %}" class="nav-link {% if request.path == '/administrator/sections/' %}active{% endif %}">
               <i class="fas fa-puzzle-piece"></i> <span>Sections</span>
             </a>
+            <a href="{% url 'schedules' %}" class="nav-link {% if request.path == '/schedules/' %}active{% endif %}">
+              <i class="fas fa-calendar-alt"></i> <span>Schedules</span>
+            </a>
             
           </nav>
         </div>

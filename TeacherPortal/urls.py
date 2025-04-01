@@ -29,8 +29,8 @@ urlpatterns = [
     path('upload-grades/', views.upload_grades, name='upload_grades'),
     path('upload-grades-ajax/', views.upload_grades_ajax, name='upload_grades_ajax'),
     path('confirm-import-grades-ajax/', views.confirm_import_grades_ajax, name='confirm_import_grades_ajax'),
-    path('generate_grade_template/', views.generate_grade_template, name='generate_grade_template'),
-    
+    path('preview-template/', views.preview_template, name='preview_template'),
+    path('generate-template/', views.generate_grade_template, name='generate_grade_template'),
 ]
 
 

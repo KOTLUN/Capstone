@@ -5,117 +5,27 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Teacher Scheduling - Web ARMS</title>
-    <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" rel="stylesheet">
-    <!-- Font Awesome -->
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css" rel="stylesheet">
-    <!-- DataTables CSS -->
     <link href="https://cdn.datatables.net/1.11.5/css/dataTables.bootstrap5.min.css" rel="stylesheet">
-    <style>
-        body {
-            background-color: #f8f9fc;
-        }
-        .main-content {
-            padding: 20px;
-        }
-        .card {
-            box-shadow: 0 .15rem 1.75rem 0 rgba(58, 59, 69, .15);
-            border: none;
-            border-radius: 0.35rem;
-            margin-bottom: 1.5rem;
-        }
-        .card-header {
-            background-color: #f8f9fc;
-            border-bottom: 1px solid #e3e6f0;
-        }
-        .btn-primary {
-            background-color: #4e73df;
-            border-color: #4e73df;
-        }
-        .btn-primary:hover {
-            background-color: #2e59d9;
-            border-color: #2653d4;
-        }
-        .text-primary {
-            color: #4e73df !important;
-        }
-        .font-weight-bold {
-            font-weight: 700 !important;
-        }
-        .table-responsive {
-            overflow-x: auto;
-        }
-    </style>
 </head>
 <body>
-    <div class="main-content">
+    <div class="container-fluid">
         {% include 'structures/sidebar.html' %}
-        <div class="d-flex justify-content-between align-items-center mb-4">
-            <h1 class="h3 mb-0 text-gray-800">Teacher Scheduling</h1>
-            <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addScheduleModal">
-                <i class="fas fa-plus"></i> Add New Schedule
-            </button>
-        </div>
+        <div class="row">
+            <div class="col main-content">
+          
+            
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h1 class="h3">Teacher Scheduling</h1>
+                <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addScheduleModal">
+                    Add New Schedule
+                </button>
+            </div>
 
-        <!-- Filters Row -->
-        <div class="card mb-4">
-            <div class="card-header">
-                <h6 class="m-0 font-weight-bold text-primary">Filters</h6>
-            </div>
-            <div class="card-body">
-                <div class="row">
-                    <div class="col-md-3">
-                        <div class="mb-3">
-                            <label for="filterTeacher" class="form-label">Filter by Teacher</label>
-                            <select class="form-select" id="filterTeacher">
-                                <option value="">All Teachers</option>
-                                <!-- Teachers will be populated here -->
-                            </select>
-                        </div>
-                    </div>
-                    <div class="col-md-3">
-                        <div class="mb-3">
-                            <label for="filterGradeLevel" class="form-label">Filter by Grade Level</label>
-                            <select class="form-select" id="filterGradeLevel">
-                                <option value="">All Grade Levels</option>
-                                <!-- Grade levels will be populated here -->
-                            </select>
-                        </div>
-                    </div>
-                    <div class="col-md-3">
-                        <div class="mb-3">
-                            <label for="filterSection" class="form-label">Filter by Section</label>
-                            <select class="form-select" id="filterSection">
-                                <option value="">All Sections</option>
-                                <!-- Sections will be populated here -->
-                            </select>
-                        </div>
-                    </div>
-                    <div class="col-md-3">
-                        <div class="mb-3">
-                            <label for="filterDay" class="form-label">Filter by Day</label>
-                            <select class="form-select" id="filterDay">
-                                <option value="">All Days</option>
-                                <option value="Monday">Monday</option>
-                                <option value="Tuesday">Tuesday</option>
-                                <option value="Wednesday">Wednesday</option>
-                                <option value="Thursday">Thursday</option>
-                                <option value="Friday">Friday</option>
-                            </select>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Schedule Table -->
-        <div class="card shadow mb-4">
-            <div class="card-header py-3">
-                <h6 class="m-0 font-weight-bold text-primary">Teacher Schedules</h6>
-            </div>
-            <div class="card-body">
-                <div class="table-responsive">
-                    <table class="table table-bordered" id="scheduleTable" width="100%" cellspacing="0">
+            <!-- Schedule Table -->
+            <div class="card">
+                <div class="card-body">
+                    <table class="table table-striped" id="scheduleTable">
                         <thead>
                             <tr>
                                 <th>Teacher</th>
@@ -125,291 +35,389 @@
                                 <th>Day</th>
                                 <th>Time</th>
                                 <th>Room</th>
-                                <th>Actions</th>
                             </tr>
                         </thead>
                         <tbody>
-                            <!-- Schedule data will be populated here -->
+                            {% for schedule in schedules %}
+                            <tr>
+                                <td>{{ schedule.teacher_id.first_name }} {{ schedule.teacher_id.last_name }}</td>
+                                <td>{{ schedule.subject.name }}</td>
+                                <td>{{ schedule.grade_level }}</td>
+                                <td>{{ schedule.section.section_id }}</td>
+                                <td>{{ schedule.day }}</td>
+                                <td>{{ schedule.start_time|time:"H:i" }} - {{ schedule.end_time|time:"H:i" }}</td>
+                                <td>{{ schedule.room }}</td>
+                            </tr>
+                            {% endfor %}
                         </tbody>
                     </table>
                 </div>
             </div>
-        </div>
-    </div>
 
-    <!-- Add Schedule Modal -->
-    <div class="modal fade" id="addScheduleModal" tabindex="-1" aria-labelledby="addScheduleModalLabel" aria-hidden="true">
-        <div class="modal-dialog modal-lg">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="addScheduleModalLabel">Add New Schedule</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            <!-- Add Schedule Modal -->
+            <div class="modal fade" id="addScheduleModal" tabindex="-1">
+                <div class="modal-dialog modal-lg">
+                    <div class="modal-content">
+                        <div class="modal-header bg-primary text-white">
+                            <h5 class="modal-title">Add New Schedule</h5>
+                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                        </div>
+                        <form id="addScheduleForm" method="POST" action="{% url 'add_schedule' %}">
+                            {% csrf_token %}
+                            <div class="modal-body p-4">
+                                <div class="row g-4">
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label for="teacher" class="form-label fw-bold">Teacher</label>
+                                            <select class="form-select shadow-sm" id="teacher" name="teacher_id" required>
+                                                <option value="">Select Teacher</option>
+                                                {% for teacher in teachers %}
+                                                <option value="{{ teacher.id }}">{{ teacher.first_name }} {{ teacher.last_name }}</option>
+                                                {% endfor %}
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label for="subject" class="form-label fw-bold">Subject</label>
+                                            <select class="form-select shadow-sm" id="subject" name="subject" required>
+                                                <option value="">Select Subject</option>
+                                                {% for subject in subjects %}
+                                                <option value="{{ subject.id }}">{{ subject.name }}</option>
+                                                {% endfor %}
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label for="gradeLevel" class="form-label fw-bold">Grade Level</label>
+                                            <select class="form-select shadow-sm" id="gradeLevel" name="grade_level" required>
+                                                <option value="">Select Grade Level</option>
+                                                {% for grade in grade_levels %}
+                                                <option value="{{ grade }}">Grade {{ grade }}</option>
+                                                {% endfor %}
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label for="section" class="form-label fw-bold">Section</label>
+                                            <select class="form-select shadow-sm" id="section" name="section" required>
+                                                <option value="">Select Section</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-12">
+                                        <div class="mb-3">
+                                            <label class="form-label fw-bold">Days</label>
+                                            <div class="d-flex flex-wrap gap-3">
+                                                <div class="form-check">
+                                                    <input class="form-check-input" type="checkbox" name="days[]" value="Monday" id="dayMonday">
+                                                    <label class="form-check-label" for="dayMonday">Monday</label>
+                                                </div>
+                                                <div class="form-check">
+                                                    <input class="form-check-input" type="checkbox" name="days[]" value="Tuesday" id="dayTuesday">
+                                                    <label class="form-check-label" for="dayTuesday">Tuesday</label>
+                                                </div>
+                                                <div class="form-check">
+                                                    <input class="form-check-input" type="checkbox" name="days[]" value="Wednesday" id="dayWednesday">
+                                                    <label class="form-check-label" for="dayWednesday">Wednesday</label>
+                                                </div>
+                                                <div class="form-check">
+                                                    <input class="form-check-input" type="checkbox" name="days[]" value="Thursday" id="dayThursday">
+                                                    <label class="form-check-label" for="dayThursday">Thursday</label>
+                                                </div>
+                                                <div class="form-check">
+                                                    <input class="form-check-input" type="checkbox" name="days[]" value="Friday" id="dayFriday">
+                                                    <label class="form-check-label" for="dayFriday">Friday</label>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-12">
+                                        <div class="mb-3">
+                                            <label for="timeSlot" class="form-label fw-bold">Time Slot</label>
+                                            <select class="form-select shadow-sm" id="timeSlot" required>
+                                                <option value="">Select Time Slot</option>
+                                            </select>
+                                            <small class="text-muted">
+                                                <i class="fas fa-info-circle"></i> Available time slots are shown based on teacher's schedule
+                                            </small>
+                                        </div>
+                                    </div>
+                                    <input type="hidden" id="startTime" name="start_time">
+                                    <input type="hidden" id="endTime" name="end_time">
+                                    <div class="col-md-4">
+                                        <div class="mb-3">
+                                            <label for="room" class="form-label fw-bold">Room</label>
+                                            <input type="text" class="form-control shadow-sm" id="room" name="room" required>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="modal-footer bg-light">
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                <button type="submit" class="btn btn-primary">Add Schedule</button>
+                            </div>
+                        </form>
+                    </div>
                 </div>
-                <form id="addScheduleForm" method="POST" action="/add_schedule/">
-                    <div class="modal-body">
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label for="teacher" class="form-label">Teacher</label>
-                                    <select class="form-select" id="teacher" name="teacher_id" required>
-                                        <option value="">Select Teacher</option>
-                                        <!-- Teachers will be populated here -->
-                                    </select>
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label for="subject" class="form-label">Subject</label>
-                                    <select class="form-select" id="subject" name="subject" required>
-                                        <option value="">Select Subject</option>
-                                        <!-- Subjects will be populated here -->
-                                    </select>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label for="gradeLevel" class="form-label">Grade Level</label>
-                                    <select class="form-select" id="gradeLevel" name="grade_level" required>
-                                        <option value="">Select Grade Level</option>
-                                        <!-- Grade levels will be populated here -->
-                                    </select>
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label for="section" class="form-label">Section</label>
-                                    <select class="form-select" id="section" name="section" required>
-                                        <option value="">Select Section</option>
-                                        <!-- Sections will be populated here -->
-                                    </select>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label for="day" class="form-label">Day</label>
-                                    <select class="form-select" id="day" name="day" required>
-                                        <option value="">Select Day</option>
-                                        <option value="Monday">Monday</option>
-                                        <option value="Tuesday">Tuesday</option>
-                                        <option value="Wednesday">Wednesday</option>
-                                        <option value="Thursday">Thursday</option>
-                                        <option value="Friday">Friday</option>
-                                    </select>
-                                </div>
-                            </div>
-                            <div class="col-md-3">
-                                <div class="mb-3">
-                                    <label for="startTime" class="form-label">Start Time</label>
-                                    <input type="time" class="form-control" id="startTime" name="start_time" required>
-                                </div>
-                            </div>
-                            <div class="col-md-3">
-                                <div class="mb-3">
-                                    <label for="endTime" class="form-label">End Time</label>
-                                    <input type="time" class="form-control" id="endTime" name="end_time" required>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="mb-3">
-                            <label for="room" class="form-label">Room</label>
-                            <input type="text" class="form-control" id="room" name="room" required>
-                        </div>
-                    </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                        <button type="submit" class="btn btn-primary">Add Schedule</button>
-                    </div>
-                </form>
             </div>
         </div>
+        </div>
     </div>
-
-    <!-- jQuery -->
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-    <!-- Bootstrap JS Bundle with Popper -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.bundle.min.js"></script>
-    <!-- DataTables JS -->
     <script src="https://cdn.datatables.net/1.11.5/js/jquery.dataTables.min.js"></script>
     <script src="https://cdn.datatables.net/1.11.5/js/dataTables.bootstrap5.min.js"></script>
-    
+
     <script>
         $(document).ready(function() {
             // Initialize DataTable
-            $('#scheduleTable').DataTable({
-                "order": [[0, "asc"]],
-                "pageLength": 25
+            $('#scheduleTable').DataTable();
+
+            // Grade Level change event handler
+            $('#gradeLevel').change(function() {
+                const gradeLevel = $(this).val();
+                const sectionSelect = $('#section');
+                
+                sectionSelect.empty();
+                sectionSelect.append('<option value="">Select Section</option>');
+                
+                if (gradeLevel) {
+                    $.ajax({
+                        url: "{% url 'get_sections_by_grade' %}",
+                        data: { grade_level: gradeLevel },
+                        success: function(data) {
+                            data.sections.forEach(function(section) {
+                                sectionSelect.append(
+                                    `<option value="${section.id}">${section.section_id}</option>`
+                                );
+                            });
+                        }
+                    });
+                }
             });
 
-            // Load data from server
-            loadTeachers();
-            loadSections();
-            loadSubjects();
-            loadGradeLevels();
-            loadSchedules();
+            // Function to check subject availability
+            function checkSubjectAvailability() {
+                const teacherId = $('#teacher').val();
+                const subjectId = $('#subject').val();
+                const gradeLevel = $('#gradeLevel').val();
+                const sectionId = $('#section').val();
 
-            // Filter functionality
-            $('#filterTeacher, #filterGradeLevel, #filterDay, #filterSection').change(function() {
-                filterTable();
+                if (!teacherId || !subjectId || !gradeLevel || !sectionId) return;
+
+                $.ajax({
+                    url: "{% url 'get_available_time_slots' %}",
+                    data: {
+                        teacher_id: teacherId,
+                        subject: subjectId,
+                        grade_level: gradeLevel,
+                        section_id: sectionId
+                    },
+                    success: function(response) {
+                        // Clear any existing error messages
+                        $('.subject-error').remove();
+                    },
+                    error: function(xhr) {
+                        if (xhr.status === 400) {
+                            const response = JSON.parse(xhr.responseText);
+                            // Display error message
+                            const errorDiv = $('<div class="alert alert-danger subject-error mt-2"></div>')
+                                .text(response.error);
+                            $('#subject').after(errorDiv);
+                            
+                            // Reset subject selection
+                            $('#subject').val('');
+                            
+                            // Disable time slot selection
+                            $('#timeSlot').prop('disabled', true);
+                        }
+                    }
+                });
+            }
+
+            // Add change event listeners
+            $('#subject, #section, #gradeLevel').change(function() {
+                checkSubjectAvailability();
             });
 
-            // Validate time selection (end time must be after start time)
+            // Update time slots when teacher or days change
+            $('#teacher').change(updateAvailableTimeSlots);
+            $('input[name="days[]"]').change(updateAvailableTimeSlots);
+
+            // Handle time slot selection
+            $('#timeSlot').change(function() {
+                const value = $(this).val();
+                if (value) {
+                    const [start, end] = value.split(',');
+                    $('#startTime').val(start);
+                    $('#endTime').val(end);
+                } else {
+                    $('#startTime').val('');
+                    $('#endTime').val('');
+                }
+            });
+
+            // Time validation
             $('#startTime, #endTime').change(function() {
                 const startTime = $('#startTime').val();
                 const endTime = $('#endTime').val();
                 
                 if (startTime && endTime && startTime >= endTime) {
                     alert('End time must be after start time');
-                    $(this).val('');
+                    $('#endTime').val('');
                 }
             });
 
-            // Load sections when the grade level changes
-            $('#filterGradeLevel').change(function() {
-                const gradeLevel = $(this).val();
-                loadSections(gradeLevel);
+            // Update the existing updateAvailableTimeSlots function
+            function updateAvailableTimeSlots() {
+                const teacherId = $('#teacher').val();
+                const selectedDays = $('input[name="days[]"]:checked').map(function() {
+                    return $(this).val();
+                }).get();
+                const sectionId = $('#section').val();
+                const subjectId = $('#subject').val();
+                const gradeLevel = $('#gradeLevel').val();
+                const room = $('#room').val();  // Get room value
+
+                if (!teacherId || selectedDays.length === 0 || !subjectId || !sectionId || !room) {
+                    // Clear time slots if any required field is missing
+                    const timeSlotSelect = $('#timeSlot');
+                    timeSlotSelect.empty().append('<option value="">Select Time Slot</option>');
+                    return;
+                }
+
+                // Clear and disable time slot select
+                const timeSlotSelect = $('#timeSlot');
+                timeSlotSelect.empty().append('<option value="">Loading available times...</option>').prop('disabled', true);
+
+                // Get available time slots for each selected day
+                const promises = selectedDays.map(day => 
+                    $.get("{% url 'get_available_time_slots' %}", {
+                        teacher_id: teacherId,
+                        day: day,
+                        section_id: sectionId,
+                        subject: subjectId,
+                        grade_level: gradeLevel,
+                        room: room  // Include room in the request
+                    })
+                );
+
+                // Process results
+                Promise.all(promises)
+                    .then(results => {
+                        const commonSlots = results.reduce((common, result, index) => {
+                            const slots = result.time_slots;
+                            if (index === 0) return slots;
+                            return common.filter(commonSlot => 
+                                slots.some(slot => slot.start === commonSlot.start)
+                            );
+                        }, []);
+
+                        // Update time slot select
+                        timeSlotSelect.empty().append('<option value="">Select Time Slot</option>');
+                        if (commonSlots.length > 0) {
+                            commonSlots.forEach(slot => {
+                                timeSlotSelect.append(
+                                    `<option value="${slot.start},${slot.end}">${slot.display}</option>`
+                                );
+                            });
+                        } else {
+                            timeSlotSelect.append('<option value="" disabled>No available time slots</option>');
+                        }
+                    })
+                    .finally(() => {
+                        timeSlotSelect.prop('disabled', false);
+                    });
+            }
+
+            // Add room change handler
+            $('#room').change(function() {
+                updateAvailableTimeSlots();
             });
 
-            function loadSections(gradeLevel) {
-                if (gradeLevel) {
+            // Update form submission validation
+            $('#addScheduleForm').submit(function(e) {
+                e.preventDefault();
+                
+                // Check for subject error
+                if ($('.subject-error').length > 0) {
+                    alert('Please resolve subject conflicts before submitting');
+                    return false;
+                }
+                
+                // Validate at least one day is selected
+                if ($('input[name="days[]"]:checked').length === 0) {
+                    alert('Please select at least one day');
+                    return false;
+                }
+                
+                // Get selected days
+                const selectedDays = [];
+                $('input[name="days[]"]:checked').each(function() {
+                    selectedDays.push($(this).val());
+                });
+                
+                // Create a schedule for each selected day
+                let successCount = 0;
+                let errorCount = 0;
+                
+                // Show loading message
+                const loadingDiv = $('<div class="alert alert-info mt-3">Adding schedules...</div>');
+                $(this).append(loadingDiv);
+                
+                // Process each day
+                selectedDays.forEach(function(day) {
+                    const formData = new FormData();
+                    formData.append('teacher_id', $('#teacher').val());
+                    formData.append('subject', $('#subject').val());
+                    formData.append('grade_level', $('#gradeLevel').val());
+                    formData.append('section', $('#section').val());
+                    formData.append('day', day);
+                    formData.append('start_time', $('#startTime').val());
+                    formData.append('end_time', $('#endTime').val());
+                    formData.append('room', $('#room').val());
+                    formData.append('csrfmiddlewaretoken', $('[name=csrfmiddlewaretoken]').val());
+                    
                     $.ajax({
-                        url: '/get_sections_by_grade/',
-                        data: { 'grade_level': gradeLevel },
-                        dataType: 'json',
-                        success: function(data) {
-                            const sectionSelect = $('#filterSection');
-                            sectionSelect.empty();
-                            sectionSelect.append('<option value="">All Sections</option>');
-                            data.sections.forEach(section => {
-                                sectionSelect.append(`<option value="${section.id}">${section.section_id}</option>`);
-                            });
+                        url: "{% url 'add_schedule' %}",
+                        method: 'POST',
+                        data: formData,
+                        processData: false,
+                        contentType: false,
+                        success: function(response) {
+                            if (response.success) {
+                                successCount++;
+                            } else {
+                                errorCount++;
+                                console.error('Error adding schedule for ' + day + ':', response.message);
+                            }
+                            checkCompletion();
                         },
-                        error: function() {
-                            alert('Failed to load sections. Please try again.');
+                        error: function(xhr, status, error) {
+                            errorCount++;
+                            console.error('Error adding schedule for ' + day + ':', error);
+                            checkCompletion();
                         }
                     });
-                } else {
-                    $('#filterSection').empty().append('<option value="">All Sections</option>');
-                }
-            }
-        });
-
-        function loadTeachers() {
-            $.ajax({
-                url: '/get_teachers/',
-                dataType: 'json',
-                success: function(data) {
-                    const teacherSelect = $('#filterTeacher');
-                    teacherSelect.empty();
-                    teacherSelect.append('<option value="">All Teachers</option>');
-                    data.teachers.forEach(teacher => {
-                        teacherSelect.append(`<option value="${teacher.id}">${teacher.first_name} ${teacher.last_name}</option>`);
-                    });
-                },
-                error: function() {
-                    alert('Failed to load teachers. Please try again.');
-                }
-            });
-        }
-
-        function loadSections() {
-            $.ajax({
-                url: '/get_sections/',
-                dataType: 'json',
-                success: function(data) {
-                    const sectionSelect = $('#filterSection');
-                    sectionSelect.empty();
-                    sectionSelect.append('<option value="">All Sections</option>');
-                    data.sections.forEach(section => {
-                        sectionSelect.append(`<option value="${section.id}">${section.section_id} - Grade ${section.grade_level}</option>`);
-                    });
-                },
-                error: function() {
-                    alert('Failed to load sections. Please try again.');
-                }
-            });
-        }
-
-        function loadSubjects() {
-            $.ajax({
-                url: '/get_subjects/',
-                dataType: 'json',
-                success: function(data) {
-                    const subjectSelect = $('#subject');
-                    subjectSelect.empty();
-                    subjectSelect.append('<option value="">Select Subject</option>');
-                    data.subjects.forEach(subject => {
-                        subjectSelect.append(`<option value="${subject.id}">${subject.name}</option>`);
-                    });
-                },
-                error: function() {
-                    alert('Failed to load subjects. Please try again.');
-                }
-            });
-        }
-
-        function loadGradeLevels() {
-            // Fetch grade levels from the server
-            // For demo purposes, using static data
-            const gradeLevels = ["7", "8", "9", "10"];
-            const gradeLevelSelects = $('#filterGradeLevel, #gradeLevel');
-            gradeLevelSelects.each(function() {
-                const select = $(this);
-                select.empty();
-                select.append('<option value="">Select Grade Level</option>');
-                gradeLevels.forEach(level => {
-                    select.append(`<option value="${level}">Grade ${level}</option>`);
                 });
-            });
-        }
-
-        function loadSchedules() {
-            // Fetch schedules from the server
-            // For demo purposes, using static data
-            const schedules = [
-                {
-                    id: 1,
-                    teacher: "John Smith",
-                    subject: "Mathematics",
-                    grade_level: "7",
-                    section: "Section A",
-                    day: "Monday",
-                    time: "08:00 - 09:30",
-                    room: "Room 101"
+                
+                function checkCompletion() {
+                    if (successCount + errorCount === selectedDays.length) {
+                        loadingDiv.remove();
+                        if (errorCount === 0) {
+                            alert('All schedules added successfully!');
+                            $('#addScheduleModal').modal('hide');
+                            location.reload();
+                        } else {
+                            alert(`Added ${successCount} schedules, but ${errorCount} failed. Check console for details.`);
+                        }
+                    }
                 }
-            ];
-            const tableBody = $('#scheduleTable tbody');
-            tableBody.empty();
-            schedules.forEach(schedule => {
-                tableBody.append(`
-                    <tr>
-                        <td>${schedule.teacher}</td>
-                        <td>${schedule.subject}</td>
-                        <td>Grade ${schedule.grade_level}</td>
-                        <td>${schedule.section}</td>
-                        <td>${schedule.day}</td>
-                        <td>${schedule.time}</td>
-                        <td>${schedule.room}</td>
-                        <td>
-                            <button class="btn btn-sm btn-info edit-schedule" data-id="${schedule.id}">
-                                <i class="fas fa-edit"></i>
-                            </button>
-                            <button class="btn btn-sm btn-danger delete-schedule" data-id="${schedule.id}">
-                                <i class="fas fa-trash"></i>
-                            </button>
-                        </td>
-                    </tr>
-                `);
             });
-        }
-
-        function filterTable() {
-            // Implement filtering logic
-            // This function will filter the table based on selected filters
-        }
+        });
     </script>
 </body>
 </html>

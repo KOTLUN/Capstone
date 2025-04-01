@@ -8,6 +8,7 @@
     <!-- <link rel="stylesheet" href="{% static 'css/sidebar.css' %}"> -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+
     <style>
         .card {
             border-radius: 0.75rem;
@@ -87,8 +88,21 @@
                             <select name="school_year" class="form-select me-2 shadow-sm">
                                 <option value="">All School Years</option>
                                 {% for year in school_years %}
-                                    <option value="{{ year }}" {% if selected_year == year %}selected{% endif %}>{{ year }}</option>
+                                    <option value="{{ year }}" {% if selected_year == year %}selected{% endif %}>
+                                        {{ year }}
+                                    </option>
                                 {% endfor %}
+                                
+                                {% now "Y" as current_year %}
+                                {% with next_year=current_year|add:"1" %}
+                                    {% with school_year=current_year|stringformat:"s"|add:"-"|add:next_year|stringformat:"s" %}
+                                        {% if school_year not in school_years %}
+                                            <option value="{{ school_year }}" {% if selected_year == school_year %}selected{% endif %}>
+                                                {{ school_year }}
+                                            </option>
+                                        {% endif %}
+                                    {% endwith %}
+                                {% endwith %}
                             </select>
                             <button type="submit" class="btn btn-primary shadow-sm">
                                 <i class="fas fa-filter me-2"></i> Filter
@@ -580,5 +594,6 @@
     </script>
     
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+
 </body>
 </html>

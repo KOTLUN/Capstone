@@ -95,9 +95,9 @@ class Subject(models.Model):
 class Schedules(models.Model):
     subject = models.ForeignKey(Subject, on_delete=models.CASCADE)
     teacher_id = models.ForeignKey(Teachers, on_delete=models.CASCADE)
-    grade_level = models.CharField(max_length=50)
+    grade_level = models.IntegerField()
     section = models.ForeignKey('Sections', on_delete=models.CASCADE)
-    day = models.CharField(max_length=20)
+    day = models.CharField(max_length=10)
     start_time = models.TimeField()
     end_time = models.TimeField()
     room = models.CharField(max_length=50)
@@ -109,6 +109,7 @@ class Schedules(models.Model):
         verbose_name_plural = 'Schedules'
         # Add unique constraint to prevent conflicts
         unique_together = ['teacher_id', 'section', 'day', 'start_time']
+        db_table = 'schedules'
 
     def __str__(self):
         return f"{self.subject.name} - {self.section.section_id} ({self.day})"
@@ -116,10 +117,18 @@ class Schedules(models.Model):
     class Meta:
         ordering = ['-created_at']
 
+    @classmethod
+    def exists_time_conflict(cls, queryset, start_time, end_time):
+        """Check if there's a time conflict in the queryset."""
+        return queryset.filter(
+            models.Q(start_time__lt=end_time) & 
+            models.Q(end_time__gt=start_time)
+        ).exists()
+
 
 class Sections(models.Model):
     section_id = models.CharField(max_length=50, unique=True)
-    grade_level = models.CharField(max_length=50)
+    grade_level = models.IntegerField()
     adviser = models.ForeignKey(Teachers, on_delete=models.CASCADE, related_name='sections')
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

@@ -280,6 +280,43 @@
               </div>
             </div>
             
+            <!-- Add this section for template import -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h6 class="m-0 font-weight-bold text-primary">Import Template</h6>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <form id="templateForm" method="POST" enctype="multipart/form-data">
+                                {% csrf_token %}
+                                <div class="mb-3">
+                                    <label for="templateFile" class="form-label">Upload Template Excel File</label>
+                                    <input type="file" class="form-control" id="templateFile" name="template_file" accept=".xlsx,.xls">
+                                </div>
+                                <button type="button" class="btn btn-primary" id="importTemplateBtn">
+                                    <i class="fas fa-file-import"></i> Import Template
+                                </button>
+                                <button type="button" class="btn btn-secondary" id="downloadTemplateBtn">
+                                    <i class="fas fa-download"></i> Download Sample Template
+                                </button>
+                            </form>
+                        </div>
+                        <div class="col-md-6">
+                            <div id="templatePreview" style="display: none;">
+                                <h6>Template Preview</h6>
+                                <div class="table-responsive">
+                                    <table class="table table-bordered">
+                                        <thead id="previewHeader"></thead>
+                                        <tbody id="previewBody"></tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
             {% if messages %}
             <div class="messages mt-4">
                 {% for message in messages %}
@@ -564,6 +601,99 @@
                     alert('Error generating template: ' + error);
                     $('#generateTemplate').html('<i class="fas fa-download me-2"></i>Generate Template');
                     $('#generateTemplate').prop('disabled', false);
+                }
+            });
+        });
+
+        // Handle template import
+        $('#importTemplateBtn').click(function() {
+            var formData = new FormData();
+            var file = $('#templateFile')[0].files[0];
+            if (!file) {
+                alert('Please select a file first');
+                return;
+            }
+
+            formData.append('template_file', file);
+            formData.append('csrfmiddlewaretoken', $('input[name=csrfmiddlewaretoken]').val());
+            formData.append('subject', $('#subject').val());
+            formData.append('quarter', $('#quarter').val());
+            formData.append('school_year', $('#school_year').val());
+
+            $.ajax({
+                url: '{% url "preview_template" %}',
+                type: 'POST',
+                data: formData,
+                processData: false,
+                contentType: false,
+                success: function(response) {
+                    if (response.status === 'success') {
+                        // Show preview
+                        $('#templatePreview').show();
+                        
+                        // Build header
+                        var headerHtml = '<tr>';
+                        response.headers.forEach(function(header) {
+                            headerHtml += `<th>${header}</th>`;
+                        });
+                        headerHtml += '</tr>';
+                        $('#previewHeader').html(headerHtml);
+                        
+                        // Build body
+                        var bodyHtml = '';
+                        response.preview_data.forEach(function(row) {
+                            bodyHtml += '<tr>';
+                            row.forEach(function(cell) {
+                                bodyHtml += `<td>${cell || ''}</td>`;
+                            });
+                            bodyHtml += '</tr>';
+                        });
+                        $('#previewBody').html(bodyHtml);
+                    } else {
+                        alert('Error: ' + response.message);
+                    }
+                },
+                error: function(xhr, status, error) {
+                    alert('Error uploading template: ' + error);
+                }
+            });
+        });
+
+        // Handle template download
+        $('#downloadTemplateBtn').click(function() {
+            var subject = $('#subject').val();
+            var quarter = $('#quarter').val();
+            var school_year = $('#school_year').val();
+
+            if (!subject || !quarter || !school_year) {
+                alert('Please select subject, quarter, and school year first');
+                return;
+            }
+
+            $.ajax({
+                url: '{% url "generate_grade_template" %}',
+                type: 'POST',
+                data: {
+                    subject: subject,
+                    quarter: quarter,
+                    school_year: school_year,
+                    csrfmiddlewaretoken: $('input[name=csrfmiddlewaretoken]').val()
+                },
+                success: function(response) {
+                    if (response.status === 'success') {
+                        // Generate Excel file
+                        var wb = XLSX.utils.book_new();
+                        var ws = XLSX.utils.aoa_to_sheet(response.template_data);
+                        XLSX.utils.book_append_sheet(wb, ws, "Grades Template");
+                        
+                        // Download file
+                        XLSX.writeFile(wb, `${response.subject_name}_Q${response.quarter}_${response.school_year}_template.xlsx`);
+                    } else {
+                        alert('Error: ' + response.message);
+                    }
+                },
+                error: function(xhr, status, error) {
+                    alert('Error generating template: ' + error);
                 }
             });
         });

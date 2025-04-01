@@ -987,104 +987,121 @@ def confirm_import_grades_ajax(request):
         return JsonResponse({'status': 'error', 'message': str(e)})
 
 @login_required
-def generate_grade_template(request):
-    """Generate a CSV template with enrolled students for a specific subject"""
-    if request.method != 'GET':
+def preview_template(request):
+    """Preview the template based on uploaded file or generate a new one"""
+    if request.method != 'POST':
         return JsonResponse({'status': 'error', 'message': 'Invalid request method'})
     
     try:
-        # Get parameters from request
-        subject_id = request.GET.get('subject')
-        quarter = request.GET.get('quarter')
-        school_year = request.GET.get('school_year')
+        subject_id = request.POST.get('subject')
+        quarter = request.POST.get('quarter')
+        school_year = request.POST.get('school_year')
         
         if not all([subject_id, quarter, school_year]):
-            return JsonResponse({'status': 'error', 'message': 'Missing required parameters'})
+            return JsonResponse({'status': 'error', 'message': 'Missing required fields'})
         
-        # Get the teacher
+        subject = Subject.objects.get(id=subject_id)
         teacher = Teachers.objects.get(user=request.user)
         
-        # Get the subject
-        try:
-            subject = Subject.objects.get(id=subject_id)
-        except Subject.DoesNotExist:
-            return JsonResponse({'status': 'error', 'message': 'Subject not found'})
-        
-        # Verify that this teacher teaches this subject
-        subject_schedules = Schedules.objects.filter(
-            subject=subject,
-            teacher_id=teacher
-        )
-        
-        if not subject_schedules.exists():
-            return JsonResponse({'status': 'error', 'message': 'You are not assigned to teach this subject'})
-        
-        # Get all sections from these schedules
-        schedule_sections = [schedule.section for schedule in subject_schedules]
-        
-        # Get students enrolled in these sections
+        # Get enrolled students
         enrolled_students = Student.objects.filter(
-            enrollments__section__in=schedule_sections,
-            enrollments__status='Active'  # Only get active enrollments
+            enrollments__section__schedules__subject=subject,
+            enrollments__section__schedules__teacher_id=teacher,
+            enrollments__status='Active'
         ).distinct()
         
-        # Format student data for the template
-        students_data = []
-        for student in enrolled_students:
-            # Find the enrollment record for this student in one of the sections
-            enrollment = Enrollment.objects.filter(
-                student=student,
-                section__in=schedule_sections,
-                status='Active'
-            ).first()
+        headers = []
+        preview_data = []
+        
+        if 'template_file' in request.FILES:
+            # Read template from uploaded file
+            df = pd.read_excel(request.FILES['template_file'])
+            headers = df.columns.tolist()
             
-            if enrollment:
-                # Get existing grade if available
-                try:
-                    from TeacherPortal.models import Grade
-                    grade = Grade.objects.filter(
-                        student=student.student_id,
-                        course=subject.subject_id,
-                        quarter=quarter,
-                        school_year=school_year
-                    ).first()
-                    
-                    current_grade = grade.grade if grade else ""
-                except:
-                    current_grade = ""
-                
-                # Get section name - fix for the error
-                try:
-                    section_name = enrollment.section.section_name  # Try section_name first
-                except AttributeError:
-                    try:
-                        section_name = enrollment.section.grade_level  # Try grade_level if section_name doesn't exist
-                    except AttributeError:
-                        section_name = str(enrollment.section)  # Fall back to string representation
-                
-                # Add student to the list
-                students_data.append({
-                    'student_id': student.student_id,
-                    'student_name': f"{student.last_name}, {student.first_name} {student.middle_name if student.middle_name else ''}",
-                    'section': section_name,
-                    'current_grade': current_grade
-                })
+            # Get first few rows as sample data
+            preview_data = df.head(5).values.tolist()
+        else:
+            # Generate default template
+            headers = ['Student Name', subject.name]
+            
+            # Add sample student data
+            for student in enrolled_students[:5]:
+                preview_data.append([
+                    f"{student.last_name}, {student.first_name}",
+                    ""  # Empty grade column
+                ])
         
-        # Sort students by name
-        students_data.sort(key=lambda x: x['student_name'])
-        
-        # Return the data
         return JsonResponse({
             'status': 'success',
-            'subject_name': subject.name,
-            'quarter': quarter,
-            'school_year': school_year,
-            'students': students_data
+            'headers': headers,
+            'preview_data': preview_data
         })
         
     except Exception as e:
-        import traceback
-        print(f"Error in generate_grade_template: {str(e)}")
-        print(traceback.format_exc())
-        return JsonResponse({'status': 'error', 'message': str(e)})
+        return JsonResponse({
+            'status': 'error',
+            'message': str(e)
+        })
+
+@login_required
+def generate_grade_template(request):
+    """Generate grade template based on uploaded file or create new one"""
+    if request.method != 'POST':
+        return JsonResponse({'status': 'error', 'message': 'Invalid request method'})
+    
+    try:
+        subject_id = request.POST.get('subject')
+        quarter = request.POST.get('quarter')
+        school_year = request.POST.get('school_year')
+        
+        if not all([subject_id, quarter, school_year]):
+            return JsonResponse({'status': 'error', 'message': 'Missing required fields'})
+        
+        subject = Subject.objects.get(id=subject_id)
+        teacher = Teachers.objects.get(user=request.user)
+        
+        # Get enrolled students
+        enrolled_students = Student.objects.filter(
+            enrollments__section__schedules__subject=subject,
+            enrollments__section__schedules__teacher_id=teacher,
+            enrollments__status='Active'
+        ).distinct()
+        
+        template_data = []
+        
+        if 'template_file' in request.FILES:
+            # Use uploaded template structure
+            df = pd.read_excel(request.FILES['template_file'])
+            headers = df.columns.tolist()
+            template_data.append(headers)
+            
+            # Add enrolled students to template
+            for student in enrolled_students:
+                row = [""] * len(headers)  # Create empty row
+                row[0] = f"{student.last_name}, {student.first_name}"  # Add student name
+                template_data.append(row)
+        else:
+            # Create default template
+            template_data.append(['Student Name', subject.name])
+            
+            # Add enrolled students
+            for student in enrolled_students:
+                template_data.append([
+                    f"{student.last_name}, {student.first_name}",
+                    ""  # Empty grade column
+                ])
+        
+        return JsonResponse({
+            'status': 'success',
+            'template_data': template_data,
+            'subject_name': subject.name,
+            'quarter': quarter,
+            'school_year': school_year
+        })
+        
+    except Exception as e:
+        return JsonResponse({
+            'status': 'error',
+            'message': str(e)
+        })
 
