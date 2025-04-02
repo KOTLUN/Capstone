@@ -1340,3 +1340,78 @@ def schedules_view(request):
         'grade_levels': grade_levels,
     }
     return render(request, 'schedules.html', context)
+
+def get_section_schedule(request):
+    """API endpoint to get a section's weekly schedule"""
+    section_id = request.GET.get('section_id')
+    if not section_id:
+        return JsonResponse({'error': 'Section ID is required'}, status=400)
+    
+    try:
+        section = Sections.objects.get(id=section_id)
+        schedules = section.schedules_set.all().select_related('subject', 'teacher_id')
+        
+        # Generate time slots from 7 AM to 5 PM with exact hour ranges
+        time_slots = []
+        start_time = datetime.strptime('07:00', '%H:%M')
+        end_time = datetime.strptime('17:00', '%H:%M')
+        
+        while start_time < end_time:
+            next_time = start_time + timedelta(hours=1)
+            time_slots.append({
+                'start': start_time.time(),
+                'end': next_time.time(),
+                'display': f"{start_time.strftime('%I:%M %p')} - {next_time.strftime('%I:%M %p')}"
+            })
+            start_time = next_time
+
+        # Generate HTML for the schedule table
+        html = """
+        <div class="table-responsive">
+            <table class="table table-bordered">
+                <thead>
+                    <tr class="bg-light">
+                        <th style="width: 150px;">Time</th>
+                        <th>Monday</th>
+                        <th>Tuesday</th>
+                        <th>Wednesday</th>
+                        <th>Thursday</th>
+                        <th>Friday</th>
+                    </tr>
+                </thead>
+                <tbody>
+        """
+        
+        days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday']
+        
+        for time_slot in time_slots:
+            html += f"<tr><td class='font-weight-bold'>{time_slot['display']}</td>"
+            
+            for day in days:
+                html += "<td style='height: 100px; padding: 0.5rem;'>"
+                for schedule in schedules:
+                    if (schedule.day == day and 
+                        schedule.start_time <= time_slot['start'] and 
+                        schedule.end_time > time_slot['start']):
+                        html += f"""
+                            <div class="schedule-item bg-primary text-white p-2 rounded">
+                                <strong>{schedule.subject.name}</strong><br>
+                                <small>{schedule.teacher_id.first_name} {schedule.teacher_id.last_name}</small><br>
+                                <small>Room: {schedule.room}</small>
+                            </div>
+                        """
+                html += "</td>"
+            
+            html += "</tr>"
+        
+        html += "</tbody></table></div>"
+        
+        return JsonResponse({
+            'html': html,
+            'section_name': f"Grade {section.grade_level} - Section {section.section_id}"
+        })
+        
+    except Sections.DoesNotExist:
+        return JsonResponse({'error': 'Section not found'}, status=404)
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)

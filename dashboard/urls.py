@@ -50,6 +50,7 @@ urlpatterns = [
     path('add_schedule/', views.add_schedule, name='add_schedule'),
     path('get_sections_by_grade/', views.get_sections_by_grade, name='get_sections_by_grade'),
     path('get_available_time_slots/', views.get_available_time_slots, name='get_available_time_slots'),
+    path('get-section-schedule/', views.get_section_schedule, name='get_section_schedule'),
 ]
 
 if settings.DEBUG:
