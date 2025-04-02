@@ -12,11 +12,116 @@ from django.db import models
 from django.views.decorators.http import require_POST
 import json
 from django.core.serializers.json import DjangoJSONEncoder
+from django.db.models.functions import ExtractMonth
+from django.db.models import Q
+from collections import defaultdict
 
 
 # Create your views here.
 def dashboard_view(request):
-    return render(request, 'main.html')
+    # Get selected school year from request, default to current year
+    current_year = datetime.now().year
+    default_school_year = f"{current_year}-{current_year+1}"
+    selected_school_year = request.GET.get('school_year', default_school_year)
+
+    # Get total number of enrolled students for selected school year
+    total_students = Enrollment.objects.filter(
+        school_year=selected_school_year,
+        status='Active'
+    ).count()
+    
+    # Calculate student growth (comparing to last month for the selected school year)
+    last_month = datetime.now() - timedelta(days=30)
+    students_last_month = Enrollment.objects.filter(
+        school_year=selected_school_year,
+        status='Active',
+        enrollment_date__lt=last_month
+    ).count()
+    
+    if students_last_month > 0:
+        student_growth = ((total_students - students_last_month) / students_last_month) * 100
+    else:
+        student_growth = 0
+
+    # Get existing school years from enrollments
+    db_school_years = list(Enrollment.objects.values_list('school_year', flat=True).distinct().order_by('-school_year'))
+    
+    # Use default years if no data exists
+    default_years = [f"{year}-{year+1}" for year in range(current_year-2, current_year+1)]
+    school_years = db_school_years if db_school_years else default_years
+    
+    # Initialize school years data structure
+    school_years_data = {}
+    
+    for school_year in school_years:
+        try:
+            year_start = int(school_year.split('-')[0])
+            
+            # Get monthly enrollment data
+            monthly_data = (
+                Enrollment.objects
+                .filter(
+                    school_year=school_year,
+                    status='Active'
+                )
+                .annotate(month=ExtractMonth('enrollment_date'))
+                .values('month')
+                .annotate(count=Count('id'))
+            )
+
+            # Initialize monthly counts
+            monthly_counts = [0] * 12
+            for item in monthly_data:
+                month_index = item['month'] - 1
+                monthly_counts[month_index] = item['count']
+
+            # Get yearly data
+            yearly_labels = []
+            yearly_data = []
+            
+            for i in range(-3, 1):
+                year = year_start + i
+                year_range = f"{year}-{year+1}"
+                yearly_labels.append(year_range)
+                
+                count = Enrollment.objects.filter(
+                    school_year=year_range,
+                    status='Active'
+                ).count()
+                yearly_data.append(count)
+
+            school_years_data[school_year] = {
+                'monthly': {
+                    'labels': ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
+                    'data': monthly_counts
+                },
+                'yearly': {
+                    'labels': yearly_labels,
+                    'data': yearly_data
+                }
+            }
+            
+        except (ValueError, IndexError) as e:
+            print(f"Error processing school year {school_year}: {str(e)}")
+            continue
+
+    # Get simple counts for other stats
+    total_teachers = Teachers.objects.count()
+    total_sections = Sections.objects.count()
+
+    context = {
+        'total_students': total_students,
+        'student_growth': round(student_growth, 1),
+        'total_teachers': total_teachers,
+        'teacher_growth': 0,
+        'total_sections': total_sections,
+        'section_growth': 0,
+        'school_years_data': json.dumps(school_years_data),
+        'available_school_years': school_years,
+        'selected_school_year': selected_school_year  # Add selected year to context
+    }
+    
+    return render(request, 'main.html', context)
 
 def students_view(request):
     # Get all students
@@ -1214,3 +1319,24 @@ def get_available_time_slots(request):
             available_slots.append(slot)
 
     return JsonResponse({'time_slots': available_slots})
+
+def schedules_view(request):
+    # Existing code...
+    schedules = Schedules.objects.select_related('teacher_id', 'subject', 'section').all()
+    sections = Sections.objects.prefetch_related(
+        'schedules_set',
+        'schedules_set__subject',
+        'schedules_set__teacher_id'
+    ).all()
+    teachers = Teachers.objects.all()
+    subjects = Subject.objects.all()
+    grade_levels = range(7, 13)  # Grades 7-12
+
+    context = {
+        'schedules': schedules,
+        'sections': sections,
+        'teachers': teachers,
+        'subjects': subjects,
+        'grade_levels': grade_levels,
+    }
+    return render(request, 'schedules.html', context)

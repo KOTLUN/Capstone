@@ -163,6 +163,86 @@
                     </div>
                 </div>
             </div>
+
+            <!-- Add this after the schedule table card -->
+            <div class="row mt-4">
+                <div class="col-12">
+                    <div class="card">
+                        <div class="card-header bg-primary text-white">
+                            <h5 class="mb-0">Available Sections</h5>
+                        </div>
+                        <div class="card-body">
+                            <!-- Search and Filter -->
+                            <div class="row mb-4">
+                                <div class="col-md-6">
+                                    <div class="input-group">
+                                        <span class="input-group-text"><i class="fas fa-search"></i></span>
+                                        <input type="text" class="form-control" id="searchSection" placeholder="Search sections...">
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="input-group">
+                                        <span class="input-group-text">Filter by Grade</span>
+                                        <select class="form-select" id="filterGradeLevel">
+                                            <option value="all" selected>All Grade Levels</option>
+                                            {% for grade in grade_levels %}
+                                            <option value="{{ grade }}">Grade {{ grade }}</option>
+                                            {% endfor %}
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Sections Card View -->
+                            <div class="row" id="sectionsContainer">
+                                {% for section in sections %}
+                                <div class="col-md-4 section-item mb-4" data-grade="{{ section.grade_level }}">
+                                    <div class="card section-card h-100">
+                                        <div class="card-header {% cycle 'bg-primary' 'bg-success' 'bg-info' 'bg-warning' 'bg-danger' 'bg-secondary' %} text-white">
+                                            <h5 class="card-title mb-0">Grade {{ section.grade_level }}</h5>
+                                        </div>
+                                        <div class="card-body">
+                                            <h6 class="card-subtitle mb-2">Section: {{ section.section_id }}</h6>
+                                            <p class="card-text">
+                                                <strong>Adviser:</strong> {{ section.adviser.first_name }} {{ section.adviser.last_name }}
+                                            </p>
+                                            <div class="mt-3">
+                                                <h6 class="mb-2">Assigned Subjects:</h6>
+                                                <ul class="list-group list-group-flush">
+                                                    {% for schedule in section.schedules_set.all %}
+                                                    <li class="list-group-item px-0">
+                                                        <div class="d-flex justify-content-between align-items-center">
+                                                            <span>{{ schedule.subject.name }}</span>
+                                                            <small class="text-muted">
+                                                                {{ schedule.day }} {{ schedule.start_time|time:"g:i A" }}-{{ schedule.end_time|time:"g:i A" }}
+                                                            </small>
+                                                        </div>
+                                                        <small class="text-muted">
+                                                            Teacher: {{ schedule.teacher_id.first_name }} {{ schedule.teacher_id.last_name }}
+                                                        </small>
+                                                    </li>
+                                                    {% empty %}
+                                                    <li class="list-group-item px-0 text-muted">
+                                                        <i class="fas fa-info-circle me-2"></i>No subjects assigned yet
+                                                    </li>
+                                                    {% endfor %}
+                                                </ul>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                {% empty %}
+                                <div class="col-12 text-center py-4">
+                                    <i class="fas fa-folder-open fa-3x text-muted mb-3"></i>
+                                    <h5>No Sections Available</h5>
+                                    <p class="text-muted">No sections have been created yet.</p>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
         </div>
     </div>
@@ -417,7 +497,60 @@
                     }
                 }
             });
+
+            // Section search and filter functionality
+            const searchSection = document.getElementById('searchSection');
+            const filterGradeLevel = document.getElementById('filterGradeLevel');
+            const sectionItems = document.querySelectorAll('.section-item');
+
+            function filterSections() {
+                const searchTerm = searchSection.value.toLowerCase();
+                const gradeFilter = filterGradeLevel.value;
+                
+                sectionItems.forEach(item => {
+                    const sectionText = item.textContent.toLowerCase();
+                    const gradeLevel = item.getAttribute('data-grade');
+                    
+                    const matchesSearch = sectionText.includes(searchTerm);
+                    const matchesGrade = gradeFilter === 'all' || gradeLevel === gradeFilter;
+                    
+                    item.style.display = matchesSearch && matchesGrade ? '' : 'none';
+                });
+            }
+
+            if (searchSection) {
+                searchSection.addEventListener('input', filterSections);
+            }
+            
+            if (filterGradeLevel) {
+                filterGradeLevel.addEventListener('change', filterSections);
+            }
         });
     </script>
+
+    <!-- Add these styles -->
+    <style>
+        .section-card {
+            transition: transform 0.3s, box-shadow 0.3s;
+        }
+        
+        .section-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+        }
+        
+        .list-group-item {
+            border-left: none;
+            border-right: none;
+        }
+        
+        .list-group-item:first-child {
+            border-top: none;
+        }
+        
+        .list-group-item:last-child {
+            border-bottom: none;
+        }
+    </style>
 </body>
 </html>

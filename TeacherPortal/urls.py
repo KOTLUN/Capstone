@@ -31,6 +31,8 @@ urlpatterns = [
     path('confirm-import-grades-ajax/', views.confirm_import_grades_ajax, name='confirm_import_grades_ajax'),
     path('preview-template/', views.preview_template, name='preview_template'),
     path('generate-template/', views.generate_grade_template, name='generate_grade_template'),
+    path('get-enrolled-students/', views.get_enrolled_students, name='get_enrolled_students'),
+    path('student-registration/', views.student_registration, name='student_registration'),
 ]
 
 

@@ -13,45 +13,58 @@ from django.utils import timezone
 
 @login_required
 def profile_view(request):
-    # Get the teacher information based on the logged-in user
     try:
-        # Try to get the teacher by the associated user account
+        # Get the teacher
         teacher = Teachers.objects.get(user=request.user)
         
-        # Print teacher info for debugging
-        print(f"Found teacher: {teacher.first_name} {teacher.last_name}")
+        # Get all schedules with related data
+        teacher_schedules = Schedules.objects.filter(
+            teacher_id=teacher
+        ).select_related(
+            'subject',
+            'section'
+        )
+
+        # Organize subjects by section
+        subjects_by_section = {}
+        for schedule in teacher_schedules:
+            if schedule.section not in subjects_by_section:
+                subjects_by_section[schedule.section] = []
+            
+            subjects_by_section[schedule.section].append({
+                'subject': schedule.subject,
+                'schedule': schedule
+            })
+
+        # Get unique sections and subjects for badges
+        section_subjects = []
+        teacher_sections = []
         
-        # Get sections where this teacher is the adviser
-        teacher_sections = Sections.objects.filter(adviser=teacher)
-        
-        # Get subjects from these sections through the schedules relationship
-        section_subjects = Subject.objects.filter(schedules__section__in=teacher_sections).distinct()
-        
+        for schedule in teacher_schedules:
+            if schedule.subject not in section_subjects:
+                section_subjects.append(schedule.subject)
+            if schedule.section not in teacher_sections:
+                teacher_sections.append(schedule.section)
+
         context = {
             'teacher': teacher,
             'section_subjects': section_subjects,
-            'teacher_sections': teacher_sections
+            'teacher_sections': teacher_sections,
+            'subjects_by_section': subjects_by_section
         }
+        
         return render(request, 'Profile.html', context)
+        
     except Teachers.DoesNotExist:
-        # Print error for debugging
-        print(f"No teacher found for user: {request.user.username}")
-        
-        # Try to get all teachers to see what's available
-        all_teachers = Teachers.objects.all()
-        print(f"Available teachers: {[t.username for t in all_teachers]}")
-        
-        # If no teacher profile is found, create a basic context with user info
         context = {
-            'error': 'Teacher profile not found',
+            'error': 'Teacher profile not found. Please make sure your account is properly linked to a teacher profile.',
             'user': request.user
         }
         return render(request, 'Profile.html', context)
     except Exception as e:
-        # Catch any other exceptions
-        print(f"Error retrieving teacher: {str(e)}")
+        print(f"Error in profile_view: {str(e)}")  # Add logging for debugging
         context = {
-            'error': f'Error: {str(e)}',
+            'error': f'An error occurred: {str(e)}',
             'user': request.user
         }
         return render(request, 'Profile.html', context)
@@ -1103,5 +1116,105 @@ def generate_grade_template(request):
         return JsonResponse({
             'status': 'error',
             'message': str(e)
+        })
+
+@login_required
+def student_registration(request):
+    try:
+        # Get the current teacher
+        teacher = Teachers.objects.get(user=request.user)
+        
+        if request.method == 'POST':
+            try:
+                # Check if student ID already exists
+                student_id = request.POST.get('student_id')
+                if Student.objects.filter(student_id=student_id).exists():
+                    messages.error(request, 'Student ID already exists!')
+                    return redirect('student_registration')
+
+                # Check if email already exists
+                email = request.POST.get('email')
+                if Student.objects.filter(email=email).exists():
+                    messages.error(request, 'Email already exists!')
+                    return redirect('student_registration')
+
+                # Create new student in the dashboard's Student model
+                student = Student.objects.create(
+                    student_id=student_id,
+                    first_name=request.POST.get('first_name'),
+                    middle_name=request.POST.get('middle_name'),
+                    last_name=request.POST.get('last_name'),
+                    gender=request.POST.get('gender'),
+                    religion=request.POST.get('religion'),
+                    date_of_birth=request.POST.get('date_of_birth'),
+                    email=email,
+                    mobile_number=request.POST.get('mobile_number'),
+                    address=request.POST.get('address'),
+                    school_year=request.POST.get('school_year'),
+                    status='Not Enrolled',  # Default status
+                    has_account=False  # Default value
+                )
+                
+                # Handle student photo if uploaded
+                if 'student_photo' in request.FILES:
+                    student.student_photo = request.FILES['student_photo']
+                    student.save()
+                
+                messages.success(request, f'Student {student.first_name} {student.last_name} registered successfully!')
+                return redirect('student_registration')
+                
+            except Exception as e:
+                messages.error(request, f'Error registering student: {str(e)}')
+                return redirect('student_registration')
+        
+        return render(request, 'Studentregistration.html', {'teacher': teacher})
+        
+    except Teachers.DoesNotExist:
+        messages.error(request, 'Teacher profile not found')
+        return redirect('profile')
+
+def get_enrolled_students(request):
+    """
+    View function to get enrolled students for a specific section
+    """
+    try:
+        section_id = request.GET.get('section_id')
+
+        # Get the section using the section's ID from the URL
+        section = Sections.objects.get(id=section_id)  # Changed from section_id to id
+        
+        # Get enrolled students for this section
+        enrolled_students = Enrollment.objects.filter(
+            section=section,
+            status='Active'  # Only get active enrollments
+        ).select_related('student')
+
+        students_data = []
+        for enrollment in enrolled_students:
+            student = enrollment.student
+            students_data.append({
+                'student_id': student.student_id,
+                'first_name': student.first_name,
+                'last_name': student.last_name,
+                'gender': student.gender,
+                'status': enrollment.status
+            })
+
+        return JsonResponse({
+            'success': True,
+            'students': students_data
+        })
+
+    except Sections.DoesNotExist:
+        print(f"Section not found with ID: {section_id}")  # Add logging
+        return JsonResponse({
+            'success': False,
+            'error': f'Section not found with ID: {section_id}'
+        })
+    except Exception as e:
+        print(f"Error in get_enrolled_students: {str(e)}")  # Add logging
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
         })
 

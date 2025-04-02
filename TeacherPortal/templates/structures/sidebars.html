@@ -178,6 +178,9 @@ html, body {
             <a href="{% url 'teacher_schedule' %}" class="nav-link {% if request.path == '/teacher_schedule/' %}active{% endif %}">
               <i class="fas fa-calendar-alt"></i> <span>Schedule</span>
             </a>
+            <a href="{% url 'student_registration' %}" class="nav-link {% if request.path == '/student_registration/' %}active{% endif %}">
+              <i class="fas fa-user-plus"></i> <span>Student Registration</span>
+            </a>
             <a href="{% url 'import_grades' %}" class="nav-link {% if request.path == '/import_grades/' %}active{% endif %}">
               <i class="fas fa-chart-line"></i> <span>Grades</span>
             </a>

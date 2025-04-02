@@ -82,9 +82,18 @@
                     <div class="card border-0 rounded-4 shadow-sm">
                         <div class="card-header bg-white d-flex justify-content-between align-items-center p-4 border-0">
                             <h5 class="card-title mb-0 fw-bold">Student Enrollment Trends</h5>
-                            <div class="btn-group" role="group" aria-label="Chart period">
-                                <button class="btn btn-sm btn-primary active" onclick="updateChart('monthly')">Monthly</button>
-                                <button class="btn btn-sm btn-outline-primary" onclick="updateChart('yearly')">Yearly</button>
+                            <div class="d-flex gap-3 align-items-center">
+                                <select class="form-select form-select-sm" id="schoolYearSelect" style="width: auto;">
+                                    {% for year in available_school_years %}
+                                        <option value="{{ year }}" {% if year == selected_school_year %}selected{% endif %}>
+                                            SY {{ year }}
+                                        </option>
+                                    {% endfor %}
+                                </select>
+                                <div class="btn-group" role="group" aria-label="Chart period">
+                                    <button class="btn btn-sm btn-primary active" onclick="updateChart('monthly')">Monthly</button>
+                                    <button class="btn btn-sm btn-outline-primary" onclick="updateChart('yearly')">Yearly</button>
+                                </div>
                             </div>
                         </div>
                         <div class="card-body p-4">
@@ -106,16 +115,6 @@
                         </div>
                     </div>
                 </div>
-                <div class="col-md-6 mb-4">
-                    <div class="card border-0 rounded-4 shadow-sm h-100">
-                        <div class="card-header bg-white p-4 border-0">
-                            <h5 class="card-title mb-0 fw-bold">Monthly Attendance Rate</h5>
-                        </div>
-                        <div class="card-body p-4">
-                            <canvas id="attendanceChart" height="250"></canvas>
-                        </div>
-                    </div>
-                </div>
             </div>
         </div>
     </div>
@@ -125,18 +124,43 @@
 
     <!-- Charts Script -->
     <script>
-    let studentChart, genderChart, attendanceChart;
+    let studentChart, genderChart;
+    
+    // Parse the school years data from the server
+    const schoolYearData = JSON.parse('{{ school_years_data|safe }}');
+    console.log("School Year Data:", schoolYearData);
 
     document.addEventListener('DOMContentLoaded', function() {
+        const schoolYearSelect = document.getElementById('schoolYearSelect');
+        
+        // Add event listener for school year select to update total students
+        schoolYearSelect.addEventListener('change', function() {
+            const selectedYear = this.value;
+            // Reload page with selected school year
+            window.location.href = `?school_year=${selectedYear}`;
+        });
+
+        // Get initial school year
+        const initialYear = schoolYearSelect.value;
+        console.log("Initial Year:", initialYear); // Debug logging
+        
+        const initialData = schoolYearData[initialYear] || {
+            monthly: {
+                labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
+                data: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+            }
+        };
+        console.log("Initial Data:", initialData); // Debug logging
+
         // Student Enrollment Chart
         const studentCtx = document.getElementById('studentChart').getContext('2d');
         studentChart = new Chart(studentCtx, {
             type: 'line',
             data: {
-                labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
+                labels: initialData.monthly.labels,
                 datasets: [{
-                    label: 'Total Students',
-                    data: [150, 180, 210, 240, 270, 300, 330, 360, 390, 420, 450, 480],
+                    label: 'Total Enrollments',
+                    data: initialData.monthly.data,
                     backgroundColor: 'rgba(13, 110, 253, 0.2)',
                     borderColor: 'rgba(13, 110, 253, 1)',
                     borderWidth: 2,
@@ -151,6 +175,13 @@
                     legend: {
                         display: true,
                         position: 'top'
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                return `Enrollments: ${context.raw}`;
+                            }
+                        }
                     }
                 },
                 scales: {
@@ -158,7 +189,7 @@
                         beginAtZero: true,
                         title: {
                             display: true,
-                            text: 'Number of Students'
+                            text: 'Number of Enrollments'
                         }
                     }
                 }
@@ -192,80 +223,50 @@
             }
         });
 
-        // Attendance Rate Chart
-        const attendanceCtx = document.getElementById('attendanceChart').getContext('2d');
-        attendanceChart = new Chart(attendanceCtx, {
-            type: 'bar',
-            data: {
-                labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
-                datasets: [{
-                    label: 'Attendance Rate (%)',
-                    data: [95, 93, 94, 92, 96, 95],
-                    backgroundColor: 'rgba(20, 184, 166, 0.8)',
-                    borderRadius: 6
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                scales: {
-                    y: {
-                        beginAtZero: true,
-                        max: 100
-                    }
-                }
-            }
+        // Add event listener for school year select
+        schoolYearSelect.addEventListener('change', function() {
+            const period = document.querySelector('.btn-primary').textContent.trim().toLowerCase();
+            updateChart(period);
         });
     });
 
     function updateChart(period) {
-        const yearlyData = {
-            labels: ['2020', '2021', '2022', '2023'],
+        const selectedYear = document.getElementById('schoolYearSelect').value;
+        const yearData = schoolYearData[selectedYear];
+
+        if (!yearData) {
+            console.error('No data found for year:', selectedYear);
+            return;
+        }
+
+        const chartData = {
+            labels: yearData[period].labels,
             datasets: [{
-                label: 'Total Students',
-                data: [300, 450, 600, 480],
-                backgroundColor: 'rgba(20, 184, 166, 0.2)',
-                borderColor: 'rgba(20, 184, 166, 1)',
+                label: period === 'yearly' ? 'Yearly Enrollments' : 'Monthly Enrollments',
+                data: yearData[period].data,
+                backgroundColor: period === 'yearly' ? 'rgba(20, 184, 166, 0.2)' : 'rgba(13, 110, 253, 0.2)',
+                borderColor: period === 'yearly' ? 'rgba(20, 184, 166, 1)' : 'rgba(13, 110, 253, 1)',
                 borderWidth: 2,
                 fill: true,
                 tension: 0.4
             }]
         };
 
-        const monthlyData = {
-            labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
-            datasets: [{
-                label: 'Total Students',
-                data: [150, 180, 210, 240, 270, 300, 330, 360, 390, 420, 450, 480],
-                backgroundColor: 'rgba(13, 110, 253, 0.2)',
-                borderColor: 'rgba(13, 110, 253, 1)',
-                borderWidth: 2,
-                fill: true,
-                tension: 0.4
-            }]
-        };
-
-        studentChart.data = period === 'yearly' ? yearlyData : monthlyData;
+        studentChart.data = chartData;
+        studentChart.options.scales.y.title.text = `Number of ${period === 'yearly' ? 'Yearly' : 'Monthly'} Enrollments`;
         studentChart.update();
 
         // Update button states
         document.querySelectorAll('.btn-outline-primary, .btn-primary').forEach(btn => {
-            if (period === 'yearly') {
-                if (btn.textContent.trim() === 'Yearly') {
-                    btn.classList.remove('btn-outline-primary');
-                    btn.classList.add('btn-primary');
-                } else {
-                    btn.classList.remove('btn-primary');
-                    btn.classList.add('btn-outline-primary');
-                }
+            const isYearly = period === 'yearly';
+            const buttonIsYearly = btn.textContent.trim() === 'Yearly';
+            
+            if (isYearly === buttonIsYearly) {
+                btn.classList.remove('btn-outline-primary');
+                btn.classList.add('btn-primary');
             } else {
-                if (btn.textContent.trim() === 'Monthly') {
-                    btn.classList.remove('btn-outline-primary');
-                    btn.classList.add('btn-primary');
-                } else {
-                    btn.classList.remove('btn-primary');
-                    btn.classList.add('btn-outline-primary');
-                }
+                btn.classList.remove('btn-primary');
+                btn.classList.add('btn-outline-primary');
             }
         });
     }
