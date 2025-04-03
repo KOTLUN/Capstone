@@ -42,6 +42,22 @@
             <h1 class="h3 mb-0 text-gray-800">Student Enrollment</h1>
         </div>
 
+        <div class="mb-3 d-flex justify-content-between align-items-center">
+            <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#promoteStudentsModal">
+                <i class="fas fa-graduation-cap me-2"></i>Promote Students
+            </button>
+            <div>
+                <select class="form-select form-select-sm" id="schoolYearFilter" style="width: auto;">
+                    <option value="all">All School Years</option>
+                    {% for year in school_years %}
+                        <option value="{{ year }}" {% if year == selected_year %}selected{% endif %}>
+                            {{ year }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+
         <!-- Display Messages -->
         {% if messages %}
             {% for message in messages %}
@@ -89,9 +105,12 @@
             </div>
         </div>
 
+        <!-- Add this button above your enrollment table -->
+       
+
         <!-- Enrollments Table Card -->
         <div class="card shadow mb-4">
-            <div class="card-header py-3">
+            <div class="card-header py-3 d-flex justify-content-between align-items-center">
                 <h6 class="m-0 fw-bold text-primary">Current Enrollments</h6>
             </div>
             <div class="card-body">
@@ -120,7 +139,12 @@
                                 <td>{{ enrollment.section.subject.name }}</td>
                                 <td>{{ enrollment.school_year }}</td>
                                 <td>
-                                    <span class="badge {% if enrollment.status == 'Active' %}bg-success{% elif enrollment.status == 'Withdrawn' %}bg-warning{% elif enrollment.status == 'Completed' %}bg-info{% endif %}">
+                                    <span class="badge {% if enrollment.status == 'Active' %}bg-success
+                                                      {% elif enrollment.status == 'Withdrawn' %}bg-warning
+                                                      {% elif enrollment.status == 'Completed' %}bg-info
+                                                      {% elif enrollment.status == 'Dropped' %}bg-danger
+                                                      {% elif enrollment.status == 'Transferred' %}bg-primary
+                                                      {% endif %}">
                                         {{ enrollment.status }}
                                     </span>
                                 </td>
@@ -194,7 +218,65 @@
                                 <option value="Active">Active</option>
                                 <option value="Withdrawn">Withdrawn</option>
                                 <option value="Completed">Completed</option>
+                                <option value="Dropped">Dropped</option>
+                                <option value="Transferred">Transferred</option>
                             </select>
+                        </div>
+                        <div id="status-specific-fields" class="d-none">
+                            <!-- Fields for Dropped status -->
+                            <div id="dropped-fields" class="status-fields">
+                                <div class="mb-3">
+                                    <label class="form-label">Drop Date</label>
+                                    <input type="date" class="form-control" name="drop_date" 
+                                           value="{% now 'Y-m-d' %}" required>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Reason for Dropping</label>
+                                    <textarea class="form-control" name="drop_reason"></textarea>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Remarks</label>
+                                    <textarea class="form-control" name="drop_remarks"></textarea>
+                                </div>
+                            </div>
+
+                            <!-- Fields for Transferred status -->
+                            <div id="transferred-fields" class="status-fields">
+                                <div class="mb-3">
+                                    <label class="form-label">Transfer Date</label>
+                                    <input type="date" class="form-control" name="transfer_date" 
+                                           value="{% now 'Y-m-d' %}" required>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Transfer School</label>
+                                    <input type="text" class="form-control" name="transfer_school">
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Reason for Transfer</label>
+                                    <textarea class="form-control" name="transfer_reason"></textarea>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Remarks</label>
+                                    <textarea class="form-control" name="transfer_remarks"></textarea>
+                                </div>
+                            </div>
+
+                            <!-- Fields for Completed status -->
+                            <div id="completed-fields" class="status-fields">
+                                <div class="mb-3">
+                                    <label class="form-label">Completion Date</label>
+                                    <input type="date" class="form-control" name="completion_date" 
+                                           value="{% now 'Y-m-d' %}" required>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Final Grade</label>
+                                    <input type="number" step="0.01" class="form-control" name="final_grade">
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Remarks</label>
+                                    <textarea class="form-control" name="completion_remarks"></textarea>
+                                </div>
+                            </div>
                         </div>
                     </div>
                     <div class="modal-footer">
@@ -332,7 +414,195 @@
                     alert.alert('close');
                 }, 5000);
             });
+
+            // Handle school year and grade level change
+            $('select[name="from_school_year"], select[name="current_grade"]').change(function() {
+                loadEligibleStudents();
+            });
+
+            function loadEligibleStudents() {
+                const schoolYear = $('select[name="from_school_year"]').val();
+                const gradeLevel = $('select[name="current_grade"]').val();
+                
+                $('#eligibleStudentsTable tbody').html(
+                    '<tr><td colspan="6" class="text-center">' +
+                    '<div class="spinner-border" role="status">' +
+                    '<span class="visually-hidden">Loading...</span></div></td></tr>'
+                );
+
+                $.ajax({
+                    url: '{% url "get_eligible_students" %}',
+                    data: {
+                        school_year: schoolYear,
+                        grade_level: gradeLevel
+                    },
+                    success: function(response) {
+                        let html = '';
+                        response.students.forEach(student => {
+                            html += `
+                                <tr>
+                                    <td>
+                                        <input type="checkbox" name="student_ids[]" 
+                                               value="${student.id}" 
+                                               ${student.is_eligible ? '' : 'disabled'}>
+                                    </td>
+                                    <td>${student.student_id}</td>
+                                    <td>${student.name}</td>
+                                    <td>${student.grade_level}</td>
+                                    <td>${student.school_year}</td>
+                                    <td>${student.overall_grade}</td>
+                                    <td>
+                                        <span class="badge ${student.status === 'Active' ? 'bg-success' :
+                                                           student.status === 'Withdrawn' ? 'bg-warning' :
+                                                           student.status === 'Completed' ? 'bg-info' :
+                                                           student.status === 'Dropped' ? 'bg-danger' :
+                                                           student.status === 'Transferred' ? 'bg-primary' : 'bg-secondary'}">
+                                            ${student.status}
+                                        </span>
+                                    </td>
+                                </tr>
+                            `;
+                        });
+                        $('#eligibleStudentsTable tbody').html(html);
+                    },
+                    error: function() {
+                        $('#eligibleStudentsTable tbody').html(
+                            '<tr><td colspan="6" class="text-center text-danger">' +
+                            'Error loading students. Please try again.</td></tr>'
+                        );
+                    }
+                });
+            }
+
+            // Handle select all checkbox
+            $('#selectAllStudents').change(function() {
+                $('input[name="student_ids[]"]:not(:disabled)').prop('checked', $(this).is(':checked'));
+            });
+
+            // Form submission
+            $('#promoteStudentsForm').submit(function(e) {
+                e.preventDefault();
+                
+                if (!$('input[name="student_ids[]"]:checked').length) {
+                    alert('Please select at least one student to promote.');
+                    return;
+                }
+
+                if (!confirm('Are you sure you want to promote the selected students? This action cannot be undone.')) {
+                    return;
+                }
+
+                $.ajax({
+                    url: $(this).attr('action'),
+                    method: 'POST',
+                    data: $(this).serialize(),
+                    success: function(response) {
+                        if (response.success) {
+                            alert('Students promoted successfully!');
+                            location.reload();
+                        } else {
+                            alert('Error: ' + response.error);
+                        }
+                    },
+                    error: function() {
+                        alert('Error promoting students. Please try again.');
+                    }
+                });
+            });
+
+            // Add this to your existing script
+            $('#edit_status').change(function() {
+                const status = $(this).val();
+                const statusFields = $('#status-specific-fields');
+                
+                // Hide all status-specific fields first
+                $('.status-fields').hide();
+                statusFields.addClass('d-none');
+                
+                // Show fields based on selected status
+                if (status === 'Dropped') {
+                    $('#dropped-fields').show();
+                    statusFields.removeClass('d-none');
+                } else if (status === 'Transferred') {
+                    $('#transferred-fields').show();
+                    statusFields.removeClass('d-none');
+                } else if (status === 'Completed') {
+                    $('#completed-fields').show();
+                    statusFields.removeClass('d-none');
+                }
+            });
         });
     </script>
+
+    <!-- Add this modal at the bottom of your file, before closing body tag -->
+    <div class="modal fade" id="promoteStudentsModal" tabindex="-1">
+        <div class="modal-dialog modal-xl">
+            <div class="modal-content">
+                <div class="modal-header bg-success text-white">
+                    <h5 class="modal-title">Promote Students</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="promoteStudentsForm" method="POST" action="{% url 'promote_students' %}">
+                        {% csrf_token %}
+                        <div class="row mb-3">
+                            <div class="col-md-4">
+                                <label class="form-label">From School Year</label>
+                                <select class="form-select" name="from_school_year" required>
+                                    <option value="all">All School Years</option>
+                                    {% for year in school_years %}
+                                        <option value="{{ year }}">{{ year }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">To School Year</label>
+                                <input type="text" class="form-control" name="to_school_year" 
+                                       placeholder="e.g., 2024-2025" required>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Grade Level to Promote</label>
+                                <select class="form-select" name="current_grade" required>
+                                    <option value="Grade 7">Grade 7 to 8</option>
+                                    <option value="Grade 8">Grade 8 to 9</option>
+                                    <option value="Grade 9">Grade 9 to 10</option>
+                                    <option value="Grade 10">Grade 10 to 11</option>
+                                    <option value="Grade 11">Grade 11 to 12</option>
+                                </select>
+                            </div>
+                        </div>
+                        
+                        <div class="table-responsive">
+                            <table class="table table-bordered" id="eligibleStudentsTable">
+                                <thead>
+                                    <tr>
+                                        <th>
+                                            <input type="checkbox" id="selectAllStudents">
+                                        </th>
+                                        <th>Student ID</th>
+                                        <th>Name</th>
+                                        <th>Current Grade</th>
+                                        <th>School Year</th>
+                                        <th>Overall Grade</th>
+                                        <th>Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <!-- Will be populated via AJAX -->
+                                </tbody>
+                            </table>
+                        </div>
+                        
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                            <button type="submit" class="btn btn-success" id="promoteButton">
+                                Promote Selected Students
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
 </body>
 </html>

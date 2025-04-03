@@ -142,7 +142,11 @@
                                         <td>{{ student.email }}</td>
                                         <td>{{ student.mobile_number }}</td>
                                         <td>
-                                            <span class="badge {% if student.status == 'Enrolled' %}bg-success{% elif student.status == 'Not Enrolled' %}bg-secondary{% elif student.status == 'Transferred' %}bg-warning text-dark{% elif student.status == 'Dropped' %}bg-danger{% endif %} rounded-pill">
+                                            <span class="badge {% if student.status == 'Enrolled' %}bg-success
+                                                              {% elif student.status == 'Not Enrolled' %}bg-secondary
+                                                              {% elif student.status == 'Transferred' %}bg-warning text-dark
+                                                              {% elif student.status == 'Dropped' %}bg-danger
+                                                              {% elif student.status == 'Completed' %}bg-info{% endif %} rounded-pill">
                                                 {{ student.status }}
                                             </span>
                                         </td>
@@ -273,6 +277,7 @@
                                 <option value="Enrolled">Enrolled</option>
                                 <option value="Transferred">Transferred</option>
                                 <option value="Dropped">Dropped</option>
+                                <option value="Completed">Completed</option>
                             </select>
                         </div>
                         <div class="modal-footer px-0 pb-0">

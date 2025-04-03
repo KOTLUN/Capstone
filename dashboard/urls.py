@@ -51,6 +51,9 @@ urlpatterns = [
     path('get_sections_by_grade/', views.get_sections_by_grade, name='get_sections_by_grade'),
     path('get_available_time_slots/', views.get_available_time_slots, name='get_available_time_slots'),
     path('get-section-schedule/', views.get_section_schedule, name='get_section_schedule'),
+    path('get-enrolled-students/', views.get_enrolled_students, name='get_enrolled_students'),
+    path('get-eligible-students/', views.get_eligible_students, name='get_eligible_students'),
+    path('promote-students/', views.promote_students, name='promote_students'),
 ]
 
 if settings.DEBUG:

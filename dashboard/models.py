@@ -19,7 +19,8 @@ class Student(models.Model):
                              choices=[('Not Enrolled', 'Not Enrolled'),
                                      ('Enrolled', 'Enrolled'), 
                                      ('Transferred', 'Transferred'),
-                                     ('Dropped', 'Dropped')])
+                                     ('Dropped', 'Dropped'),
+                                     ('Completed', 'Completed')])
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     has_account = models.BooleanField(default=False)
@@ -150,7 +151,9 @@ class Enrollment(models.Model):
     status = models.CharField(max_length=20, default='Active', 
                              choices=[('Active', 'Active'), 
                                      ('Withdrawn', 'Withdrawn'),
-                                     ('Completed', 'Completed')])
+                                     ('Completed', 'Completed'),
+                                     ('Dropped', 'Dropped'),
+                                     ('Transferred', 'Transferred')])
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -159,11 +162,37 @@ class Enrollment(models.Model):
 
     class Meta:
         ordering = ['-created_at']
-        # Ensure a student can only be enrolled once in a section for a given school year
         unique_together = ['student', 'section', 'school_year']
+
+# New models for different statuses
+class DroppedStudent(models.Model):
+    enrollment = models.OneToOneField(Enrollment, on_delete=models.CASCADE, related_name='dropped_details')
+    drop_date = models.DateField(auto_now_add=True)
+    reason = models.TextField()
+    remarks = models.TextField(blank=True, null=True)
     
+    def __str__(self):
+        return f"{self.enrollment.student} - Dropped on {self.drop_date}"
+
+class TransferredStudent(models.Model):
+    enrollment = models.OneToOneField(Enrollment, on_delete=models.CASCADE, related_name='transfer_details')
+    transfer_date = models.DateField(auto_now_add=True)
+    transfer_school = models.CharField(max_length=255)
+    reason = models.TextField()
+    remarks = models.TextField(blank=True, null=True)
     
+    def __str__(self):
+        return f"{self.enrollment.student} - Transferred to {self.transfer_school}"
+
+class CompletedStudent(models.Model):
+    enrollment = models.OneToOneField(Enrollment, on_delete=models.CASCADE, related_name='completion_details')
+    completion_date = models.DateField(auto_now_add=True)
+    final_grade = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
+    remarks = models.TextField(blank=True, null=True)
     
+    def __str__(self):
+        return f"{self.enrollment.student} - Completed on {self.completion_date}"
+
 
 class StudentAccount(models.Model):
     student = models.OneToOneField(Student, on_delete=models.CASCADE, related_name='account')

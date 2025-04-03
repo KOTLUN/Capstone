@@ -1,6 +1,6 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
-from .models import Student, Teachers, Subject, Schedules, Sections, Enrollment, StudentAccount, Guardian, Grades
+from .models import Student, Teachers, Subject, Schedules, Sections, Enrollment, StudentAccount, Guardian, Grades, DroppedStudent, TransferredStudent, CompletedStudent
 from django.contrib.auth.models import User
 from django.contrib.auth.decorators import login_required
 from django.db.models import Count
@@ -15,6 +15,7 @@ from django.core.serializers.json import DjangoJSONEncoder
 from django.db.models.functions import ExtractMonth
 from django.db.models import Q
 from collections import defaultdict
+from django.db.models import Avg
 
 
 # Create your views here.
@@ -361,21 +362,24 @@ def sections_view(request):
         
         subjects = Subject.objects.all()
         
+        # Get unique school years from enrollments
+        enrollment_years = (Enrollment.objects
+                          .values_list('school_year', flat=True)
+                          .distinct()
+                          .order_by('-school_year'))
+
+        context = {
+            'sections': sections,
+            'teachers': all_teachers,
+            'available_teachers': available_teachers,
+            'subjects': subjects,
+            'adviser_grade_levels': adviser_grade_levels,
+            'enrollment_years': enrollment_years  # Add this to context
+        }
+        return render(request, 'Sections.html', context)
     except Exception as e:
-        # Handle the case where the table structure doesn't match
-        sections = []
-        available_teachers = []
-        subjects = []
         messages.error(request, f"Error loading sections: {str(e)}")
-    
-    context = {
-        'sections': sections,
-        'teachers': all_teachers,  # Send all teachers for editing existing sections
-        'available_teachers': available_teachers,  # Send available teachers for new sections
-        'subjects': subjects,
-        'adviser_grade_levels': adviser_grade_levels  # Send the mapping of advisers to grade levels
-    }
-    return render(request, 'Sections.html', context)
+        return render(request, 'Sections.html', {})
 
 def add_section(request):
     if request.method == 'POST':
@@ -456,6 +460,14 @@ def delete_section(request, pk=None):
     return redirect('sections')
 
 def enrollment_view(request):
+    enrollments = Enrollment.objects.select_related(
+        'student', 
+        'section',
+        'dropped_details',
+        'transfer_details',
+        'completion_details'
+    ).all()
+    
     # Get students who are not currently enrolled (status is 'Not Enrolled', 'Transferred', or 'Dropped')
     available_students = Student.objects.filter(status__in=['Not Enrolled', 'Transferred', 'Dropped'])
     
@@ -463,13 +475,12 @@ def enrollment_view(request):
     all_students = Student.objects.all()
     
     sections = Sections.objects.all()
-    enrollments = Enrollment.objects.all()
     
     context = {
+        'enrollments': enrollments,
+        'sections': sections,
         'available_students': available_students,
         'all_students': all_students,
-        'sections': sections,
-        'enrollments': enrollments
     }
     return render(request, 'enrollment.html', context)
 
@@ -561,96 +572,67 @@ def add_enrollment(request):
 
 def edit_enrollment(request):
     if request.method == 'POST':
+        enrollment_id = request.POST.get('enrollment_id')
+        new_status = request.POST.get('status')
+        
         try:
-            enrollment_id = request.POST.get('enrollment_id')
-            student_id = request.POST.get('student')
-            section_id = request.POST.get('section')
-            school_year = request.POST.get('school_year')
-            status = request.POST.get('status')
-            
-            # Get the enrollment, student, and section objects
             enrollment = Enrollment.objects.get(id=enrollment_id)
-            student = Student.objects.get(id=student_id)
-            section = Sections.objects.get(id=section_id)
-            
-            # If changing to a different section or school year, check for conflicts
-            if (enrollment.section.id != int(section_id) or 
-                enrollment.school_year != school_year) and status == 'Active':
-                
-                # Check if the student is already enrolled in this section for this school year
-                if Enrollment.objects.filter(
-                    student=student, 
-                    section=section, 
-                    school_year=school_year,
-                    status='Active'
-                ).exclude(id=enrollment_id).exists():
-                    messages.error(request, f"{student.first_name} {student.last_name} is already enrolled in this section for {school_year}.")
-                    return redirect('enrollment')
-                
-                # Check if the student is already enrolled in any section for this school year
-                existing_enrollment = Enrollment.objects.filter(
-                    student=student, 
-                    school_year=school_year,
-                    status='Active'
-                ).exclude(id=enrollment_id).first()
-                
-                if existing_enrollment:
-                    messages.error(
-                        request, 
-                        f"{student.first_name} {student.last_name} is already enrolled in {existing_enrollment.section.section_id} "
-                        f"({existing_enrollment.section.grade_level}) for {school_year}. "
-                        f"A student cannot be enrolled in multiple sections at the same time."
-                    )
-                    return redirect('enrollment')
-                
-                # Check if the student is enrolled in a different grade level
-                student_grade_level = section.grade_level
-                different_grade_enrollment = Enrollment.objects.filter(
-                    student=student,
-                    status='Active'
-                ).exclude(section__grade_level=student_grade_level).exclude(id=enrollment_id).first()
-                
-                if different_grade_enrollment:
-                    messages.error(
-                        request,
-                        f"{student.first_name} {student.last_name} is already enrolled in grade level "
-                        f"{different_grade_enrollment.section.grade_level}. A student cannot be enrolled in multiple grade levels."
-                    )
-                    return redirect('enrollment')
-            
-            # Update the enrollment
-            enrollment.student = student
-            enrollment.section = section
-            enrollment.school_year = school_year
-            enrollment.status = status
-            enrollment.save()
+            student = enrollment.student  # Get the student reference
+            old_status = enrollment.status  # Store the old status
             
             # Update student status based on enrollment status
-            if status == 'Active':
+            if new_status == 'Active':
                 student.status = 'Enrolled'
-            elif status == 'Withdrawn' or status == 'Completed':
-                # Check if student has any other active enrollments
-                active_enrollments = Enrollment.objects.filter(
-                    student=student, 
-                    status='Active'
-                ).exclude(id=enrollment_id).exists()
-                
-                if not active_enrollments:
-                    student.status = 'Not Enrolled'
+            elif new_status == 'Withdrawn':
+                student.status = 'Not Enrolled'
+            elif new_status == 'Completed':
+                student.status = 'Completed'
+                CompletedStudent.objects.create(
+                    enrollment=enrollment,
+                    completion_date=request.POST.get('completion_date'),
+                    final_grade=request.POST.get('final_grade'),
+                    remarks=request.POST.get('completion_remarks', '')
+                )
+                enrollment.status = new_status
+                enrollment.save()
+            elif new_status == 'Dropped':
+                student.status = 'Dropped'
+                DroppedStudent.objects.create(
+                    enrollment=enrollment,
+                    drop_date=request.POST.get('drop_date'),
+                    reason=request.POST.get('drop_reason', 'Status changed to Dropped'),
+                    remarks=request.POST.get('drop_remarks', '')
+                )
+                enrollment.delete()
+            elif new_status == 'Transferred':
+                student.status = 'Transferred'
+                TransferredStudent.objects.create(
+                    enrollment=enrollment,
+                    transfer_date=request.POST.get('transfer_date'),
+                    transfer_school=request.POST.get('transfer_school', 'Not specified'),
+                    reason=request.POST.get('transfer_reason', 'Status changed to Transferred'),
+                    remarks=request.POST.get('transfer_remarks', '')
+                )
+                enrollment.delete()
             
+            # Save student status changes
             student.save()
             
-            messages.success(request, 'Enrollment updated successfully!')
+            if new_status in ['Dropped', 'Transferred']:
+                messages.success(request, f'Student {student.first_name} {student.last_name} has been marked as {new_status}')
+            elif new_status == 'Completed':
+                messages.success(request, f'Student {student.first_name} {student.last_name} has completed the enrollment')
+            else:
+                # For Active and Withdrawn statuses
+                enrollment.status = new_status
+                enrollment.save()
+                messages.success(request, 'Enrollment status updated successfully')
             
         except Enrollment.DoesNotExist:
             messages.error(request, 'Enrollment not found!')
-        except Student.DoesNotExist:
-            messages.error(request, 'Student not found!')
-        except Sections.DoesNotExist:
-            messages.error(request, 'Section not found!')
         except Exception as e:
             messages.error(request, f'Error updating enrollment: {str(e)}')
-    
+        
     return redirect('enrollment')
 
 def delete_enrollment(request):
@@ -1413,5 +1395,168 @@ def get_section_schedule(request):
         
     except Sections.DoesNotExist:
         return JsonResponse({'error': 'Section not found'}, status=404)
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
+def get_enrolled_students(request):
+    """API endpoint to get enrolled students for a section"""
+    section_id = request.GET.get('section_id')
+    selected_school_year = request.GET.get('school_year')
+    
+    if not section_id or not selected_school_year:
+        return JsonResponse({'error': 'Section ID and School Year are required'}, status=400)
+    
+    try:
+        section = Sections.objects.get(id=section_id)
+        
+        # Get enrollments for this section and school year only
+        enrollments = Enrollment.objects.select_related('student').filter(
+            section=section,
+            school_year=selected_school_year,  # Filter by exact school year
+            status='Active'
+        )
+
+        # Create list of students
+        students = []   
+        seen_students = set()  # To track unique students
+        
+        for enrollment in enrollments:
+            student_id = enrollment.student.student_id
+            if student_id not in seen_students:  # Only add if not already added
+                seen_students.add(student_id)
+                students.append({
+                    'student_id': student_id,
+                    'first_name': enrollment.student.first_name,
+                    'last_name': enrollment.student.last_name,
+                    'gender': enrollment.student.gender,
+                    'status': enrollment.status
+                })
+        
+        # Sort students by ID
+        students.sort(key=lambda x: x['student_id'])
+        
+        return JsonResponse({
+            'students': students,
+            'grade_level': section.grade_level,
+            'section_id': section.section_id,
+            'school_year': selected_school_year
+        })
+        
+    except Sections.DoesNotExist:
+        return JsonResponse({'error': 'Section not found'}, status=404)
+    except Exception as e:
+        print(f"Error in get_enrolled_students: {str(e)}")  # For debugging
+        return JsonResponse({'error': str(e)}, status=500)
+
+def get_eligible_students(request):
+    """API endpoint to get students eligible for promotion"""
+    school_year = request.GET.get('school_year')
+    current_grade = request.GET.get('grade_level')
+    
+    # Base query for enrollments
+    enrollment_query = Enrollment.objects.filter(
+        section__grade_level=current_grade,
+        status='Active'
+    ).select_related('student')
+    
+    # Apply school year filter if not "all"
+    if school_year and school_year != 'all':
+        enrollment_query = enrollment_query.filter(school_year=school_year)
+    
+    students = []
+    seen_students = set()  # To prevent duplicates
+    
+    for enrollment in enrollment_query:
+        student_id = enrollment.student.id
+        
+        # Skip if we've already processed this student
+        if student_id in seen_students:
+            continue
+        seen_students.add(student_id)
+        
+        # Calculate overall grade for the student
+        grades_query = Grades.objects.filter(
+            student=enrollment.student
+        )
+        
+        # Filter grades by school year if specific year selected
+        if school_year and school_year != 'all':
+            grades_query = grades_query.filter(school_year=school_year)
+        
+        overall_grade = grades_query.aggregate(
+            avg_grade=Avg('final_grade')
+        )['avg_grade'] or 0
+        
+        # Student is eligible if overall grade is >= 75
+        is_eligible = overall_grade >= 75
+        
+        students.append({
+            'id': student_id,
+            'student_id': enrollment.student.student_id,
+            'name': f"{enrollment.student.first_name} {enrollment.student.last_name}",
+            'grade_level': current_grade,
+            'overall_grade': round(overall_grade, 2),
+            'is_eligible': is_eligible,
+            'school_year': enrollment.school_year
+        })
+    
+    # Sort students by ID
+    students.sort(key=lambda x: x['student_id'])
+    
+    return JsonResponse({'students': students})
+
+@transaction.atomic
+def promote_students(request):
+    """View to handle student promotion"""
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Invalid request method'}, status=400)
+    
+    try:
+        from_year = request.POST.get('from_school_year')
+        to_year = request.POST.get('to_school_year')
+        current_grade = request.POST.get('current_grade')
+        student_ids = request.POST.getlist('student_ids[]')
+        
+        # Get the next grade level
+        grade_levels = {
+            'Grade 7': 'Grade 8',
+            'Grade 8': 'Grade 9',
+            'Grade 9': 'Grade 10',
+            'Grade 10': 'Grade 11',
+            'Grade 11': 'Grade 12'
+        }
+        next_grade = grade_levels.get(current_grade)
+        
+        if not next_grade:
+            return JsonResponse({'error': 'Invalid grade level'}, status=400)
+        
+        # Get the section for the next grade
+        next_section = Sections.objects.filter(grade_level=next_grade).first()
+        if not next_section:
+            return JsonResponse({'error': f'No section found for {next_grade}'}, status=400)
+        
+        # Process each student
+        for student_id in student_ids:
+            student = Student.objects.get(id=student_id)
+            
+            # Create new enrollment for next year
+            Enrollment.objects.create(
+                student=student,
+                section=next_section,
+                school_year=to_year,
+                status='Active'
+            )
+            
+            # Update current enrollment status to 'Completed'
+            current_enrollment = Enrollment.objects.get(
+                student=student,
+                school_year=from_year,
+                status='Active'
+            )
+            current_enrollment.status = 'Completed'
+            current_enrollment.save()
+        
+        return JsonResponse({'success': True})
+        
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=500)

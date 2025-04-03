@@ -7,7 +7,18 @@
     <title>Section Management</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <style>
+        #schoolYearFilter {
+            min-width: 120px;
+            font-size: 0.9rem;
+        }
+        
+        #schoolYearFilter:focus {
+            box-shadow: none;
+        }
+
         .section-card {
             transition: transform 0.3s;
             margin-bottom: 20px;
@@ -166,22 +177,30 @@
                                     <div class="card-header {% cycle 'bg-primary' 'bg-success' 'bg-info' 'bg-warning' 'bg-danger' 'bg-secondary' %} text-white">
                                         <div class="d-flex justify-content-between align-items-center">
                                             <h5 class="card-title mb-0">Grade-{{ section.grade_level }}</h5>
-                                            <div class="dropdown">
-                                                <button class="btn btn-sm text-white dropdown-toggle" type="button" id="dropdownMenuButton{{ section.id }}" data-bs-toggle="dropdown" aria-expanded="false">
-                                                    <i class="fas fa-ellipsis-v"></i>
+                                            <div class="d-flex align-items-center">
+                                                <button class="btn btn-sm text-white me-2 view-students-btn" 
+                                                        data-section-id="{{ section.id }}"
+                                                        data-bs-toggle="tooltip" 
+                                                        title="View Enrolled Students">
+                                                    <i class="fas fa-users"></i>
                                                 </button>
-                                                <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="dropdownMenuButton{{ section.id }}">
-                                                    <li>
-                                                        <button class="dropdown-item" data-bs-toggle="modal" data-bs-target="#editSectionModal{{ section.id }}">
-                                                            <i class="fas fa-edit me-2"></i> Edit
-                                                        </button>
-                                                    </li>
-                                                    <li>
-                                                        <button class="dropdown-item text-danger" onclick="confirmDelete('{{ section.id }}', '{{ section.section_id }}')">
-                                                            <i class="fas fa-trash me-2"></i> Delete
-                                                        </button>
-                                                    </li>
-                                                </ul>
+                                                <div class="dropdown">
+                                                    <button class="btn btn-sm text-white dropdown-toggle" type="button" id="dropdownMenuButton{{ section.id }}" data-bs-toggle="dropdown" aria-expanded="false">
+                                                        <i class="fas fa-ellipsis-v"></i>
+                                                    </button>
+                                                    <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="dropdownMenuButton{{ section.id }}">
+                                                        <li>
+                                                            <button class="dropdown-item" data-bs-toggle="modal" data-bs-target="#editSectionModal{{ section.id }}">
+                                                                <i class="fas fa-edit me-2"></i> Edit
+                                                            </button>
+                                                        </li>
+                                                        <li>
+                                                            <button class="dropdown-item text-danger" onclick="confirmDelete('{{ section.id }}', '{{ section.section_id }}')">
+                                                                <i class="fas fa-trash me-2"></i> Delete
+                                                            </button>
+                                                        </li>
+                                                    </ul>
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
@@ -276,10 +295,51 @@
         </div>
     </div>
 
+    <!-- Enrolled Students Modal -->
+    <div class="modal fade" id="enrolledStudentsModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title">Enrolled Students</h5>
+                    <div class="ms-auto me-3">
+                        <select class="form-select form-select-sm bg-light" id="schoolYearFilter">
+                            {% for year in enrollment_years %}
+                                <option value="{{ year }}">SY {{ year }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>Student ID</th>
+                                    <th>Name</th>
+                                    <th>Gender</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody id="enrolledStudentsTableBody">
+                                <!-- Students will be loaded here -->
+                            </tbody>
+                        </table>
+                    </div>
+                    <div id="noStudentsMessage" class="text-center py-4 d-none">
+                        <i class="fas fa-user-graduate fa-3x text-muted mb-3"></i>
+                        <h5>No Students Enrolled</h5>
+                        <p class="text-muted">There are no students enrolled in this section yet.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- JavaScript for functionality -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', function() {
+            let currentSectionId = null;
             const searchSection = document.getElementById('searchSection');
             const filterGradeLevel = document.getElementById('filterGradeLevel');
             const sectionItems = document.querySelectorAll('.section-item');
@@ -408,6 +468,76 @@
                 const deleteModal = new bootstrap.Modal(document.getElementById('deleteConfirmModal'));
                 deleteModal.show();
             }
+
+            // Function to load students with proper filtering
+            function loadEnrolledStudents(sectionId, schoolYear) {
+                // Show loading state
+                const tableBody = document.getElementById('enrolledStudentsTableBody');
+                const noStudentsMessage = document.getElementById('noStudentsMessage');
+                
+                tableBody.innerHTML = '<tr><td colspan="4" class="text-center">' +
+                    '<div class="spinner-border" role="status">' +
+                    '<span class="visually-hidden">Loading...</span></div></td></tr>';
+                
+                noStudentsMessage.classList.add('d-none');
+                
+                // Fetch enrolled students with exact school year
+                fetch(`{% url 'get_enrolled_students' %}?section_id=${sectionId}&school_year=${schoolYear}`)
+                    .then(response => response.json())
+                    .then(response => {
+                        if (response.students && response.students.length > 0) {
+                            let html = '';
+                            response.students.forEach(student => {
+                                html += `
+                                    <tr>
+                                        <td>${student.student_id}</td>
+                                        <td>${student.first_name} ${student.last_name}</td>
+                                        <td>${student.gender}</td>
+                                        <td><span class="badge bg-${student.status === 'Active' ? 'success' : 'warning'}">${student.status}</span></td>
+                                    </tr>
+                                `;
+                            });
+                            tableBody.innerHTML = html;
+                            noStudentsMessage.classList.add('d-none');
+                        } else {
+                            tableBody.innerHTML = '';
+                            noStudentsMessage.classList.remove('d-none');
+                        }
+                        
+                        // Update modal title with current selection
+                        document.querySelector('.modal-title').textContent = 
+                            `Enrolled Students - Grade ${response.grade_level} Section ${response.section_id} (SY ${response.school_year})`;
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        tableBody.innerHTML = '<tr><td colspan="4" class="text-center text-danger">' +
+                            'Error loading students. Please try again.</td></tr>';
+                    });
+            }
+
+            // Handle school year filter change
+            document.getElementById('schoolYearFilter').addEventListener('change', function() {
+                if (currentSectionId) {
+                    loadEnrolledStudents(currentSectionId, this.value);
+                }
+            });
+
+            // Handle view enrolled students button click
+            document.querySelectorAll('.view-students-btn').forEach(function(button) {
+                button.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    currentSectionId = this.getAttribute('data-section-id');
+                    const schoolYear = document.getElementById('schoolYearFilter').value;
+                    
+                    // Show the modal
+                    const modal = new bootstrap.Modal(document.getElementById('enrolledStudentsModal'));
+                    modal.show();
+                    
+                    // Load students after modal is shown
+                    loadEnrolledStudents(currentSectionId, schoolYear);
+                });
+            });
         });
     </script>
 </body>
