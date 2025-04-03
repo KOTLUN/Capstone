@@ -54,6 +54,8 @@ urlpatterns = [
     path('get-enrolled-students/', views.get_enrolled_students, name='get_enrolled_students'),
     path('get-eligible-students/', views.get_eligible_students, name='get_eligible_students'),
     path('promote-students/', views.promote_students, name='promote_students'),
+    path('admin-profile/', views.admin_profile, name='admin_profile'),
+    path('admin-profile/update/', views.admin_profile_update, name='admin_profile_update'),
 ]
 
 if settings.DEBUG:

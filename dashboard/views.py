@@ -1,6 +1,6 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
-from .models import Student, Teachers, Subject, Schedules, Sections, Enrollment, StudentAccount, Guardian, Grades, DroppedStudent, TransferredStudent, CompletedStudent
+from .models import Student, Teachers, Subject, Schedules, Sections, Enrollment, StudentAccount, Guardian, Grades, DroppedStudent, TransferredStudent, CompletedStudent, AdminProfile, AdminActivity
 from django.contrib.auth.models import User
 from django.contrib.auth.decorators import login_required
 from django.db.models import Count
@@ -16,6 +16,7 @@ from django.db.models.functions import ExtractMonth
 from django.db.models import Q
 from collections import defaultdict
 from django.db.models import Avg
+from django.contrib.auth.hashers import make_password
 
 
 # Create your views here.
@@ -197,6 +198,11 @@ def add_teacher(request):
                 teacher_photo=teacher_photo
             )
             messages.success(request, 'Teacher added successfully!')
+            log_admin_activity(
+                request.user,
+                f"Added new teacher: {teacher.first_name} {teacher.last_name}",
+                "teacher"
+            )
             return redirect('teachers')
         except Exception as e:
             if 'user' in locals():
@@ -210,37 +216,50 @@ def add_teacher(request):
 
 def add_student(request):
     if request.method == 'POST':
-        student_id = request.POST.get('student_id')
-        first_name = request.POST.get('first_name')
-        middle_name = request.POST.get('middle_name', '')
-        last_name = request.POST.get('last_name')
-        gender = request.POST.get('gender')
-        religion = request.POST.get('religion')
-        date_of_birth = request.POST.get('date_of_birth')
-        email = request.POST.get('email')
-        mobile_number = request.POST.get('mobile_number')
-        address = request.POST.get('address')
+        try:
+            student_id = request.POST.get('student_id')
+            first_name = request.POST.get('first_name')
+            middle_name = request.POST.get('middle_name', '')
+            last_name = request.POST.get('last_name')
+            gender = request.POST.get('gender')
+            religion = request.POST.get('religion')
+            date_of_birth = request.POST.get('date_of_birth')
+            email = request.POST.get('email')
+            mobile_number = request.POST.get('mobile_number')
+            address = request.POST.get('address')
 
-        # Validate that the date of birth is provided
-        if not date_of_birth:
-            messages.error(request, "Date of Birth is required.")
-            return redirect('students')  # Or render the form again
+            # Validate that the date of birth is provided
+            if not date_of_birth:
+                messages.error(request, "Date of Birth is required.")
+                return redirect('students')
 
-        # Proceed to create the student record
-        Student.objects.create(
-            student_id=student_id,
-            first_name=first_name,
-            middle_name=middle_name,
-            last_name=last_name,
-            gender=gender,
-            religion=religion,
-            date_of_birth=date_of_birth,
-            email=email,
-            mobile_number=mobile_number,
-            address=address
-        )
-        messages.success(request, "Student added successfully!")
-        return redirect('students')  # Redirect to the list or appropriate page
+            # Create the student record
+            student = Student.objects.create(
+                student_id=student_id,
+                first_name=first_name,
+                middle_name=middle_name,
+                last_name=last_name,
+                gender=gender,
+                religion=religion,
+                date_of_birth=date_of_birth,
+                email=email,
+                mobile_number=mobile_number,
+                address=address
+            )
+
+            # Log the activity after successful creation
+            log_admin_activity(
+                request.user,
+                f"Added new student: {student.first_name} {student.last_name} ({student.student_id})",
+                "student"
+            )
+            
+            messages.success(request, "Student added successfully!")
+            return redirect('students')
+
+        except Exception as e:
+            messages.error(request, f"Error adding student: {str(e)}")
+            return redirect('students')
 
     return render(request, 'students.html')
 
@@ -281,6 +300,12 @@ def edit_teacher(request):
             teacher.save()
             messages.success(request, 'Teacher updated successfully!')
             
+            log_admin_activity(
+                request.user,
+                f"Updated teacher information: {teacher.first_name} {teacher.last_name}",
+                "teacher"
+            )
+            
         except Teachers.DoesNotExist:
             messages.error(request, 'Teacher not found!')
         except Exception as e:
@@ -308,6 +333,11 @@ def add_subject(request):
                 name=subject_name
             )
             messages.success(request, f"Subject '{subject_name}' added successfully!")
+            log_admin_activity(
+                request.user,
+                f"Added new subject: {subject_name}",
+                "subject"
+            )
             return redirect('add_subject')
         else:
             messages.error(request, "Both Subject ID and Subject Name are required.")
@@ -413,6 +443,11 @@ def add_section(request):
                 adviser=adviser
             )  
             messages.success(request, f"Section '{section_id} - {grade_level}' added successfully!")
+            log_admin_activity(
+                request.user,
+                f"Added new section: {section_id} (Grade {grade_level})",
+                "section"
+            )
         except Teachers.DoesNotExist:
             messages.error(request, "Selected adviser not found.")
         except Exception as e:
@@ -435,6 +470,11 @@ def edit_section(request, pk=None):
             section.save()
             
             messages.success(request, f"Section updated successfully!")
+            log_admin_activity(
+                request.user,
+                f"Updated section: {section.section_id}",
+                "section"
+            )
         except Sections.DoesNotExist:
             messages.error(request, "Section not found.")
         except Teachers.DoesNotExist:
@@ -559,14 +599,19 @@ def add_enrollment(request):
             student.status = "Enrolled"
             student.save()
             
-            messages.success(request, f"{student.first_name} {student.last_name} successfully enrolled in {section.section_id} for {school_year}!")
+            log_admin_activity(
+                request.user,
+                f"Enrolled student: {student.first_name} {student.last_name} in {section.section_id}",
+                "student"
+            )
+            messages.success(request, 'Student enrolled successfully!')
             
         except Student.DoesNotExist:
             messages.error(request, 'Student not found!')
         except Sections.DoesNotExist as e:
             messages.error(request, f'Section not found! {str(e)}')
         except Exception as e:
-            messages.error(request, f'Error adding enrollment: {str(e)}')
+            messages.error(request, f'Error enrolling student: {str(e)}')
     
     return redirect('enrollment')
 
@@ -595,6 +640,11 @@ def edit_enrollment(request):
                 )
                 enrollment.status = new_status
                 enrollment.save()
+                log_admin_activity(
+                    request.user,
+                    f"Marked {student.first_name} {student.last_name}'s enrollment as Completed",
+                    "enrollment"
+                )
             elif new_status == 'Dropped':
                 student.status = 'Dropped'
                 DroppedStudent.objects.create(
@@ -604,16 +654,27 @@ def edit_enrollment(request):
                     remarks=request.POST.get('drop_remarks', '')
                 )
                 enrollment.delete()
+                log_admin_activity(
+                    request.user,
+                    f"Marked {student.first_name} {student.last_name} as Dropped",
+                    "enrollment"
+                )
             elif new_status == 'Transferred':
                 student.status = 'Transferred'
+                transfer_school = request.POST.get('transfer_school', 'Not specified')
                 TransferredStudent.objects.create(
                     enrollment=enrollment,
                     transfer_date=request.POST.get('transfer_date'),
-                    transfer_school=request.POST.get('transfer_school', 'Not specified'),
+                    transfer_school=transfer_school,
                     reason=request.POST.get('transfer_reason', 'Status changed to Transferred'),
                     remarks=request.POST.get('transfer_remarks', '')
                 )
                 enrollment.delete()
+                log_admin_activity(
+                    request.user,
+                    f"Marked {student.first_name} {student.last_name} as Transferred to {transfer_school}",
+                    "enrollment"
+                )
             
             # Save student status changes
             student.save()
@@ -696,6 +757,11 @@ def edit_student(request):
             student.status = status
             student.save()
             
+            log_admin_activity(
+                request.user,
+                f"Updated student information: {student.first_name} {student.last_name} ({student.student_id})",
+                "student"
+            )
             messages.success(request, 'Student updated successfully!')
             
         except Student.DoesNotExist:
@@ -705,6 +771,24 @@ def edit_student(request):
     
     return redirect('students')
 
+def delete_student(request):
+    if request.method == 'POST':
+        try:
+            student_id = request.POST.get('student_id')
+            student = Student.objects.get(student_id=student_id)
+            name = f"{student.first_name} {student.last_name}"
+            student_id = student.student_id
+            student.delete()
+            
+            log_admin_activity(
+                request.user,
+                f"Deleted student: {name} ({student_id})",
+                "student"
+            )
+            messages.success(request, 'Student deleted successfully!')
+        except Exception as e:
+            messages.error(request, f'Error deleting student: {str(e)}')
+    return redirect('students')
 
 @transaction.atomic
 def create_student_account(request):
@@ -790,6 +874,11 @@ def create_student_account(request):
             )
             
             messages.success(request, f"Account created successfully for {student.first_name} {student.last_name}.")
+            log_admin_activity(
+                request.user,
+                f"Created account for student: {student.first_name} {student.last_name}",
+                "student"
+            )
             
         except Exception as e:
             # Print the error to the console for debugging
@@ -990,6 +1079,11 @@ def add_grade(request):
             grade.save()
             
             messages.success(request, f"Grade for {student.first_name} {student.last_name} in {subject.name} has been updated.")
+            log_admin_activity(
+                request.user,
+                f"Added grades for {student.first_name} {student.last_name} in {subject.name}",
+                "grade"
+            )
             
         except Exception as e:
             messages.error(request, f"Error adding grade: {str(e)}")
@@ -1007,6 +1101,11 @@ def delete_teacher(request):
                 teacher.user.delete()
             teacher.delete()
             messages.success(request, 'Teacher deleted successfully.')
+            log_admin_activity(
+                request.user,
+                f"Deleted teacher: {teacher.first_name} {teacher.last_name}",
+                "teacher"
+            )
         except Teachers.DoesNotExist:
             messages.error(request, 'Teacher not found.')
         except Exception as e:
@@ -1205,6 +1304,12 @@ def add_schedule(request):
                 start_time=start_time,
                 end_time=end_time,
                 room=room
+            )
+            
+            log_admin_activity(
+                request.user,
+                f"Added schedule for {schedule.teacher_id.first_name} {schedule.teacher_id.last_name} - {schedule.subject.name}",
+                "schedule"
             )
             
             return JsonResponse({'success': True})
@@ -1555,8 +1660,81 @@ def promote_students(request):
             )
             current_enrollment.status = 'Completed'
             current_enrollment.save()
+            
+            log_admin_activity(
+                request.user,
+                f"Promoted {student.first_name} {student.last_name} to {next_grade}",
+                "student"
+            )
         
         return JsonResponse({'success': True})
         
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=500)
+
+def log_admin_activity(user, action, action_type):
+    """
+    action_type can be:
+    - student
+    - teacher
+    - subject
+    - section
+    - schedule
+    - enrollment
+    - grade
+    - profile
+    """
+    AdminActivity.objects.create(
+        admin=user,
+        action=action,
+        action_type=action_type
+    )
+
+@login_required
+def admin_profile(request):
+    try:
+        admin_profile = AdminProfile.objects.get(user=request.user)
+    except AdminProfile.DoesNotExist:
+        admin_profile = AdminProfile.objects.create(user=request.user)
+    
+    # Get recent activities
+    recent_activities = AdminActivity.objects.filter(admin=request.user)[:5]
+    
+    context = {
+        'admin_profile': admin_profile,
+        'recent_activities': recent_activities
+    }
+    return render(request, 'admin_profile.html', context)
+
+@login_required
+def admin_profile_update(request):
+    if request.method == 'POST':
+        try:
+            user = request.user
+            user.first_name = request.POST.get('first_name', '')
+            user.last_name = request.POST.get('last_name', '')
+            user.email = request.POST.get('email', '')
+            
+            # Update password if provided
+            new_password = request.POST.get('new_password')
+            if new_password:
+                user.set_password(new_password)
+            
+            user.save()
+            
+            # Handle profile photo
+            if request.FILES.get('profile_photo'):
+                profile = AdminProfile.objects.get_or_create(user=user)[0]
+                profile.profile_photo = request.FILES['profile_photo']
+                profile.save()
+            
+            messages.success(request, 'Profile updated successfully!')
+            
+            # If password was changed, redirect to login
+            if new_password:
+                return redirect('login')
+                
+        except Exception as e:
+            messages.error(request, f'Error updating profile: {str(e)}')
+            
+    return redirect('admin_profile')

@@ -326,3 +326,49 @@ class Grades(models.Model):
     
     
     
+
+class AdminProfile(models.Model):
+    user = models.OneToOneField(User, on_delete=models.CASCADE)
+    profile_photo = models.ImageField(upload_to='admin_photos/', null=True, blank=True)
+    
+    def __str__(self):
+        return f"Profile of {self.user.username}"
+    
+    
+    
+
+class AdminActivity(models.Model):
+    admin = models.ForeignKey(User, on_delete=models.CASCADE)
+    action = models.CharField(max_length=255)
+    action_type = models.CharField(max_length=50)  # For icon selection
+    timestamp = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-timestamp']
+
+    def __str__(self):
+        return f"{self.admin.username} - {self.action}"
+
+    def get_time_ago(self):
+        from django.utils import timezone
+        from datetime import timedelta
+        
+        now = timezone.now()
+        diff = now - self.timestamp
+
+        if diff < timedelta(minutes=1):
+            return 'just now'
+        elif diff < timedelta(hours=1):
+            minutes = int(diff.total_seconds() / 60)
+            return f'{minutes} minute{"s" if minutes != 1 else ""} ago'
+        elif diff < timedelta(days=1):
+            hours = int(diff.total_seconds() / 3600)
+            return f'{hours} hour{"s" if hours != 1 else ""} ago'
+        elif diff < timedelta(days=30):
+            days = diff.days
+            return f'{days} day{"s" if days != 1 else ""} ago'
+        else:
+            return self.timestamp.strftime('%B %d, %Y')
+    
+    
+    

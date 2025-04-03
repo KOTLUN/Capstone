@@ -1,0 +1,261 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Profile</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+    <style>
+        .profile-header {
+            background: linear-gradient(135deg, #0d6efd 0%, #0099ff 100%);
+            padding: 2rem 0;
+            border-radius: 0 0 50px 50px;
+            margin-bottom: -30px;
+        }
+        
+        .profile-img-container {
+            position: relative;
+            width: 150px;
+            height: 150px;
+            margin: 0 auto;
+        }
+        
+        .profile-img {
+            width: 150px;
+            height: 150px;
+            border: 5px solid white;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+        
+        .camera-icon {
+            position: absolute;
+            bottom: 5px;
+            right: 5px;
+            background: #0d6efd;
+            color: white;
+            width: 35px;
+            height: 35px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .camera-icon:hover {
+            background: #0b5ed7;
+            transform: scale(1.1);
+        }
+        
+        .profile-card {
+            border: none;
+            border-radius: 15px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+        }
+        
+        .info-label {
+            color: #6c757d;
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+        
+        .info-value {
+            color: #212529;
+            font-size: 1rem;
+        }
+        
+        .edit-btn {
+            border-radius: 50px;
+            padding: 8px 25px;
+            font-weight: 500;
+        }
+        
+        .activity-item {
+            padding: 15px;
+            border-radius: 10px;
+            background: #f8f9fa;
+            margin-bottom: 10px;
+            transition: all 0.3s ease;
+        }
+        
+        .activity-item:hover {
+            background: #e9ecef;
+            transform: translateX(5px);
+        }
+    </style>
+</head>
+<body>
+    {% include 'structures/sidebar.html' %}
+    
+    <div class="main-content" style="margin-left: 250px; padding: 0;">
+        <!-- Profile Header -->
+        <div class="profile-header text-center text-white">
+            <div class="profile-img-container mb-3">
+                {% if admin_profile.profile_photo %}
+                    <img src="{{ admin_profile.profile_photo.url }}" 
+                         class="profile-img rounded-circle" alt="Admin Profile">
+                {% else %}
+                    <img src="{% static 'images/default-avatar.png' %}" 
+                         class="profile-img rounded-circle" alt="Default Profile"
+                         onerror="this.src='https://via.placeholder.com/150'">
+                {% endif %}
+                <div class="camera-icon" data-bs-toggle="modal" data-bs-target="#editProfileModal">
+                    <i class="fas fa-camera"></i>
+                </div>
+            </div>
+            <h3 class="mb-1">{{ request.user.get_full_name }}</h3>
+            <p class="mb-0"><i class="fas fa-shield-alt me-2"></i>System Administrator</p>
+        </div>
+
+        <div class="container py-5">
+            <div class="row g-4">
+                <!-- Personal Information -->
+                <div class="col-lg-8">
+                    <div class="card profile-card">
+                        <div class="card-header bg-transparent border-0 pt-4">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <h5 class="mb-0"><i class="fas fa-user-circle me-2"></i>Personal Information</h5>
+                                <button class="btn btn-primary edit-btn" data-bs-toggle="modal" data-bs-target="#editProfileModal">
+                                    <i class="fas fa-edit me-2"></i>Edit Profile
+                                </button>
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <div class="row mb-4">
+                                <div class="col-sm-4">
+                                    <p class="info-label mb-0">Full Name</p>
+                                    <p class="info-value">{{ request.user.get_full_name }}</p>
+                                </div>
+                                <div class="col-sm-4">
+                                    <p class="info-label mb-0">Username</p>
+                                    <p class="info-value">{{ request.user.username }}</p>
+                                </div>
+                                <div class="col-sm-4">
+                                    <p class="info-label mb-0">Email</p>
+                                    <p class="info-value">{{ request.user.email }}</p>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-sm-4">
+                                    <p class="info-label mb-0">Role</p>
+                                    <p class="info-value">Administrator</p>
+                                </div>
+                                <div class="col-sm-4">
+                                    <p class="info-label mb-0">Last Login</p>
+                                    <p class="info-value">{{ request.user.last_login|date:"F d, Y H:i" }}</p>
+                                </div>
+                                <div class="col-sm-4">
+                                    <p class="info-label mb-0">Account Created</p>
+                                    <p class="info-value">{{ request.user.date_joined|date:"F d, Y" }}</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Recent Activity -->
+                <div class="col-lg-4">
+                    <div class="card profile-card">
+                        <div class="card-header bg-transparent border-0 pt-4">
+                            <h5 class="mb-0"><i class="fas fa-clock me-2"></i>Recent Activity</h5>
+                        </div>
+                        <div class="card-body">
+                            {% if recent_activities %}
+                                {% for activity in recent_activities %}
+                                    <div class="activity-item">
+                                        <i class="fas {% if activity.action_type == 'student' %}fa-user-graduate text-primary
+                                                   {% elif activity.action_type == 'teacher' %}fa-chalkboard-teacher text-success
+                                                   {% elif activity.action_type == 'subject' %}fa-book text-warning
+                                                   {% elif activity.action_type == 'section' %}fa-door-open text-info
+                                                   {% elif activity.action_type == 'schedule' %}fa-calendar-alt text-danger
+                                                   {% elif activity.action_type == 'enrollment' %}fa-user-check text-purple
+                                                   {% elif activity.action_type == 'grade' %}fa-star text-warning
+                                                   {% elif activity.action_type == 'profile' %}fa-user-edit text-info
+                                                   {% else %}fa-check-circle text-secondary{% endif %} me-2"></i>
+                                        <span>{{ activity.action }}</span>
+                                        <small class="text-muted d-block">{{ activity.get_time_ago }}</small>
+                                    </div>
+                                {% endfor %}
+                            {% else %}
+                                <div class="text-center text-muted py-3">
+                                    <i class="fas fa-info-circle mb-2"></i>
+                                    <p class="mb-0">No recent activity</p>
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Profile Modal -->
+    <div class="modal fade" id="editProfileModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title"><i class="fas fa-user-edit me-2"></i>Edit Profile</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <form method="POST" action="{% url 'admin_profile_update' %}" enctype="multipart/form-data">
+                    {% csrf_token %}
+                    <div class="modal-body p-4">
+                        <div class="mb-4 text-center">
+                            <label for="profilePhoto" class="d-block" style="cursor: pointer;">
+                                {% if admin_profile.profile_photo %}
+                                    <img src="{{ admin_profile.profile_photo.url }}" 
+                                         class="rounded-circle" width="100" height="100" id="photoPreview">
+                                {% else %}
+                                    <img src="{% static 'images/default-avatar.png' %}" 
+                                         class="rounded-circle" width="100" height="100" id="photoPreview"
+                                         onerror="this.src='https://via.placeholder.com/100'">
+                                {% endif %}
+                                <small class="d-block text-muted mt-2">Click to change photo</small>
+                            </label>
+                            <input type="file" id="profilePhoto" name="profile_photo" class="d-none" accept="image/*">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">First Name</label>
+                            <input type="text" class="form-control" name="first_name" value="{{ request.user.first_name }}">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Last Name</label>
+                            <input type="text" class="form-control" name="last_name" value="{{ request.user.last_name }}">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Email</label>
+                            <input type="email" class="form-control" name="email" value="{{ request.user.email }}">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">New Password</label>
+                            <input type="password" class="form-control" name="new_password" 
+                                   placeholder="Leave blank to keep current password">
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-primary">Save Changes</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Preview selected photo
+        document.getElementById('profilePhoto').addEventListener('change', function(e) {
+            if (this.files && this.files[0]) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    document.getElementById('photoPreview').src = e.target.result;
+                }
+                reader.readAsDataURL(this.files[0]);
+            }
+        });
+    </script>
+</body>
+</html> 
