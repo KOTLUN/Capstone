@@ -1,5 +1,6 @@
 from django.db import models
 from django.contrib.auth.models import User
+from django.utils import timezone
 
 
 # Create your models here.
@@ -129,19 +130,21 @@ class Schedules(models.Model):
 
 class Sections(models.Model):
     section_id = models.CharField(max_length=50, unique=True)
-    grade_level = models.IntegerField()
-    adviser = models.ForeignKey(Teachers, on_delete=models.CASCADE, related_name='sections')
+    grade_level = models.IntegerField()  # Store as number (7-12)
+    adviser = models.ForeignKey(Teachers, on_delete=models.CASCADE)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-    
+
     def __str__(self):
         return f"{self.section_id} - Grade {self.grade_level}"
-    
+
+    def get_grade_level_display(self):
+        return f"Grade {self.grade_level}"
+
     class Meta:
-        ordering = ['-created_at']
-    
-    
-    
+        ordering = ['grade_level', 'section_id']
+        verbose_name_plural = "Sections"
+
 
 class Enrollment(models.Model):
     student = models.ForeignKey(Student, on_delete=models.CASCADE, related_name='enrollments')
@@ -369,6 +372,166 @@ class AdminActivity(models.Model):
             return f'{days} day{"s" if days != 1 else ""} ago'
         else:
             return self.timestamp.strftime('%B %d, %Y')
+    
+    
+    
+
+class Grade8Enrollment(models.Model):
+    student = models.ForeignKey(Student, on_delete=models.CASCADE, related_name='grade8_enrollments')
+    section = models.ForeignKey(Sections, on_delete=models.CASCADE, related_name='grade8_enrollments')
+    school_year = models.CharField(max_length=20)  # e.g., "2023-2024"
+    enrollment_date = models.DateField(auto_now_add=True)
+    status = models.CharField(max_length=20, default='Active', 
+                             choices=[('Active', 'Active'), 
+                                     ('Withdrawn', 'Withdrawn'),
+                                     ('Completed', 'Completed'),
+                                     ('Dropped', 'Dropped'),
+                                     ('Transferred', 'Transferred')])
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"{self.student} - {self.section} ({self.school_year})"
+
+    class Meta:
+        ordering = ['-created_at']
+        unique_together = ['student', 'section', 'school_year']
+
+class Grade9Enrollment(models.Model):
+    student = models.ForeignKey(Student, on_delete=models.CASCADE, related_name='grade9_enrollments')
+    section = models.ForeignKey(Sections, on_delete=models.CASCADE, related_name='grade9_enrollments')
+    school_year = models.CharField(max_length=20)  # e.g., "2023-2024"
+    enrollment_date = models.DateField(auto_now_add=True)
+    status = models.CharField(max_length=20, default='Active', 
+                             choices=[('Active', 'Active'), 
+                                     ('Withdrawn', 'Withdrawn'),
+                                     ('Completed', 'Completed'),
+                                     ('Dropped', 'Dropped'),
+                                     ('Transferred', 'Transferred')])
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"{self.student} - {self.section} ({self.school_year})"
+
+    class Meta:
+        ordering = ['-created_at']
+        unique_together = ['student', 'section', 'school_year']
+
+class Grade10Enrollment(models.Model):
+    student = models.ForeignKey(Student, on_delete=models.CASCADE, related_name='grade10_enrollments')
+    section = models.ForeignKey(Sections, on_delete=models.CASCADE, related_name='grade10_enrollments')
+    school_year = models.CharField(max_length=20)  # e.g., "2023-2024"
+    enrollment_date = models.DateField(auto_now_add=True)
+    status = models.CharField(max_length=20, default='Active', 
+                            choices=[('Active', 'Active'), 
+                                    ('Withdrawn', 'Withdrawn'),
+                                    ('Completed', 'Completed'),
+                                    ('Dropped', 'Dropped'),
+                                    ('Transferred', 'Transferred')])
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"{self.student} - {self.section} ({self.school_year})"
+
+    class Meta:
+        ordering = ['-created_at']
+        unique_together = ['student', 'section', 'school_year']
+
+class Grade11Enrollment(models.Model):
+    student = models.ForeignKey(Student, on_delete=models.CASCADE, related_name='grade11_enrollments')
+    section = models.ForeignKey(Sections, on_delete=models.CASCADE, related_name='grade11_enrollments')
+    track = models.CharField(max_length=20)
+    school_year = models.CharField(max_length=20)  # e.g., "2023-2024"
+    enrollment_date = models.DateField(auto_now_add=True)
+    status = models.CharField(max_length=20, default='Active', 
+                             choices=[('Active', 'Active'), 
+                                     ('Withdrawn', 'Withdrawn'),
+                                     ('Completed', 'Completed'),
+                                     ('Dropped', 'Dropped'),
+                                     ('Transferred', 'Transferred')])
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"{self.student} - {self.section} ({self.school_year})"
+
+    class Meta:
+        ordering = ['-created_at']
+        unique_together = ['student', 'section', 'school_year']
+
+class Grade12Enrollment(models.Model):
+    student = models.ForeignKey(Student, on_delete=models.CASCADE, related_name='grade12_enrollments')
+    section = models.ForeignKey(Sections, on_delete=models.CASCADE, related_name='grade12_enrollments')
+    track = models.CharField(max_length=20)
+    school_year = models.CharField(max_length=20)  # e.g., "2023-2024"
+    enrollment_date = models.DateField(auto_now_add=True)
+    status = models.CharField(max_length=20, default='Active', 
+                             choices=[('Active', 'Active'), 
+                                     ('Withdrawn', 'Withdrawn'),
+                                     ('Completed', 'Completed'),
+                                     ('Dropped', 'Dropped'),
+                                     ('Transferred', 'Transferred')])
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"{self.student} - {self.section} ({self.school_year})"
+
+    class Meta:
+        ordering = ['-created_at']
+        unique_together = ['student', 'section', 'school_year']
+
+class SchoolYear(models.Model):
+    year_start = models.IntegerField()
+    year_end = models.IntegerField()
+    is_active = models.BooleanField(default=False)
+    is_previous = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    @property
+    def display_name(self):
+        return f"{self.year_start}-{self.year_end}"
+
+    def save(self, *args, **kwargs):
+        if self.is_active:
+            try:
+                # Get current active school year
+                previous_active = SchoolYear.objects.get(is_active=True)
+                if previous_active and previous_active.id != self.id:
+                    # Mark all students as Not Enrolled for new year
+                    Student.objects.filter(status='Active').update(status='Not Enrolled')
+                    
+                    # Mark all active enrollments as Completed
+                    Enrollment.objects.filter(
+                        school_year=previous_active.display_name,
+                        status='Active'
+                    ).update(status='Completed')
+                    
+                    # Set previous year
+                    previous_active.is_active = False
+                    previous_active.is_previous = True
+                    previous_active.save()
+            except SchoolYear.DoesNotExist:
+                pass
+
+            # Set all other years as inactive
+            SchoolYear.objects.exclude(id=self.id).update(is_active=False)
+
+        super().save(*args, **kwargs)
+
+    @classmethod
+    def get_active(cls):
+        try:
+            return cls.objects.get(is_active=True)
+        except cls.DoesNotExist:
+            return None
+
+    @classmethod
+    def get_all_years(cls):
+        return cls.objects.all().order_by('-year_start')
     
     
     

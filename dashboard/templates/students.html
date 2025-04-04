@@ -86,23 +86,18 @@
                     <div class="col-md-4">
                         <form method="GET" action="{% url 'students' %}" class="d-flex">
                             <select name="school_year" class="form-select me-2 shadow-sm">
-                                <option value="">All School Years</option>
-                                {% for year in school_years %}
-                                    <option value="{{ year }}" {% if selected_year == year %}selected{% endif %}>
-                                        {{ year }}
+                                {% if active_school_year %}
+                                    <option value="{{ active_school_year.display_name }}" {% if selected_year == active_school_year.display_name %}selected{% endif %}>
+                                        {{ active_school_year.display_name }} (Active)
                                     </option>
+                                {% endif %}
+                                {% for year in school_years %}
+                                    {% if not year.is_active %}
+                                        <option value="{{ year.display_name }}" {% if selected_year == year.display_name %}selected{% endif %}>
+                                            {{ year.display_name }}
+                                        </option>
+                                    {% endif %}
                                 {% endfor %}
-                                
-                                {% now "Y" as current_year %}
-                                {% with next_year=current_year|add:"1" %}
-                                    {% with school_year=current_year|stringformat:"s"|add:"-"|add:next_year|stringformat:"s" %}
-                                        {% if school_year not in school_years %}
-                                            <option value="{{ school_year }}" {% if selected_year == school_year %}selected{% endif %}>
-                                                {{ school_year }}
-                                            </option>
-                                        {% endif %}
-                                    {% endwith %}
-                                {% endwith %}
                             </select>
                             <button type="submit" class="btn btn-primary shadow-sm">
                                 <i class="fas fa-filter me-2"></i> Filter
@@ -142,12 +137,14 @@
                                         <td>{{ student.email }}</td>
                                         <td>{{ student.mobile_number }}</td>
                                         <td>
-                                            <span class="badge {% if student.status == 'Enrolled' %}bg-success
-                                                              {% elif student.status == 'Not Enrolled' %}bg-secondary
-                                                              {% elif student.status == 'Transferred' %}bg-warning text-dark
-                                                              {% elif student.status == 'Dropped' %}bg-danger
-                                                              {% elif student.status == 'Completed' %}bg-info{% endif %} rounded-pill">
-                                                {{ student.status }}
+                                            <span class="badge {% if student.display_status == 'Active' %}bg-success
+                                                              {% elif student.display_status == 'Enrolled' %}bg-primary
+                                                              {% elif student.display_status == 'Not Enrolled' %}bg-warning
+                                                              {% elif student.display_status == 'Completed' %}bg-info
+                                                              {% elif student.display_status == 'Dropped' %}bg-danger
+                                                              {% elif student.display_status == 'Transferred' %}bg-secondary
+                                                              {% endif %} rounded-pill">
+                                                {{ student.display_status }}
                                             </span>
                                         </td>
                                         <td>
@@ -158,7 +155,7 @@
                                                     data-gender="{{ student.gender }}"
                                                     data-email="{{ student.email }}"
                                                     data-mobile="{{ student.mobile_number }}"
-                                                    data-status="{{ student.status }}">
+                                                    data-status="{{ student.display_status }}">
                                                     <i class="fas fa-eye"></i>
                                                 </button>
                                                 <button class="btn btn-sm btn-outline-warning edit-student-btn" data-bs-toggle="modal" data-bs-target="#editStudentModal" 
@@ -167,7 +164,7 @@
                                                     data-gender="{{ student.gender }}"
                                                     data-email="{{ student.email }}"
                                                     data-mobile="{{ student.mobile_number }}"
-                                                    data-status="{{ student.status }}">
+                                                    data-status="{{ student.display_status }}">
                                                     <i class="fas fa-edit"></i>
                                                 </button>
                                                 {% if not student.has_account %}
@@ -312,16 +309,22 @@
                                 <div class="mb-3">
                                     <label for="school-year" class="form-label">School Year</label>
                                     <select id="school-year" name="school_year" class="form-select" required>
-                                        <option value="">Select School Year</option>
-                                        {% for year in school_years %}
-                                            <option value="{{ year }}">{{ year }}</option>
-                                        {% endfor %}
-                                        <!-- Add current and next school years if not in the list -->
-                                        {% now "Y" as current_year %}
-                                        {% with next_year=current_year|add:"1" %}
-                                            <option value="{{ current_year }}-{{ next_year }}">{{ current_year }}-{{ next_year }}</option>
-                                        {% endwith %}
+                                        {% if active_school_year %}
+                                            <option value="{{ active_school_year.display_name }}" selected>
+                                                {{ active_school_year.display_name }} (Active)
+                                            </option>
+                                        {% else %}
+                                            <option value="">No Active School Year</option>
+                                            <div class="form-text text-warning">
+                                                <i class="fas fa-exclamation-triangle"></i> No active school year set. Please set an active school year.
+                                            </div>
+                                        {% endif %}
                                     </select>
+                                    {% if not active_school_year %}
+                                        <div class="form-text text-warning">
+                                            <i class="fas fa-exclamation-triangle"></i> No active school year set. Please set an active school year.
+                                        </div>
+                                    {% endif %}
                                 </div>
                             </div>
                             <div class="col-md-6">

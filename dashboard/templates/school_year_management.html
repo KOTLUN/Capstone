@@ -1,0 +1,184 @@
+{% extends 'main.html' %}
+{% load static %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row mb-4">
+        <div class="col">
+            <h2>School Year Management</h2>
+            <p class="text-muted">Manage academic years and set the active school year</p>
+        </div>
+    </div>
+
+    <!-- Add School Year Form -->
+    <div class="card mb-4">
+        <div class="card-header bg-primary text-white">
+            <h5 class="card-title mb-0">Add New School Year</h5>
+        </div>
+        <div class="card-body">
+            <form id="addSchoolYearForm" method="POST">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="add">
+                <div class="row g-3">
+                    <div class="col-md-4">
+                        <label for="year_start" class="form-label">Start Year</label>
+                        <input type="number" class="form-control" id="year_start" name="year_start" required>
+                    </div>
+                    <div class="col-md-4">
+                        <label for="year_end" class="form-label">End Year</label>
+                        <input type="number" class="form-control" id="year_end" name="year_end" required>
+                    </div>
+                    <div class="col-md-4 d-flex align-items-end">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="is_active" name="is_active" value="true">
+                            <label class="form-check-label" for="is_active">
+                                Set as Active School Year
+                            </label>
+                        </div>
+                    </div>
+                </div>
+                <div class="mt-3">
+                    <button type="submit" class="btn btn-primary">Add School Year</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- School Years List -->
+    <div class="card">
+        <div class="card-header bg-primary text-white">
+            <h5 class="card-title mb-0">School Years</h5>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>School Year</th>
+                            <th>Status</th>
+                            <th>Created At</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for year in school_years %}
+                        <tr>
+                            <td>{{ year.display_name }}</td>
+                            <td>
+                                {% if year.is_active %}
+                                <span class="badge bg-success">Active</span>
+                                {% else %}
+                                <span class="badge bg-secondary">Inactive</span>
+                                {% endif %}
+                            </td>
+                            <td>{{ year.created_at|date:"M d, Y" }}</td>
+                            <td>
+                                {% if not year.is_active %}
+                                <form method="POST" class="d-inline activate-form">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="action" value="activate">
+                                    <input type="hidden" name="school_year_id" value="{{ year.id }}">
+                                    <button type="submit" class="btn btn-sm btn-success">
+                                        Set Active
+                                    </button>
+                                </form>
+                                <form method="POST" class="d-inline">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="action" value="delete">
+                                    <input type="hidden" name="school_year_id" value="{{ year.id }}">
+                                    <button type="submit" class="btn btn-sm btn-danger" 
+                                            onclick="return confirm('Are you sure you want to delete this school year?')">
+                                        Delete
+                                    </button>
+                                </form>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="4" class="text-center">No school years found</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Handle form submission for adding school year
+    document.getElementById('addSchoolYearForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        fetch('{% url "school_year_management" %}', {
+            method: 'POST',
+            body: new FormData(this),
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'success') {
+                // Show success message
+                const alertHtml = `
+                    <div class="alert alert-success alert-dismissible fade show" role="alert">
+                        ${data.message}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                `;
+                document.querySelector('.main-content').insertAdjacentHTML('afterbegin', alertHtml);
+                
+                // Auto-dismiss message after 1 second
+                setTimeout(() => {
+                    const alert = document.querySelector('.alert');
+                    if (alert) {
+                        alert.remove();
+                        // Redirect to enrollment page after message disappears
+                        window.location.href = '{% url "enrollment" %}';
+                    }
+                }, 1000);
+            } else {
+                alert(data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Error processing your request. Please try again.');
+        });
+    });
+
+    // Handle activate forms
+    document.querySelectorAll('.activate-form').forEach(form => {
+        form.addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            fetch('{% url "school_year_management" %}', {
+                method: 'POST',
+                body: new FormData(this),
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    // Redirect to enrollment page and refresh
+                    window.location.href = data.redirect;
+                } else {
+                    alert(data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Error processing your request. Please try again.');
+            });
+        });
+    });
+});
+</script>
+{% endblock %} 

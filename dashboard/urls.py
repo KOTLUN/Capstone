@@ -56,6 +56,9 @@ urlpatterns = [
     path('promote-students/', views.promote_students, name='promote_students'),
     path('admin-profile/', views.admin_profile, name='admin_profile'),
     path('admin-profile/update/', views.admin_profile_update, name='admin_profile_update'),
+    path('get_section_grade/', views.get_section_grade, name='get_section_grade'),
+    path('school-year-management/', views.school_year_management, name='school_year_management'),
+    
 ]
 
 if settings.DEBUG:

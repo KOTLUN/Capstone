@@ -20,6 +20,8 @@
             margin-left: 250px;
             padding: 20px;
             width: calc(100% - 250px);
+            position: relative;
+            min-height: 100vh;
         }
         @media (max-width: 768px) {
             .main-content {
@@ -30,6 +32,47 @@
         .card {
             margin-bottom: 20px;
         }
+        .floating-year {
+            position: fixed;
+            top: 20px;
+            right: 30px;
+            z-index: 9999;
+            display: flex;
+            flex-direction: row;
+            align-items: center;
+            gap: 10px;
+        }
+        .year-badge {
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            padding: 8px 15px;
+            text-align: center;
+            min-width: 150px;
+            margin-bottom: 0;
+        }
+        .float-btn {
+            width: 40px;
+            height: 40px;
+            border-radius: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            transition: transform 0.3s ease;
+            background-color: #0d6efd;
+            border: none;
+        }
+        .float-btn:hover {
+            transform: rotate(90deg);
+            background-color: #0b5ed7;
+        }
+        @media (max-width: 768px) {
+            .floating-year {
+                right: 20px;
+                top: 20px;
+            }
+        }
     </style>
 </head>
 <body>
@@ -38,6 +81,23 @@
 
     <!-- Main Content -->
     <div class="main-content">
+        <!-- Add the floating button here, before the header -->
+        <div class="floating-year">
+            <div class="year-badge">
+                {% if active_school_year %}
+                    <span class="text-primary fw-bold">{{ active_school_year.display_name }}</span>
+                {% else %}
+                    <span class="text-muted">No Active SY</span>
+                {% endif %}
+            </div>
+            <button class="float-btn" 
+                    data-bs-toggle="modal" 
+                    data-bs-target="#schoolYearModal"
+                    title="Manage School Years">
+                <i class="fas fa-calendar-alt text-white"></i>
+            </button>
+        </div>
+
         <div class="d-sm-flex align-items-center justify-content-between mb-4">
             <h1 class="h3 mb-0 text-gray-800">Student Enrollment</h1>
         </div>
@@ -97,7 +157,31 @@
                         </div>
                         <div class="col-md-4 mb-3">
                             <label for="school_year" class="form-label">School Year</label>
-                            <input type="text" class="form-control" id="school_year" name="school_year" placeholder="e.g., 2023-2024" required>
+                            <select class="form-select" id="school_year" name="school_year" required>
+                                {% if active_school_year %}
+                                    <option value="{{ active_school_year.display_name }}" selected>
+                                        {{ active_school_year.display_name }} (Active)
+                                    </option>
+                                {% else %}
+                                    <option value="">No Active School Year</option>
+                                {% endif %}
+                            </select>
+                            {% if not active_school_year %}
+                                <div class="form-text text-warning">
+                                    <i class="fas fa-exclamation-triangle"></i> No active school year set. Please set an active school year.
+                                </div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-4 mb-3 track-field" style="display: none;">
+                            <label for="track" class="form-label">Academic Track</label>
+                            <select class="form-select" id="track" name="track">
+                                <option value="">Select Track</option>
+                                <option value="STEM">STEM (Science, Technology, Engineering, and Mathematics)</option>
+                                <option value="HUMSS">HUMSS (Humanities and Social Sciences)</option>
+                                <option value="ABM">ABM (Accountancy, Business and Management)</option>
+                                <option value="GAS">GAS (General Academic Strand)</option>
+                                <option value="TVL">TVL (Technical-Vocational-Livelihood)</option>
+                            </select>
                         </div>
                     </div>
                     <button type="submit" class="btn btn-primary">Enroll Student</button>
@@ -105,13 +189,21 @@
             </div>
         </div>
 
-        <!-- Add this button above your enrollment table -->
-       
-
-        <!-- Enrollments Table Card -->
+        <!-- Main enrollment table card -->
         <div class="card shadow mb-4">
             <div class="card-header py-3 d-flex justify-content-between align-items-center">
                 <h6 class="m-0 fw-bold text-primary">Current Enrollments</h6>
+                <div class="d-flex align-items-center">
+                    <select class="form-select me-2" id="yearFilter">
+                        {% for year in school_years %}
+                            <option value="{{ year.display_name }}" 
+                                    {% if year.display_name == selected_year %}selected{% endif %}>
+                                {{ year.display_name }}
+                                {% if year.is_active %}(Active){% endif %}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
             </div>
             <div class="card-body">
                 <div class="table-responsive">
@@ -122,10 +214,8 @@
                                 <th>Student Name</th>
                                 <th>Section</th>
                                 <th>Grade Level</th>
-                                <th>Subject</th>
                                 <th>School Year</th>
                                 <th>Status</th>
-                                <th>Enrollment Date</th>
                                 <th>Actions</th>
                             </tr>
                         </thead>
@@ -135,48 +225,151 @@
                                 <td>{{ enrollment.student.student_id }}</td>
                                 <td>{{ enrollment.student.first_name }} {{ enrollment.student.last_name }}</td>
                                 <td>{{ enrollment.section.section_id }}</td>
-                                <td>{{ enrollment.section.grade_level }}</td>
-                                <td>{{ enrollment.section.subject.name }}</td>
+                                <td>Grade {{ enrollment.section.grade_level }}</td>
                                 <td>{{ enrollment.school_year }}</td>
                                 <td>
                                     <span class="badge {% if enrollment.status == 'Active' %}bg-success
-                                                      {% elif enrollment.status == 'Withdrawn' %}bg-warning
                                                       {% elif enrollment.status == 'Completed' %}bg-info
                                                       {% elif enrollment.status == 'Dropped' %}bg-danger
-                                                      {% elif enrollment.status == 'Transferred' %}bg-primary
-                                                      {% endif %}">
+                                                      {% else %}bg-secondary{% endif %} rounded-pill">
                                         {{ enrollment.status }}
                                     </span>
                                 </td>
-                                <td>{{ enrollment.enrollment_date }}</td>
                                 <td>
                                     <button class="btn btn-sm btn-info edit-enrollment" 
+                                            data-bs-toggle="modal" 
+                                            data-bs-target="#editEnrollmentModal"
                                             data-id="{{ enrollment.id }}"
                                             data-student="{{ enrollment.student.id }}"
                                             data-section="{{ enrollment.section.id }}"
-                                            data-schoolyear="{{ enrollment.school_year }}"
-                                            data-status="{{ enrollment.status }}"
-                                            data-bs-toggle="modal" 
-                                            data-bs-target="#editEnrollmentModal">
+                                            data-status="{{ enrollment.status }}">
                                         <i class="fas fa-edit"></i>
                                     </button>
-                                    <button class="btn btn-sm btn-danger delete-enrollment" 
+                                    <button class="btn btn-sm btn-danger delete-enrollment"
                                             data-id="{{ enrollment.id }}"
-                                            data-student-name="{{ enrollment.student.first_name }} {{ enrollment.student.last_name }}"
-                                            data-section-id="{{ enrollment.section.section_id }}">
+                                            data-student-name="{{ enrollment.student.first_name }} {{ enrollment.student.last_name }}">
                                         <i class="fas fa-trash"></i>
                                     </button>
                                 </td>
                             </tr>
                             {% empty %}
                             <tr>
-                                <td colspan="9" class="text-center">No enrollments found</td>
+                                <td colspan="7" class="text-center">No enrollments found for this school year</td>
                             </tr>
                             {% endfor %}
                         </tbody>
                     </table>
                 </div>
             </div>
+        </div>
+
+        <!-- Grade Level Cards Section -->
+        <div class="mt-5">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h4>Enrollments by Grade Level</h4>
+            </div>
+
+            {% for grade, sections in sections_by_grade.items %}
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-white py-3">
+                    <h5 class="mb-0 fw-bold text-primary">Grade {{ grade }}</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        {% for section_data in sections %}
+                        <div class="col-xl-3 col-lg-4 col-md-6 mb-4">
+                            <div class="card h-100 border">
+                                <div class="card-header bg-light py-3">
+                                    <h6 class="m-0 fw-bold text-primary">Section {{ section_data.section.section_id }}</h6>
+                                </div>
+                                <div class="card-body">
+                                    <div class="text-center mb-3">
+                                        <div class="display-4 fw-bold text-primary mb-1">{{ section_data.count }}</div>
+                                        <div class="text-muted">Students Enrolled</div>
+                                    </div>
+                                    {% if section_data.section.adviser %}
+                                    <div class="text-center mb-3">
+                                        <i class="fas fa-user-tie fa-2x text-muted mb-2"></i>
+                                        <div class="fw-bold">{{ section_data.section.adviser.first_name }} {{ section_data.section.adviser.last_name }}</div>
+                                        <div class="text-muted small">Section Adviser</div>
+                                    </div>
+                                    {% endif %}
+                                    <button class="btn btn-primary w-100" 
+                                            data-bs-toggle="modal" 
+                                            data-bs-target="#sectionEnrollmentsModal{{ section_data.section.id }}">
+                                        <i class="fas fa-users me-2"></i>View Students
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Section Enrollments Modal -->
+                        <div class="modal fade" id="sectionEnrollmentsModal{{ section_data.section.id }}" tabindex="-1">
+                            <div class="modal-dialog modal-lg">
+                                <div class="modal-content">
+                                    <div class="modal-header">
+                                        <h5 class="modal-title">
+                                            Section {{ section_data.section.section_id }} Enrollments
+                                            <small class="text-muted d-block">Grade {{ grade }}</small>
+                                        </h5>
+                                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                    </div>
+                                    <div class="modal-body">
+                                        <div class="table-responsive">
+                                            <table class="table table-hover">
+                                                <thead>
+                                                    <tr>
+                                                        <th>Student ID</th>
+                                                        <th>Name</th>
+                                                        <th>Status</th>
+                                                        <th class="text-center">Actions</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    {% for enrollment in section_data.enrollments %}
+                                                    <tr>
+                                                        <td>{{ enrollment.student.student_id }}</td>
+                                                        <td>{{ enrollment.student.first_name }} {{ enrollment.student.last_name }}</td>
+                                                        <td>
+                                                            <span class="badge {% if enrollment.status == 'Active' %}bg-success
+                                                                      {% elif enrollment.status == 'Completed' %}bg-info
+                                                                      {% elif enrollment.status == 'Dropped' %}bg-danger
+                                                                      {% else %}bg-secondary{% endif %} rounded-pill">
+                                                                {{ enrollment.status }}
+                                                            </span>
+                                                        </td>
+                                                        <td class="text-center">
+                                                            <button class="btn btn-sm btn-info edit-enrollment" 
+                                                                    data-bs-toggle="modal" 
+                                                                    data-bs-target="#editEnrollmentModal"
+                                                                    data-id="{{ enrollment.id }}">
+                                                                <i class="fas fa-edit"></i>
+                                                            </button>
+                                                            <button class="btn btn-sm btn-danger">
+                                                                <i class="fas fa-trash"></i>
+                                                            </button>
+                                                        </td>
+                                                    </tr>
+                                                    {% empty %}
+                                                    <tr>
+                                                        <td colspan="4" class="text-center py-4 text-muted">
+                                                            <i class="fas fa-user-graduate fa-2x mb-2"></i><br>
+                                                            No students enrolled in this section
+                                                        </td>
+                                                    </tr>
+                                                    {% endfor %}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
         </div>
     </div>
 
@@ -349,11 +542,10 @@
             $('.delete-enrollment').click(function() {
                 const enrollmentId = $(this).data('id');
                 const studentName = $(this).data('student-name');
-                const sectionId = $(this).data('section-id');
 
                 // Update modal content
                 $('#deleteConfirmationModal .modal-body p:first').html(
-                    `Are you sure you want to delete the enrollment of <strong>${studentName}</strong> from section <strong>${sectionId}</strong>?`
+                    `Are you sure you want to delete the enrollment of <strong>${studentName}</strong>?`
                 );
 
                 // Store the enrollment ID for deletion
@@ -531,10 +723,94 @@
                     statusFields.removeClass('d-none');
                 }
             });
+
+            // Add this JavaScript to show/hide track selection based on grade level
+            $('#section').change(function() {
+                const selectedOption = $(this).find('option:selected');
+                const gradeLevel = selectedOption.text().match(/Grade (\d+)/);
+                
+                if (gradeLevel && (gradeLevel[1] === '11' || gradeLevel[1] === '12')) {
+                    $('.track-field').show();
+                    $('#track').prop('required', true);
+                } else {
+                    $('.track-field').hide();
+                    $('#track').prop('required', false);
+                }
+            });
+
+            // Add this JavaScript for the year filter
+            document.getElementById('yearFilter').addEventListener('change', function() {
+                const year = this.value;
+                window.location.href = `?school_year=${encodeURIComponent(year)}`;
+            });
         });
     </script>
 
-    <!-- Add this modal at the bottom of your file, before closing body tag -->
+    <!-- School Year Management Modal -->
+    <div class="modal fade" id="schoolYearModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title">School Year Management</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <!-- Add School Year Form -->
+                    <div class="card mb-4">
+                        <div class="card-header bg-light">
+                            <h6 class="card-title mb-0">Add New School Year</h6>
+                        </div>
+                        <div class="card-body">
+                            <form method="POST" id="addSchoolYearForm" action="{% url 'school_year_management' %}">
+                                {% csrf_token %}
+                                <input type="hidden" name="action" value="add">
+                                <div class="row g-3">
+                                    <div class="col-md-4">
+                                        <label for="year_start" class="form-label">Start Year</label>
+                                        <input type="number" class="form-control" id="year_start" name="year_start" required>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label for="year_end" class="form-label">End Year</label>
+                                        <input type="number" class="form-control" id="year_end" name="year_end" required>
+                                    </div>
+                                    <div class="col-md-4 d-flex align-items-end">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" id="is_active" name="is_active" value="true">
+                                            <label class="form-check-label" for="is_active">
+                                                Set as Active School Year
+                                            </label>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="mt-3">
+                                    <button type="submit" class="btn btn-primary">Add School Year</button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+
+                    <!-- School Years List -->
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>School Year</th>
+                                    <th>Status</th>
+                                    <th>Created At</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="schoolYearsList">
+                                <!-- School years will be loaded here -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Promote Students Modal -->
     <div class="modal fade" id="promoteStudentsModal" tabindex="-1">
         <div class="modal-dialog modal-xl">
             <div class="modal-content">
@@ -604,5 +880,93 @@
             </div>
         </div>
     </div>
+
+    <!-- Add this JavaScript -->
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Set default end year
+        document.getElementById('year_start').addEventListener('change', function() {
+            const yearStart = parseInt(this.value);
+            document.getElementById('year_end').value = yearStart + 1;
+        });
+
+        // Validate form submission
+        document.getElementById('addSchoolYearForm').addEventListener('submit', function(e) {
+            const yearStart = parseInt(document.getElementById('year_start').value);
+            const yearEnd = parseInt(document.getElementById('year_end').value);
+            
+            if (yearEnd !== yearStart + 1) {
+                e.preventDefault();
+                alert('End year must be the next year after start year');
+            }
+        });
+
+        // Load school years when modal opens
+        $('#schoolYearModal').on('show.bs.modal', function() {
+            loadSchoolYears();
+        });
+
+        function loadSchoolYears() {
+            fetch('{% url "school_year_management" %}', {
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            })
+            .then(response => response.text())
+            .then(html => {
+                document.getElementById('schoolYearsList').innerHTML = html;
+                
+                // Reattach event handlers to the new buttons
+                attachEventHandlers();
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                document.getElementById('schoolYearsList').innerHTML = 
+                    '<tr><td colspan="4" class="text-center text-danger">' +
+                    '<i class="fas fa-exclamation-circle me-2"></i>Error loading school years</td></tr>';
+            });
+        }
+
+        function attachEventHandlers() {
+            // Handle form submissions within the modal
+            document.querySelectorAll('#schoolYearsList form').forEach(form => {
+                form.addEventListener('submit', function(e) {
+                    e.preventDefault();
+                    
+                    fetch('{% url "school_year_management" %}', {
+                        method: 'POST',
+                        body: new FormData(this),
+                        headers: {
+                            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                        }
+                    })
+                    .then(response => {
+                        if (response.ok) {
+                            // Reload the school years list
+                            loadSchoolYears();
+                            
+                            // Show success message
+                            const action = this.querySelector('input[name="action"]').value;
+                            const message = action === 'delete' ? 'School year deleted successfully' : 
+                                          action === 'activate' ? 'School year activated successfully' : 
+                                          'School year updated successfully';
+                            
+                            // You can add a toast or alert here to show the success message
+                        } else {
+                            throw new Error('Network response was not ok');
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        // Show error message to user
+                        alert('Error processing your request. Please try again.');
+                    });
+                });
+            });
+        }
+    });
+    </script>
+
+  
 </body>
 </html>

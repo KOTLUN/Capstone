@@ -7,7 +7,7 @@ register = template.Library()
 
 @register.filter
 def get_item(dictionary, key):
-    return dictionary.get(key, [])
+    return dictionary.get(key)
 
 @register.filter(name='safe_json')
 def safe_json(obj):
