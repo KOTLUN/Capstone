@@ -23,6 +23,7 @@ from django.db.models.functions import ExtractMonth
 from django.db.models import Q
 from collections import defaultdict
 from django.urls import reverse
+from django.db.models import Prefetch
 
 
 # Create your views here.
@@ -1359,10 +1360,13 @@ def schedule_view(request):
     """View function for displaying the schedule page."""
     schedules = Schedules.objects.all().select_related('subject', 'teacher_id', 'section')
     
-    # Fetch all required data from models
-    teachers = Teachers.objects.all().order_by('first_name', 'last_name')
+    # Get teachers with their related schedules only
+    teachers = Teachers.objects.prefetch_related(
+        'schedules_set__subject'
+    ).all().order_by('first_name', 'last_name')
+    
     subjects = Subject.objects.all().order_by('name')
-    sections = Sections.objects.all().order_by('grade_level', 'section_id')
+    sections = Sections.objects.select_related('adviser').all().order_by('grade_level', 'section_id')
     grade_levels = Sections.objects.values_list('grade_level', flat=True).distinct().order_by('grade_level')
     
     sections_json = json.dumps([{
@@ -1371,6 +1375,33 @@ def schedule_view(request):
         'grade_level': section.grade_level
     } for section in sections], cls=DjangoJSONEncoder)
     
+    # Get unique subjects for each teacher
+    teacher_subjects = {}
+    teacher_roles = {}  # To store teacher roles (adviser/subject teacher)
+    
+    # First get all sections with their advisers
+    adviser_sections = {section.adviser_id: section for section in sections if section.adviser_id}
+    
+    for teacher in teachers:
+        # Get unique subjects
+        unique_subjects = set()
+        for schedule in teacher.schedules_set.all():
+            unique_subjects.add(schedule.subject)
+        teacher_subjects[teacher.id] = sorted(list(unique_subjects), key=lambda x: x.name)
+        
+        # Determine role and section if adviser
+        if teacher.id in adviser_sections:
+            section = adviser_sections[teacher.id]
+            teacher_roles[teacher.id] = {
+                'role': 'adviser',
+                'section': section.section_id
+            }
+        else:
+            teacher_roles[teacher.id] = {
+                'role': 'subject',
+                'section': None
+            }
+    
     context = {
         'schedules': schedules,
         'teachers': teachers,
@@ -1378,6 +1409,8 @@ def schedule_view(request):
         'sections': sections,
         'grade_levels': grade_levels,
         'sections_json': sections_json,
+        'teacher_subjects': teacher_subjects,
+        'teacher_roles': teacher_roles,
     }
     return render(request, 'schedules.html', context)
 
@@ -2076,6 +2109,82 @@ def school_year_management(request):
         return render(request, 'school_year_management_table.html', context)
     
     return render(request, 'school_year_management.html', context)
+
+def get_teacher_schedule(request):
+    """API endpoint to get a teacher's weekly schedule"""
+    teacher_id = request.GET.get('teacher_id')
+    if not teacher_id:
+        return JsonResponse({'error': 'Teacher ID is required'}, status=400)
+    
+    try:
+        teacher = Teachers.objects.get(id=teacher_id)
+        schedules = Schedules.objects.filter(teacher_id=teacher).select_related('subject', 'section')
+        
+        # Generate time slots from 7 AM to 5 PM
+        time_slots = []
+        start_time = datetime.strptime('07:00', '%H:%M')
+        end_time = datetime.strptime('17:00', '%H:%M')
+        
+        while start_time < end_time:
+            next_time = start_time + timedelta(hours=1)
+            time_slots.append({
+                'start': start_time.time(),
+                'end': next_time.time(),
+                'display': f"{start_time.strftime('%I:%M %p')} - {next_time.strftime('%I:%M %p')}"
+            })
+            start_time = next_time
+
+        # Generate HTML table
+        html = """
+        <div class="table-responsive">
+            <table class="table table-bordered">
+                <thead>
+                    <tr class="bg-light">
+                        <th style="width: 150px;">Time</th>
+                        <th>Monday</th>
+                        <th>Tuesday</th>
+                        <th>Wednesday</th>
+                        <th>Thursday</th>
+                        <th>Friday</th>
+                    </tr>
+                </thead>
+                <tbody>
+        """
+        
+        days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday']
+        
+        for time_slot in time_slots:
+            html += f'<tr><td class="fw-bold">{time_slot["display"]}</td>'
+            
+            for day in days:
+                html += '<td style="height: 100px; padding: 0.5rem;">'
+                for schedule in schedules:
+                    if (schedule.day == day and 
+                        schedule.start_time <= time_slot['start'] and 
+                        schedule.end_time > time_slot['start']):
+                        html += f"""
+                            <div class="schedule-item">
+                                <strong>{schedule.subject.name}</strong><br>
+                                Section: {schedule.section.section_id}<br>
+                                Room: {schedule.room}
+                            </div>
+                        """
+                html += "</td>"
+            
+            html += "</tr>"
+        
+        html += "</tbody></table></div>"
+        
+        return JsonResponse({
+            'html': html,
+            'teacher_name': f"{teacher.first_name} {teacher.last_name}"
+        })
+        
+    except Teachers.DoesNotExist:
+        return JsonResponse({'error': 'Teacher not found'}, status=404)
+    except Exception as e:
+        print(f"Error in get_teacher_schedule: {str(e)}")  # Add logging
+        return JsonResponse({'error': str(e)}, status=500)
 
 
 

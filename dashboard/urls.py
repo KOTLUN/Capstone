@@ -58,7 +58,7 @@ urlpatterns = [
     path('admin-profile/update/', views.admin_profile_update, name='admin_profile_update'),
     path('get_section_grade/', views.get_section_grade, name='get_section_grade'),
     path('school-year-management/', views.school_year_management, name='school_year_management'),
-    
+    path('get-teacher-schedule/', views.get_teacher_schedule, name='get_teacher_schedule'),
 ]
 
 if settings.DEBUG:
