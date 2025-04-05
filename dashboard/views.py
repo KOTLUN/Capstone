@@ -13,7 +13,7 @@ from django.contrib.auth.decorators import login_required
 from django.db.models import Count, Avg
 from django.conf import settings
 from django.http import JsonResponse
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from django.db import transaction
 from django.db import models
 from django.views.decorators.http import require_POST
@@ -48,7 +48,7 @@ def dashboard_view(request):
         student_growth = ((total_students - students_last_month) / students_last_month) * 100
     else:
         student_growth = 0
-
+    
     # Initialize school years data structure
     school_years_data = {}
     
@@ -59,7 +59,7 @@ def dashboard_view(request):
                 'data': [0] * 12  # Initialize with zeros
             }
         }
-
+        
         # Get monthly enrollment data
         monthly_data = (
             Enrollment.objects
@@ -126,7 +126,7 @@ def students_view(request):
                 student.display_status = enrollment.status if enrollment else student.status
             else:
                 student.display_status = student.status
-
+    
     context = {
         'students': students,
         'school_years': school_years,
@@ -348,85 +348,57 @@ def generate_time_slots():
 
 def sections_view(request):
     try:
-        sections = Sections.objects.all()
-        
-        # Get all teachers
+        sections = Sections.objects.all().order_by('grade_level', 'section_id')
         all_teachers = Teachers.objects.all()
-        
-        # Get teachers who are already advisers and their grade levels
-        existing_advisers = Sections.objects.values_list('adviser_id', 'grade_level')
-        
-        # Create a dictionary to track which teachers are advising which grade levels
-        adviser_grade_levels = {}
-        for adviser_id, grade_level in existing_advisers:
-            if adviser_id not in adviser_grade_levels:
-                adviser_grade_levels[adviser_id] = []
-            adviser_grade_levels[adviser_id].append(grade_level)
-        
-        # Filter out teachers who are already advisers for any section
-        available_teachers = []
-        for teacher in all_teachers:
-            # Include teachers who aren't advising any section yet
-            if teacher.id not in adviser_grade_levels:
-                available_teachers.append(teacher)
-        
+        available_teachers = Teachers.objects.filter(sections=None)
         subjects = Subject.objects.all()
         
-        # Get unique school years from enrollments
-        enrollment_years = (Enrollment.objects
-                          .values_list('school_year', flat=True)
-                          .distinct()
-                          .order_by('-school_year'))
-
+        # Get active school year and all school years
+        active_school_year = SchoolYear.get_active()
+        school_years = SchoolYear.objects.all().order_by('-year_start')
+        
         # Get enrollment counts for each section
         section_counts = {}
         for section in sections:
-            grade_number = section.grade_level
+            # Initialize count for this section
+            total_count = 0
             
             # Get enrollments based on grade level
-            if grade_number == 7:
-                count = Enrollment.objects.filter(
-                    section=section,
-                    status='Active'
+            if section.grade_level == 7:
+                total_count = Enrollment.objects.filter(
+                    section_id=section.id
                 ).count()
-            elif grade_number == 8:
-                count = Grade8Enrollment.objects.filter(
-                    section=section,
-                    status='Active'
+            elif section.grade_level == 8:
+                total_count = Grade8Enrollment.objects.filter(
+                    section_id=section.id
                 ).count()
-            elif grade_number == 9:
-                count = Grade9Enrollment.objects.filter(
-                    section=section,
-                    status='Active'
+            elif section.grade_level == 9:
+                total_count = Grade9Enrollment.objects.filter(
+                    section_id=section.id
                 ).count()
-            elif grade_number == 10:
-                count = Grade10Enrollment.objects.filter(
-                    section=section,
-                    status='Active'
+            elif section.grade_level == 10:
+                total_count = Grade10Enrollment.objects.filter(
+                    section_id=section.id
                 ).count()
-            elif grade_number == 11:
-                count = Grade11Enrollment.objects.filter(
-                    section=section,
-                    status='Active'
+            elif section.grade_level == 11:
+                total_count = Grade11Enrollment.objects.filter(
+                    section_id=section.id
                 ).count()
-            elif grade_number == 12:
-                count = Grade12Enrollment.objects.filter(
-                    section=section,
-                    status='Active'
+            elif section.grade_level == 12:
+                total_count = Grade12Enrollment.objects.filter(
+                    section_id=section.id
                 ).count()
-            else:
-                count = 0
-                
-            section_counts[section.id] = count
+            
+            section_counts[section.id] = total_count
 
         context = {
             'sections': sections,
             'teachers': all_teachers,
             'available_teachers': available_teachers,
             'subjects': subjects,
-            'adviser_grade_levels': adviser_grade_levels,
-            'enrollment_years': enrollment_years,
-            'section_counts': section_counts
+            'active_school_year': active_school_year,
+            'school_years': school_years,
+            'section_counts': section_counts,
         }
         return render(request, 'Sections.html', context)
     except Exception as e:
@@ -436,8 +408,15 @@ def sections_view(request):
 def add_section(request):
     if request.method == 'POST':
         section_id = request.POST.get('section_id')
-        grade_level = request.POST.get('grade_level')
+        grade_level_str = request.POST.get('grade_level')  # e.g. "Grade 7"
         adviser_id = request.POST.get('adviser')
+        
+        # Extract the number from "Grade X"
+        try:
+            grade_level = int(grade_level_str.split()[-1])  # Extract number from "Grade 7"
+        except (ValueError, AttributeError, IndexError):
+            messages.error(request, "Invalid grade level format")
+            return redirect('sections')
         
         # Check if section with this ID already exists
         if Sections.objects.filter(section_id=section_id).exists():
@@ -446,7 +425,7 @@ def add_section(request):
         
         # Check if a section with this grade level and section ID combination already exists
         if Sections.objects.filter(grade_level=grade_level, section_id=section_id).exists():
-            messages.error(request, f"A section with ID {section_id} in {grade_level} already exists.")
+            messages.error(request, f"A section with ID {section_id} in Grade {grade_level} already exists.")
             return redirect('sections')
         
         try:
@@ -455,16 +434,16 @@ def add_section(request):
             
             # Check if the adviser is already assigned to a section in this grade level
             if Sections.objects.filter(adviser=adviser, grade_level=grade_level).exists():
-                messages.error(request, f"Teacher {adviser.first_name} {adviser.last_name} is already an adviser for a section in {grade_level}.")
+                messages.error(request, f"Teacher {adviser.first_name} {adviser.last_name} is already an adviser for a section in Grade {grade_level}.")
                 return redirect('sections')
             
             # Create the new section with the adviser from Teachers model
             Sections.objects.create(
                 section_id=section_id,
-                grade_level=grade_level,
+                grade_level=grade_level,  # Now using the extracted number
                 adviser=adviser
             )  
-            messages.success(request, f"Section '{section_id} - {grade_level}' added successfully!")
+            messages.success(request, f"Section '{section_id} - Grade {grade_level}' added successfully!")
             log_admin_activity(
                 request.user,
                 f"Added new section: {section_id} (Grade {grade_level})",
@@ -636,7 +615,7 @@ def enrollment_view(request):
             if grade in sections_by_grade:
                 sections_by_grade[grade].append({
                     'section': section,
-                    'enrollments': enrollments,
+        'enrollments': enrollments,
                     'count': len(enrollments)
                 })
 
@@ -654,148 +633,184 @@ def enrollment_view(request):
     
     return render(request, 'enrollment.html', context)
 
+def validate_enrollment(student, grade_level, school_year):
+    """
+    Validates if a student can be enrolled in a specific grade level.
+    Returns (is_valid, message)
+    """
+    try:
+        # Check if student has already taken this grade level in any previous year
+        if grade_level == 7:
+            previous_enrollment = Enrollment.objects.filter(
+                student=student,
+                section__grade_level=grade_level,
+                school_year__lt=school_year  # Check previous years
+            ).exists()
+        elif grade_level == 8:
+            previous_enrollment = Grade8Enrollment.objects.filter(
+                student=student,
+                section__grade_level=grade_level,
+                school_year__lt=school_year
+            ).exists()
+        elif grade_level == 9:
+            previous_enrollment = Grade9Enrollment.objects.filter(
+                student=student,
+                section__grade_level=grade_level,
+                school_year__lt=school_year
+            ).exists()
+        elif grade_level == 10:
+            previous_enrollment = Grade10Enrollment.objects.filter(
+                student=student,
+                section__grade_level=grade_level,
+                school_year__lt=school_year
+            ).exists()
+        elif grade_level == 11:
+            previous_enrollment = Grade11Enrollment.objects.filter(
+                student=student,
+                section__grade_level=grade_level,
+                school_year__lt=school_year
+            ).exists()
+        elif grade_level == 12:
+            previous_enrollment = Grade12Enrollment.objects.filter(
+                student=student,
+                section__grade_level=grade_level,
+                school_year__lt=school_year
+            ).exists()
+
+        if previous_enrollment:
+            return False, f"Student has already taken Grade {grade_level} in a previous school year."
+
+        return True, "Student is eligible for enrollment."
+
+    except Exception as e:
+        return False, f"Error validating enrollment: {str(e)}"
+
 def add_enrollment(request):
     if request.method == 'POST':
         try:
+            # Get active school year and selected school year
+            active_school_year = SchoolYear.get_active()
+            selected_school_year = request.POST.get('school_year')
+
+            if not active_school_year:
+                messages.error(request, "No active school year found.")
+                return redirect('enrollment')
+
             student = Student.objects.get(id=request.POST['student'])
             section = Sections.objects.get(id=request.POST['section'])
-            school_year = request.POST['school_year']
             grade_level = int(section.grade_level)
             track = request.POST.get('track', '')  # For senior high
 
-            # Check if student has already completed or is currently enrolled in this grade level in ANY school year
+            # Use the active school year for enrollment
+            school_year = active_school_year.display_name
+
+            # Add validation check
+            is_valid, message = validate_enrollment(student, grade_level, school_year)
+            if not is_valid:
+                messages.error(request, message)
+                return redirect('enrollment')
+
+            # Check if student has already completed or is currently enrolled in this grade level
             completed_or_active = False
             
+            # Use the active school year for enrollment checks
             if grade_level == 7:
                 completed_or_active = Enrollment.objects.filter(
-                    student=student,
+                    student=student, 
                     section__grade_level=grade_level,
+                    school_year=school_year,
                     status__in=['Completed', 'Active']
                 ).exists()
             elif grade_level == 8:
                 completed_or_active = Grade8Enrollment.objects.filter(
                     student=student,
                     section__grade_level=grade_level,
+                    school_year=school_year,
                     status__in=['Completed', 'Active']
                 ).exists()
             elif grade_level == 9:
                 completed_or_active = Grade9Enrollment.objects.filter(
                     student=student,
                     section__grade_level=grade_level,
+                    school_year=school_year,
                     status__in=['Completed', 'Active']
                 ).exists()
             elif grade_level == 10:
                 completed_or_active = Grade10Enrollment.objects.filter(
                     student=student,
                     section__grade_level=grade_level,
+                    school_year=school_year,
                     status__in=['Completed', 'Active']
                 ).exists()
             elif grade_level == 11:
                 completed_or_active = Grade11Enrollment.objects.filter(
                     student=student,
                     section__grade_level=grade_level,
+                    school_year=school_year,
                     status__in=['Completed', 'Active']
                 ).exists()
             elif grade_level == 12:
                 completed_or_active = Grade12Enrollment.objects.filter(
                     student=student,
                     section__grade_level=grade_level,
+                    school_year=school_year,
                     status__in=['Completed', 'Active']
                 ).exists()
 
             if completed_or_active:
                 messages.error(
                     request, 
-                    f"Cannot enroll student in Grade {grade_level}. Student has already completed or is currently enrolled in this grade level."
+                    f"Cannot enroll student in Grade {grade_level}. Student is already enrolled in this grade level for {school_year}."
                 )
                 return redirect('enrollment')
 
-            # Check if previous grade level is completed (except for Grade 7)
-            if grade_level > 7:
-                previous_grade_completed = False
-                if grade_level == 8:
-                    previous_grade_completed = Enrollment.objects.filter(
-                        student=student,
-                        section__grade_level=7,
-                        status='Completed'
-                    ).exists()
-                elif grade_level == 9:
-                    previous_grade_completed = Grade8Enrollment.objects.filter(
-                        student=student,
-                        section__grade_level=8,
-                        status='Completed'
-                    ).exists()
-                elif grade_level == 10:
-                    previous_grade_completed = Grade9Enrollment.objects.filter(
-                        student=student,
-                        section__grade_level=9,
-                        status='Completed'
-                    ).exists()
-                elif grade_level == 11:
-                    previous_grade_completed = Grade10Enrollment.objects.filter(
-                        student=student,
-                        section__grade_level=10,
-                        status='Completed'
-                    ).exists()
-                elif grade_level == 12:
-                    previous_grade_completed = Grade11Enrollment.objects.filter(
-                        student=student,
-                        section__grade_level=11,
-                        status='Completed'
-                    ).exists()
-
-                if not previous_grade_completed:
-                    messages.error(
-                        request, 
-                        f"Cannot enroll in Grade {grade_level}. Student must complete Grade {grade_level-1} first."
-                    )
-                    return redirect('enrollment')
-
-            # Create enrollment based on grade level
+            # Create enrollment based on grade level using active school year
             enrollment_data = {
                 'student': student,
                 'section': section,
                 'school_year': school_year,
-                'status': 'Active'
+                'status': 'Active',
+                'enrollment_date': datetime.now()  # Changed from timezone.now()
             }
 
             if grade_level == 7:
                 Enrollment.objects.create(**enrollment_data)
-                messages.success(request, f"Student enrolled in Grade 7 successfully!")
+                messages.success(request, f"Student enrolled in Grade 7 for {school_year}!")
             elif grade_level == 8:
                 Grade8Enrollment.objects.create(**enrollment_data)
-                messages.success(request, f"Student enrolled in Grade 8 successfully!")
+                messages.success(request, f"Student enrolled in Grade 8 for {school_year}!")
             elif grade_level == 9:
                 Grade9Enrollment.objects.create(**enrollment_data)
-                messages.success(request, f"Student enrolled in Grade 9 successfully!")
+                messages.success(request, f"Student enrolled in Grade 9 for {school_year}!")
             elif grade_level == 10:
                 Grade10Enrollment.objects.create(**enrollment_data)
-                messages.success(request, f"Student enrolled in Grade 10 successfully!")
+                messages.success(request, f"Student enrolled in Grade 10 for {school_year}!")
             elif grade_level == 11:
                 if not track:
-                    messages.error(request, "Academic track is required for Grade 11")
+                    messages.error(request, "Academic track is required for Grade 11 enrollment.")
                     return redirect('enrollment')
                 enrollment_data['track'] = track
                 Grade11Enrollment.objects.create(**enrollment_data)
-                messages.success(request, f"Student enrolled in Grade 11 successfully!")
+                messages.success(request, f"Student enrolled in Grade 11 ({track}) for {school_year}!")
             elif grade_level == 12:
                 if not track:
-                    messages.error(request, "Academic track is required for Grade 12")
+                    messages.error(request, "Academic track is required for Grade 12 enrollment.")
                     return redirect('enrollment')
                 enrollment_data['track'] = track
                 Grade12Enrollment.objects.create(**enrollment_data)
-                messages.success(request, f"Student enrolled in Grade 12 successfully!")
+                messages.success(request, f"Student enrolled in Grade 12 ({track}) for {school_year}!")
 
-            # Update student status
-            student.status = 'Active'
-            student.save()
-
+            # Log the enrollment activity
             log_admin_activity(
                 request.user,
-                f"Enrolled student {student.first_name} {student.last_name} in Grade {grade_level}",
+                f"Enrolled student {student.first_name} {student.last_name} in Grade {grade_level} for {school_year}",
                 "enrollment"
             )
 
+        except Student.DoesNotExist:
+            messages.error(request, "Student not found.")
+        except Sections.DoesNotExist:
+            messages.error(request, "Section not found.")
         except Exception as e:
             messages.error(request, f"Error enrolling student: {str(e)}")
 
@@ -1690,75 +1705,89 @@ def get_section_schedule(request):
         return JsonResponse({'error': str(e)}, status=500)
 
 def get_enrolled_students(request):
-    grade_level = request.GET.get('grade_level')
     section_id = request.GET.get('section_id')
-    selected_school_year = request.GET.get('school_year', '')  # Make school_year optional for section view
+    selected_school_year = request.GET.get('school_year', '')
     
+    print(selected_school_year)
     try:
-        grade_number = int(grade_level)
         section = Sections.objects.get(id=section_id)
+        grade_number = section.grade_level
         
-        # Get enrollments based on grade level and section
+        print(f"Fetching students for section {section_id}, grade {grade_number}, year {selected_school_year}")
+        
+        # Get enrollments based on grade level
         if grade_number == 7:
             enrollments = Enrollment.objects.filter(
-                section=section,
-                status='Active'
-            ).select_related('student', 'section')
+                section_id=section_id,
+                school_year=selected_school_year
+            ).select_related('student').order_by('student__student_id')
+            print(f"Grade 7 enrollments found: {enrollments.count()}")
         elif grade_number == 8:
             enrollments = Grade8Enrollment.objects.filter(
-                section=section,
-                status='Active'
-            ).select_related('student', 'section')
+                section_id=section_id,
+                school_year=selected_school_year
+            ).select_related('student').order_by('student__student_id')
+            print(f"Grade 8 enrollments found: {enrollments.count()}")
         elif grade_number == 9:
             enrollments = Grade9Enrollment.objects.filter(
-                section=section,
-                status='Active'
-            ).select_related('student', 'section')
+                section_id=section_id,
+                school_year=selected_school_year
+            ).select_related('student').order_by('student__student_id')
+            print(f"Grade 9 enrollments found: {enrollments.count()}")
         elif grade_number == 10:
             enrollments = Grade10Enrollment.objects.filter(
-                section=section,
-                status='Active'
-            ).select_related('student', 'section')
+                section_id=section_id,
+                school_year=selected_school_year
+            ).select_related('student').order_by('student__student_id')
+            print(f"Grade 10 enrollments found: {enrollments.count()}")
         elif grade_number == 11:
             enrollments = Grade11Enrollment.objects.filter(
-                section=section,
-                status='Active'
-            ).select_related('student', 'section')
+                section_id=section_id,
+                school_year=selected_school_year
+            ).select_related('student').order_by('student__student_id')
+            print(f"Grade 11 enrollments found: {enrollments.count()}")
         elif grade_number == 12:
             enrollments = Grade12Enrollment.objects.filter(
-                section=section,
-                status='Active'
-            ).select_related('student', 'section')
+                section_id=section_id,
+                school_year=selected_school_year
+            ).select_related('student').order_by('student__student_id')
+            print(f"Grade 12 enrollments found: {enrollments.count()}")
         else:
             return JsonResponse({'error': f'Invalid grade level: {grade_number}'}, status=400)
 
-        # Add school year filter if provided
-        if selected_school_year:
-            enrollments = enrollments.filter(school_year=selected_school_year)
-
         students = []
         for enrollment in enrollments:
+            print(f"Processing enrollment: {enrollment.student.student_id} - {enrollment.school_year}")
             students.append({
                 'student_id': enrollment.student.student_id,
                 'first_name': enrollment.student.first_name,
                 'last_name': enrollment.student.last_name,
-                'section_id': enrollment.section.section_id,
-                'status': enrollment.status
+                'section_id': section.section_id,
+                'status': enrollment.status,
+                'enrollment_date': enrollment.enrollment_date.strftime('%Y-%m-%d'),
+                'school_year': enrollment.school_year
             })
-        
-        # Sort students by ID
-        students.sort(key=lambda x: x['student_id'])
-        
-        return JsonResponse({
+
+        response_data = {
             'students': students,
             'grade_level': f"Grade {grade_number}",
             'section_id': section.section_id,
+            'section_name': section.section_id,
             'total_students': len(students)
-        })
+        }
+        
+        print(f"Sending response: {response_data}")
+        return JsonResponse(response_data)
         
     except Exception as e:
-        print(f"Error in get_enrolled_students: {str(e)}")  # Debug line
-        return JsonResponse({'error': str(e)}, status=500)
+        print(f"Error in get_enrolled_students: {str(e)}")
+        return JsonResponse({
+            'error': str(e),
+            'grade_level': 'Error',
+            'section_id': 'Error',
+            'section_name': 'Error',
+            'total_students': 0
+        }, status=500)
 
 def get_eligible_students(request):
     """API endpoint to get students eligible for promotion"""
@@ -2050,4 +2079,3 @@ def school_year_management(request):
 
 
 
-    

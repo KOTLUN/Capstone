@@ -99,7 +99,7 @@ WSGI_APPLICATION = 'Web_ARMS.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',
-        'NAME': 'sms8',
+        'NAME': 'arms1',
         'USER': 'root',
         'PASSWORD': '',
         'HOST': 'localhost',

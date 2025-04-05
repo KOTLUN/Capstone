@@ -164,13 +164,11 @@
                                     </option>
                                 {% else %}
                                     <option value="">No Active School Year</option>
+                                    <div class="form-text text-warning">
+                                        <i class="fas fa-exclamation-triangle"></i> No active school year set. Please set an active school year.
+                                    </div>
                                 {% endif %}
                             </select>
-                            {% if not active_school_year %}
-                                <div class="form-text text-warning">
-                                    <i class="fas fa-exclamation-triangle"></i> No active school year set. Please set an active school year.
-                                </div>
-                            {% endif %}
                         </div>
                         <div class="col-md-4 mb-3 track-field" style="display: none;">
                             <label for="track" class="form-label">Academic Track</label>

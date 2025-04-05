@@ -239,16 +239,22 @@
                                     </div>
                                     <div class="card-body">
                                         <p class="card-text"><strong>Section:</strong> {{ section.section_id }}</p>
-                                        <!-- <p class="card-text">
-                                            <strong>Enrolled Students:</strong> 
-                                            <a href="#" class="enrolled-count-link" data-section-id="{{ section.id }}">
-                                                {{ section_counts|get_item:section.id|default:"0" }}
-                                            </a>
-                                        </p> -->
                                         <p class="card-text">
                                             <strong>Adviser:</strong> 
                                             {{ section.adviser.first_name }} {{ section.adviser.last_name }}
                                         </p>
+                                        <div class="d-flex justify-content-between align-items-center mt-3">
+                                            <a href="#" 
+                                               class="enrolled-count-link text-decoration-none"
+                                               data-section-id="{{ section.id }}">
+                                                <i class="fas fa-users me-2"></i>
+                                                Enrolled Students: {{ section_counts|get_item:section.id }}
+                                            </a>
+                                            <button class="btn btn-sm btn-primary view-students-btn" 
+                                                    data-section-id="{{ section.id }}">
+                                                <i class="fas fa-eye me-1"></i> View Students
+                                            </button>
+                                        </div>
                                         <p class="card-text">
                                             <small class="text-muted">Created: {{ section.created_at|date:"M d, Y" }}</small>
                                         </p>
@@ -338,53 +344,26 @@
         </div>
     </div>
 
-    <!-- Enrolled Students Modal -->
-    <div class="modal fade" id="enrolledStudentsModal" tabindex="-1">
-        <div class="modal-dialog modal-xl">
-            <div class="modal-content">
-                <div class="modal-header bg-primary text-white">
-                    <h5 class="modal-title">Enrolled Students</h5>
-                    <div class="ms-auto me-3">
-                        <select class="form-select form-select-sm bg-light" id="schoolYearFilter">
-                            {% for year in enrollment_years %}
-                                <option value="{{ year }}">SY {{ year }}</option>
-                            {% endfor %}
-                        </select>
-                    </div>
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body">
-                    <div class="table-responsive">
-                        <table class="table table-hover">
-                            <thead>
-                                <tr>
-                                    <th class="text-center">#</th>
-                                    <th>Student ID</th>
-                                    <th>Complete Name</th>
-                                    <th>Grade Level</th>
-                                    <th>Section</th>
-                                    <th class="text-center">Status</th>
-                                </tr>
-                            </thead>
-                            <tbody id="enrolledStudentsTableBody">
-                                <!-- Students will be loaded here -->
-                            </tbody>
-                        </table>
-                        <div id="noStudentsMessage" class="text-center text-muted d-none">
-                            No students enrolled.
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Add this new modal for section students -->
+    <!-- Modify the Section Students Modal -->
     <div class="modal fade" id="sectionStudentsModal" tabindex="-1">
         <div class="modal-dialog modal-lg">
             <div class="modal-content">
                 <div class="modal-header bg-primary text-white">
                     <h5 class="modal-title">Section Students</h5>
+                    <div class="ms-auto me-3">
+                        <select class="form-select form-select-sm bg-light" id="sectionSchoolYearFilter">
+                            {% if active_school_year %}
+                                <option value="{{ active_school_year.display_name }}" selected>
+                                    {{ active_school_year.display_name }} (Active)
+                                </option>
+                            {% endif %}
+                            {% for year in enrollment_years %}
+                                {% if active_school_year and year != active_school_year.display_name %}
+                                    <option value="{{ year }}">{{ year }}</option>
+                                {% endif %}
+                            {% endfor %}
+                        </select>
+                    </div>
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
@@ -544,16 +523,32 @@
                 deleteModal.show();
             }
 
-            function loadEnrolledStudents(sectionId, schoolYear) {
-                const tableBody = document.getElementById('enrolledStudentsTableBody');
-                const noStudentsMessage = document.getElementById('noStudentsMessage');
+            // Update both buttons to use the same modal and function
+            document.querySelectorAll('.view-students-btn, .enrolled-count-link').forEach(element => {
+                element.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    const sectionId = this.getAttribute('data-section-id');
+                    currentSectionId = sectionId;
+                    const modal = new bootstrap.Modal(document.getElementById('sectionStudentsModal'));
+                    modal.show();
+                    const selectedYear = document.getElementById('sectionSchoolYearFilter').value;
+                    loadSectionStudents(sectionId, selectedYear);
+                });
+            });
+
+            // Keep the school year filter change handler
+            document.getElementById('sectionSchoolYearFilter').addEventListener('change', function() {
+                if (currentSectionId) {
+                    loadSectionStudents(currentSectionId, this.value);
+                }
+            });
+
+            // Keep the loadSectionStudents function as is
+            function loadSectionStudents(sectionId, schoolYear) {
+                const tableBody = document.getElementById('sectionStudentsTableBody');
+                const noStudentsMessage = document.getElementById('sectionNoStudentsMessage');
                 
-                // Get section info from the card
-                const sectionCard = document.querySelector(`[data-section-id="${sectionId}"]`).closest('.section-card');
-                const gradeLevel = sectionCard.querySelector('.card-title').textContent;
-                const sectionName = sectionCard.querySelector('.card-text').textContent.split(':')[1].trim();
-                
-                tableBody.innerHTML = '<tr><td colspan="6" class="text-center">' +
+                tableBody.innerHTML = '<tr><td colspan="4" class="text-center">' +
                     '<div class="spinner-border" role="status">' +
                     '<span class="visually-hidden">Loading...</span></div></td></tr>';
                 
@@ -575,8 +570,6 @@
                                         <td class="text-center">${index + 1}</td>
                                         <td>${student.student_id}</td>
                                         <td>${student.first_name} ${student.last_name}</td>
-                                        <td>${gradeLevel}</td>
-                                        <td>${sectionName}</td>
                                         <td class="text-center">
                                             <span class="badge bg-${student.status === 'Active' ? 'success' : 'warning'}">
                                                 ${student.status}
@@ -588,89 +581,15 @@
                             tableBody.innerHTML = html;
                             noStudentsMessage.classList.add('d-none');
 
-                            // Update modal title
-                            document.querySelector('.modal-title').textContent = 
-                                `Enrolled Students - ${gradeLevel} Section ${sectionName} (SY ${schoolYear})`;
-                        } else {
-                            tableBody.innerHTML = '';
-                            noStudentsMessage.classList.remove('d-none');
-                        }
-                    })
-                    .catch(error => {
-                        console.error('Error:', error);
-                        tableBody.innerHTML = '<tr><td colspan="6" class="text-center text-danger">' +
-                            'Error loading students. Please try again.</td></tr>';
-                    });
-            }
-
-            // Event Listeners
-            document.querySelectorAll('.view-students-btn').forEach(button => {
-                button.addEventListener('click', function(e) {
-                    e.preventDefault();
-                    const sectionId = this.getAttribute('data-section-id');
-                    const modal = new bootstrap.Modal(document.getElementById('enrolledStudentsModal'));
-                    modal.show();
-                    loadEnrolledStudents(sectionId, document.getElementById('schoolYearFilter').value);
-                });
-            });
-
-            // Handle school year filter change
-            document.getElementById('schoolYearFilter').addEventListener('change', function() {
-                const sectionId = document.querySelector('.view-students-btn').getAttribute('data-section-id');
-                if (sectionId) {
-                    loadEnrolledStudents(sectionId, this.value);
-                }
-            });
-
-            function loadSectionStudents(sectionId) {
-                const tableBody = document.getElementById('sectionStudentsTableBody');
-                const noStudentsMessage = document.getElementById('sectionNoStudentsMessage');
-                
-                tableBody.innerHTML = '<tr><td colspan="4" class="text-center">' +
-                    '<div class="spinner-border" role="status">' +
-                    '<span class="visually-hidden">Loading...</span></div></td></tr>';
-                
-                noStudentsMessage.classList.add('d-none');
-                
-                // Get the section's grade level first
-                fetch(`{% url 'get_section_grade' %}?section_id=${sectionId}`)
-                    .then(response => response.json())
-                    .then(sectionData => {
-                        console.log('Section data:', sectionData); // Debug log
-                        return fetch(`{% url 'get_enrolled_students' %}?grade_level=${sectionData.grade_level}&section_id=${sectionId}`);
-                    })
-                    .then(response => response.json())
-                    .then(response => {
-                        console.log('Response:', response); // Debug log
-                        if (response.students && response.students.length > 0) {
-                            let html = '';
-                            response.students.forEach((student, index) => {
-                                html += `
-                                    <tr>
-                                        <td class="text-center">${index + 1}</td>
-                                        <td>${student.student_id}</td>
-                                        <td>${student.first_name} ${student.last_name}</td>
-                                        <td class="text-center">
-                                            <span class="badge bg-${student.status === 'Active' ? 'success' : 'warning'}">
-                                                ${student.status}
-                                            </span>
-                                        </td>
-                                    </tr>
-                                `;
-                            });
-                            tableBody.innerHTML = html;
-                            noStudentsMessage.classList.add('d-none');
-
-                            // Update modal title with section information
+                            // Update modal title with section and school year information
                             document.querySelector('#sectionStudentsModal .modal-title').textContent = 
-                                `Students in ${response.grade_level} Section ${response.section_id} (Total: ${response.total_students})`;
+                                `Students in ${response.grade_level} Section ${response.section_id} (SY ${schoolYear}) - Total: ${response.total_students}`;
                         } else {
                             tableBody.innerHTML = '';
                             noStudentsMessage.classList.remove('d-none');
                             
-                            // Still update the modal title even if no students
                             document.querySelector('#sectionStudentsModal .modal-title').textContent = 
-                                `Students in ${response.grade_level} Section ${response.section_id} (Total: 0)`;
+                                `Students in ${response.grade_level} Section ${response.section_id} (SY ${schoolYear}) - Total: 0`;
                         }
                     })
                     .catch(error => {
@@ -679,21 +598,6 @@
                             'Error loading students. Please try again.</td></tr>';
                     });
             }
-
-            // Add event listeners
-            document.querySelectorAll('.enrolled-count-link').forEach(link => {
-                link.style.textDecoration = 'none';
-                link.style.color = 'inherit';
-                link.style.cursor = 'pointer';
-                
-                link.addEventListener('click', function(e) {
-                    e.preventDefault();
-                    const sectionId = this.getAttribute('data-section-id');
-                    const modal = new bootstrap.Modal(document.getElementById('sectionStudentsModal'));
-                    modal.show();
-                    loadSectionStudents(sectionId);
-                });
-            });
         });
     </script>
 </body>
