@@ -259,11 +259,12 @@ def edit_teacher(request):
             
             # Update teacher information
             teacher.first_name = request.POST['first_name']
-            teacher.middle_name = request.POST.get('middle_name')
             teacher.last_name = request.POST['last_name']
             teacher.gender = request.POST['gender']
             teacher.religion = request.POST['religion']
-            teacher.date_of_birth = request.POST['date_of_birth']
+            # Make date_of_birth optional
+            if request.POST.get('date_of_birth'):
+                teacher.date_of_birth = request.POST['date_of_birth']
             teacher.email = request.POST['email']
             teacher.mobile_number = request.POST['mobile_number']
             teacher.address = request.POST['address']
@@ -280,12 +281,6 @@ def edit_teacher(request):
             
             teacher.save()
             messages.success(request, 'Teacher updated successfully!')
-            
-            log_admin_activity(
-                request.user,
-                f"Updated teacher information: {teacher.first_name} {teacher.last_name}",
-                "teacher"
-            )
             
         except Teachers.DoesNotExist:
             messages.error(request, 'Teacher not found!')

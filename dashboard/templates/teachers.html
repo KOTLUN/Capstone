@@ -14,11 +14,12 @@
     .hover-card {
         transition: transform 0.3s, box-shadow 0.3s;
         border: none;
+        position: relative;
+        z-index: 1;
     }
     
     .hover-card:hover {
-        transform: translateY(-5px);
-        box-shadow: 0 0.75rem 1.5rem rgba(0, 0, 0, 0.15) !important;
+        z-index: 1000;
     }
     
     .badge {
@@ -145,6 +146,209 @@
         right: 1rem;
         z-index: 1100;
     }
+
+    .tooltip {
+        font-size: 0.75rem;
+    }
+
+    .tooltip-inner {
+        max-width: none;
+        padding: 0.25rem 0.5rem;
+    }
+
+    .badge {
+        cursor: pointer;
+    }
+
+    .teaching-info {
+        font-size: 0.875rem;
+        position: relative;
+    }
+    
+    .subject-details {
+        background: white;
+        border: 1px solid #dee2e6;
+        font-size: 0.8125rem;
+        position: fixed;
+        margin-top: 5px;
+    }
+
+    .subject-wrapper:hover .subject-details {
+        display: block !important;
+    }
+    
+    .badge {
+        font-weight: 500;
+    }
+
+    .subject-wrapper {
+        display: inline-block;
+    }
+
+    /* Bootstrap popover customization */
+    .popover {
+        max-width: 200px;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+    }
+
+    .popover-header {
+        background-color: #f8f9fa;
+        border-bottom: 1px solid #dee2e6;
+        font-weight: 500;
+    }
+
+    .card:hover {
+        z-index: 1000;
+    }
+    
+    .subject-details {
+        z-index: 1050 !important;
+    }
+
+    .dropdown-menu {
+        min-width: 160px;
+        padding: 0.5rem 0;
+        margin: 0;
+        border: none;
+        border-radius: 0.5rem;
+    }
+
+    .dropdown-item {
+        padding: 0.5rem 1rem;
+        font-size: 0.875rem;
+    }
+
+    .dropdown-item:hover {
+        background-color: #f8f9fa;
+    }
+
+    .dropdown-item i {
+        width: 1.25rem;
+        text-align: center;
+    }
+
+    .dropdown-divider {
+        margin: 0.25rem 0;
+    }
+
+    /* Make the button circular and centered */
+    .btn.rounded-circle {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0;
+    }
+
+    /* Ensure dropdown appears above other elements */
+    .dropdown {
+        z-index: 10;
+    }
+
+    .dropdown {
+        position: absolute;
+        z-index: 100;
+    }
+
+    .dropdown-menu {
+        position: absolute;
+        min-width: 160px;
+        padding: 0.5rem 0;
+        margin: 0;
+        border: 1px solid rgba(0,0,0,.1);
+        border-radius: 0.5rem;
+        background-color: white;
+        box-shadow: 0 0.5rem 1rem rgba(0,0,0,.15);
+    }
+
+    .dropdown-item {
+        padding: 0.5rem 1rem;
+        font-size: 0.875rem;
+        cursor: pointer;
+    }
+
+    .dropdown-item:hover {
+        background-color: #f8f9fa;
+    }
+
+    .dropdown-item i {
+        width: 1.25rem;
+        text-align: center;
+    }
+
+    .dropdown-divider {
+        margin: 0.25rem 0;
+        border-top: 1px solid #e9ecef;
+    }
+
+    /* Override any conflicting styles */
+    .card {
+        overflow: visible !important;
+    }
+
+    .card-header {
+        overflow: visible !important;
+    }
+
+    /* Ensure the button is clickable */
+    .btn.rounded-circle {
+        cursor: pointer;
+        background-color: #f8f9fa;
+        border: 1px solid #dee2e6;
+    }
+
+    .btn.rounded-circle:hover {
+        background-color: #e9ecef;
+    }
+
+    .btn-sm {
+        padding: 0.25rem 0.5rem;
+        font-size: 0.875rem;
+        border-radius: 0.375rem;
+    }
+
+    .btn-light {
+        background-color: #f8f9fa;
+        border: 1px solid #dee2e6;
+    }
+
+    .btn-light:hover {
+        background-color: #e9ecef;
+    }
+
+    /* Remove previous dropdown styles that are no longer needed */
+    .dropdown, .dropdown-menu, .dropdown-item {
+        display: none;
+    }
+
+    .badge {
+        font-weight: normal;
+        margin-right: 0.25rem;
+    }
+
+    #view-teacher-advisory .badge,
+    #view-teacher-subjects .badge {
+        cursor: default;
+    }
+
+    .tooltip {
+        font-size: 0.75rem;
+    }
+
+    .btn-outline-success {
+        color: #198754;
+        border-color: #198754;
+    }
+
+    .btn-outline-success:hover {
+        color: #fff;
+        background-color: #198754;
+        border-color: #198754;
+    }
+
+    .modal-header .btn-sm {
+        padding: 0.25rem 0.5rem;
+        font-size: 0.875rem;
+    }
 </style>
 <body>
     <div class="layout-wrapper">
@@ -170,32 +374,24 @@
                     {% for teacher in teachers %}
                         <div class="col-md-4 col-lg-3">
                             <div class="card h-100 shadow-sm hover-card">
-                                <div class="card-body text-center p-4">
-                                    <div class="dropdown position-absolute top-0 end-0 m-2">
-                                        <button class="btn btn-light btn-sm" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-                                            <i class="fas fa-ellipsis-v"></i>
+                                <div class="card-header bg-white border-0 pt-3">
+                                    <div class="position-absolute top-0 end-0 m-2 d-flex gap-1">
+                                        <button class="btn btn-light btn-sm view-teacher" 
+                                                data-bs-toggle="modal" 
+                                                data-bs-target="#viewTeacherModal" 
+                                                data-teacher="{{ teacher|safe_json }}"
+                                                title="View Details">
+                                            <i class="fas fa-eye text-primary"></i>
                                         </button>
-                                        <ul class="dropdown-menu">
-                                            <li>
-                                                <button class="dropdown-item view-teacher" data-bs-toggle="modal" data-bs-target="#viewTeacherModal" 
-                                                    data-teacher="{{ teacher|safe_json }}">
-                                                    <i class="fas fa-eye me-2"></i>View
+                                        <button class="btn btn-light btn-sm delete-teacher" 
+                                                data-bs-toggle="modal" 
+                                                data-bs-target="#deleteTeacherModal" 
+                                                data-teacher="{{ teacher|safe_json }}"
+                                                title="Delete Teacher">
+                                            <i class="fas fa-trash-alt text-danger"></i>
                                                 </button>
-                                            </li>
-                                            <li>
-                                                <button class="dropdown-item edit-teacher" data-bs-toggle="modal" data-bs-target="#editTeacherModal" 
-                                                    data-teacher="{{ teacher|safe_json }}">
-                                                    <i class="fas fa-edit me-2"></i>Edit
-                                                </button>
-                                            </li>
-                                            <li>
-                                                <button class="dropdown-item text-danger delete-teacher" data-bs-toggle="modal" 
-                                                    data-bs-target="#deleteTeacherModal" data-teacher-id="{{ teacher.teacher_id }}">
-                                                    <i class="fas fa-trash-alt me-2"></i>Delete
-                                                </button>
-                                            </li>
-                                        </ul>
                                     </div>
+                                    <div class="text-center">
                                     <div class="profile-img-container mb-3">
                                         {% if teacher.teacher_photo %}
                                             <img src="{{ teacher.teacher_photo.url }}" 
@@ -211,72 +407,50 @@
                                         </div>
                                     </div>
                                     <h5 class="card-title fw-bold mb-1">{{ teacher.first_name }} {{ teacher.middle_name|default:'' }} {{ teacher.last_name }}</h5>
-                                    <p class="card-text text-muted mb-3">
-                                        <i class="fas fa-envelope me-2"></i>{{ teacher.email }}
-                                    </p>
-                                    
-                                    <!-- Add sections and schedules information -->
-                                    <div class="mt-3">
-                                        {% if teacher.sections.all %}
-                                            <p class="card-text mb-1 fw-medium">
-                                                <i class="fas fa-chalkboard-teacher me-2"></i><span class="text-secondary">Adviser for:</span>
-                                            </p>
+                                        <p class="text-muted small mb-0">{{ teacher.email }}</p>
+                                    </div>
+                                </div>
+
+                                <div class="card-body p-3">
+                                    <div class="teaching-info">
+                                        {% if teacher.sections_set.all %}
                                             <div class="mb-3">
-                                                {% for section in teacher.sections.all %}
-                                                    <span class="badge bg-success me-1">{{ section.grade_level }}-{{ section.section_id }}</span>
+                                                <div class="d-flex align-items-center mb-2">
+                                                    <i class="fas fa-chalkboard-teacher text-success me-2"></i>
+                                                    <span class="fw-medium">Advisory:</span>
+                                                    {% for section in teacher.sections_set.all %}
+                                                        <span class="badge bg-success ms-2">G{{ section.grade_level }}-{{ section.section_id }}</span>
                                                 {% endfor %}
+                                                </div>
                                             </div>
                                         {% endif %}
                                         
-                                        {% if teacher.schedules.all %}
-                                            <p class="card-text mb-1">
-                                                <i class="fas fa-book me-2"></i><strong>Teaching:</strong>
-                                            </p>
+                                        {% if teacher.schedules_set.all %}
                                             <div>
-                                                {% regroup teacher.schedules.all|dictsort:"subject.name" by subject.name as subject_list %}
-                                                {% for subject in subject_list|slice:":3" %}
-                                                    <span class="badge bg-primary me-1 mb-1">{{ subject.grouper }}</span>
-                                                {% endfor %}
-                                                {% if subject_list|length > 3 %}
-                                                    <button class="badge bg-secondary border-0" 
-                                                            data-bs-toggle="modal" 
-                                                            data-bs-target="#subjectsModal{{ teacher.teacher_id }}">
-                                                        +{{ subject_list|length|add:"-3" }} more
-                                                    </button>
-                                                    
-                                                    <!-- Subjects Modal -->
-                                                    <div class="modal fade" id="subjectsModal{{ teacher.teacher_id }}" tabindex="-1" aria-hidden="true">
-                                                        <div class="modal-dialog modal-dialog-centered">
-                                                            <div class="modal-content">
-                                                                <div class="modal-header">
-                                                                    <h5 class="modal-title">Subjects Taught by {{ teacher.first_name }} {{ teacher.last_name }}</h5>
-                                                                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                                <div class="d-flex align-items-center mb-2">
+                                                    <i class="fas fa-book text-primary me-2"></i>
+                                                    <span class="fw-medium">Teaching:</span>
                                                                 </div>
-                                                                <div class="modal-body">
-                                                                    <ul class="list-group">
+                                                <div class="d-flex flex-wrap gap-1">
+                                                    {% regroup teacher.schedules_set.all|dictsort:"subject.name" by subject.name as subject_list %}
                                                                         {% for subject in subject_list %}
-                                                                            <li class="list-group-item">
-                                                                                <div class="d-flex justify-content-between align-items-center">
-                                                                                    <strong>{{ subject.grouper }}</strong>
-                                                                                </div>
-                                                                                <div class="mt-2">
-                                                                                    {% for schedule in subject.list %}
-                                                                                        <span class="badge bg-info me-1 mb-1">
-                                                                                            Grade {{ schedule.grade_level }} - {{ schedule.section.section_id }}
+                                                        <div class="position-relative subject-wrapper">
+                                                            <span class="badge bg-primary" 
+                                                                  data-bs-toggle="tooltip" 
+                                                                  data-bs-placement="top" 
+                                                                  data-bs-html="true"
+                                                                  title="{% with sections=subject.list %}{% for schedule in sections %}{% if forloop.counter == 1 %}G{{ schedule.grade_level }}-{{ schedule.section.section_id }}{% endif %}{% endfor %}{% endwith %}">
+                                                                {{ subject.grouper }}
                                                                                         </span>
-                                                                                    {% endfor %}
-                                                                                </div>
-                                                                            </li>
-                                                                        {% endfor %}
-                                                                    </ul>
-                                                                </div>
-                                                                <div class="modal-footer">
-                                                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                                                                </div>
-                                                            </div>
+                                                        </div>
+                                                    {% endfor %}
                                                         </div>
                                                     </div>
                                                 {% endif %}
+
+                                        {% if not teacher.sections_set.all and not teacher.schedules_set.all %}
+                                            <div class="text-center text-muted small">
+                                                <i class="fas fa-info-circle me-2"></i>No teaching load assigned
                                             </div>
                                         {% endif %}
                                     </div>
@@ -291,31 +465,154 @@
 <div class="modal fade" id="viewTeacherModal" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered modal-lg">
         <div class="modal-content">
-            <div class="modal-header border-0 pb-0">
-                <h5 class="modal-title fw-bold">Teacher Details</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            <div class="modal-header border-0 d-flex align-items-center">
+                <h5 class="modal-title fw-bold">Teacher Information</h5>
+                <div class="ms-auto">
+                    <button class="btn btn-outline-success btn-sm me-2 edit-from-view" 
+                            data-bs-toggle="modal" 
+                            data-bs-target="#editTeacherModal">
+                        <i class="fas fa-edit me-1"></i>Edit
+                    </button>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
             </div>
             <div class="modal-body">
                 <div class="row">
-                    <div class="col-md-4 text-center mb-3 mb-md-0">
-                        <img id="view-teacher-img" src="" class="img-fluid rounded-circle border border-3 border-primary" 
-                             alt="Teacher Image" style="width: 150px; height: 150px; object-fit: cover;">
+                    <!-- Left side - Photo and basic info -->
+                    <div class="col-md-4 text-center border-end">
+                        <img id="view-teacher-photo" src="" alt="Teacher Photo" 
+                             class="rounded-circle mb-3 border border-3 border-primary" 
+                             style="width: 150px; height: 150px; object-fit: cover;">
+                        <h5 id="view-teacher-name" class="fw-bold mb-1"></h5>
+                        <p id="view-teacher-email" class="text-muted small mb-2"></p>
+                        <span class="badge bg-primary" id="view-teacher-id"></span>
                     </div>
+                    
+                    <!-- Right side - Detailed info -->
                     <div class="col-md-8">
-                        <div class="card bg-light border-0">
-                            <div class="card-body">
-                                <p class="mb-2"><strong>Teacher ID:</strong> <span id="view-teacher-id"></span></p>
-                                <p class="mb-2"><strong>Name:</strong> <span id="view-teacher-name"></span></p>
-                                <p class="mb-2"><strong>Gender:</strong> <span id="view-teacher-gender"></span></p>
-                                <p class="mb-2"><strong>Email:</strong> <span id="view-teacher-email"></span></p>
-                                <p class="mb-0"><strong>Mobile:</strong> <span id="view-teacher-mobile"></span></p>
+                        <div class="row g-3">
+                            <!-- Personal Information -->
+                            <div class="col-12">
+                                <h6 class="fw-bold text-primary mb-3">Personal Information</h6>
+                                <div class="row g-3">
+                                    <div class="col-6">
+                                        <label class="text-muted small d-block">Gender</label>
+                                        <span id="view-teacher-gender"></span>
+                                    </div>
+                                    <div class="col-6">
+                                        <label class="text-muted small d-block">Mobile</label>
+                                        <span id="view-teacher-mobile"></span>
+                                    </div>
+                                    <div class="col-6">
+                                        <label class="text-muted small d-block">Religion</label>
+                                        <span id="view-teacher-religion"></span>
+                                    </div>
+                                    <div class="col-6">
+                                        <label class="text-muted small d-block">Date of Birth</label>
+                                        <span id="view-teacher-dob"></span>
+                                    </div>
+                                    <div class="col-12">
+                                        <label class="text-muted small d-block">Address</label>
+                                        <span id="view-teacher-address"></span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Teaching Information -->
+                            <div class="col-12 border-top pt-3">
+                                <h6 class="fw-bold text-primary mb-3">Teaching Information</h6>
+                                
+                                <!-- Advisory Class -->
+                                <div class="mb-3">
+                                    <div class="d-flex align-items-center">
+                                        <i class="fas fa-chalkboard-teacher text-success me-2"></i>
+                                        <span class="text-muted">Advisory:</span>
+                                        <div id="view-teacher-advisory" class="ms-2">
+                                            <!-- Advisory badges will be inserted here -->
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <!-- Teaching Subjects -->
+                                <div class="mb-3">
+                                    <div class="d-flex align-items-center">
+                                        <i class="fas fa-book text-primary me-2"></i>
+                                        <span class="text-muted">Teaching:</span>
+                                        <div id="view-teacher-subjects" class="ms-2">
+                                            <!-- Subject badges will be inserted here -->
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
-            <div class="modal-footer border-0">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Teacher Modal -->
+<div class="modal fade" id="editTeacherModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Edit Teacher</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="editTeacherForm" method="POST" action="{% url 'edit_teacher' %}" enctype="multipart/form-data">
+                    {% csrf_token %}
+                    <input type="hidden" id="edit-teacher-id" name="teacher_id">
+                    <div class="row g-3">
+                        <div class="col-12 text-center">
+                            <img id="edit-teacher-photo-preview" src="" alt="Teacher Photo" 
+                                 class="rounded-circle mb-3" style="width: 100px; height: 100px; object-fit: cover;">
+                            <div>
+                                <input type="file" class="form-control" id="edit-teacher-photo" name="teacher_photo" accept="image/*">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">First Name</label>
+                            <input type="text" class="form-control" id="edit-first-name" name="first_name" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Last Name</label>
+                            <input type="text" class="form-control" id="edit-last-name" name="last_name" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Email</label>
+                            <input type="email" class="form-control" id="edit-email" name="email" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Mobile</label>
+                            <input type="tel" class="form-control" id="edit-mobile" name="mobile_number" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Gender</label>
+                            <select class="form-select" id="edit-gender" name="gender" required>
+                                <option value="Male">Male</option>
+                                <option value="Female">Female</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Religion</label>
+                            <input type="text" class="form-control" id="edit-religion" name="religion">
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label">Address</label>
+                            <textarea class="form-control" id="edit-address" name="address" rows="2"></textarea>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Date of Birth</label>
+                            <input type="date" class="form-control" id="edit-date-of-birth" name="date_of_birth">
+                        </div>
+                    </div>
+                    <div class="text-end mt-4">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-primary">Save Changes</button>
+                    </div>
+                </form>
             </div>
         </div>
     </div>
@@ -323,22 +620,24 @@
 
 <!-- Delete Teacher Modal -->
 <div class="modal fade" id="deleteTeacherModal" tabindex="-1">
-    <div class="modal-dialog">
+    <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Delete Teacher</h5>
+            <div class="modal-header border-0">
+                <h5 class="modal-title text-danger">Delete Teacher</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
-            <div class="modal-body">
-                <p>Are you sure you want to delete this teacher?</p>
+            <div class="modal-body text-center">
+                <i class="fas fa-exclamation-triangle text-warning" style="font-size: 3rem;"></i>
+                <h5 class="mt-3">Are you sure you want to delete this teacher?</h5>
+                <p class="text-muted" id="delete-teacher-name"></p>
                 <form id="deleteTeacherForm" method="POST" action="{% url 'delete_teacher' %}">
                     {% csrf_token %}
                     <input type="hidden" id="delete-teacher-id" name="teacher_id">
                 </form>
             </div>
-            <div class="modal-footer">
+            <div class="modal-footer border-0">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <button type="submit" form="deleteTeacherForm" class="btn btn-danger">Delete</button>
+                <button type="submit" form="deleteTeacherForm" class="btn btn-danger">Delete Teacher</button>
             </div>
         </div>
     </div>
@@ -454,80 +753,6 @@
                         </div>
                     </div>
                 </div>
-                <div class="modal fade" id="editTeacherModal" tabindex="-1">
-                    <div class="modal-dialog modal-lg">
-                        <div class="modal-content">
-                            <div class="modal-header">
-                                <h5 class="modal-title">Edit Teacher</h5>
-                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                            </div>
-                            <div class="modal-body">
-                                <form method="POST" action="{% url 'edit_teacher' %}" enctype="multipart/form-data">
-                                    {% csrf_token %}
-                                    <input type="hidden" id="edit-teacher-id" name="teacher_id">
-                                    <div class="row">
-                                        <div class="col-md-6">
-                                            <div class="mb-3">
-                                                <label for="edit-first-name" class="form-label">First Name</label>
-                                                <input type="text" class="form-control" id="edit-first-name" name="first_name" required>
-                                            </div>
-                                            <div class="mb-3">
-                                                <label for="edit-middle-name" class="form-label">Middle Name</label>
-                                                <input type="text" class="form-control" id="edit-middle-name" name="middle_name">
-                                            </div>
-                                            <div class="mb-3">
-                                                <label for="edit-last-name" class="form-label">Last Name</label>
-                                                <input type="text" class="form-control" id="edit-last-name" name="last_name" required>
-                                            </div>
-                                            <div class="mb-3">
-                                                <label for="edit-religion" class="form-label">Religion</label>
-                                                <input type="text" class="form-control" id="edit-religion" name="religion" required>
-                                            </div>
-                                        </div>
-                                        <div class="col-md-6">
-                                            <div class="mb-3">
-                                                <label for="edit-gender" class="form-label">Gender</label>
-                                                <select class="form-select" id="edit-gender" name="gender" required>
-                                                    <option value="Male">Male</option>
-                                                    <option value="Female">Female</option>
-                                                </select>
-                                            </div>
-                                            <div class="mb-3">
-                                                <label for="edit-date-of-birth" class="form-label">Date of Birth</label>
-                                                <input type="date" class="form-control" id="edit-date-of-birth" name="date_of_birth" required>
-                                            </div>
-                                            <div class="mb-3">
-                                                <label for="edit-email" class="form-label">Email</label>
-                                                <input type="email" class="form-control" id="edit-email" name="email" required>
-                                            </div>
-                                            <div class="mb-3">
-                                                <label for="edit-mobile" class="form-label">Mobile Number</label>
-                                                <input type="tel" class="form-control" id="edit-mobile" name="mobile_number" required>
-                                            </div>
-                                        </div>
-                                        <div class="col-12">
-                                            <div class="mb-3">
-                                                <label for="edit-address" class="form-label">Address</label>
-                                                <textarea class="form-control" id="edit-address" name="address" rows="3" required></textarea>
-                                            </div>
-                                        </div>
-                                        <div class="col-12">
-                                            <div class="mb-3">
-                                                <label for="edit-teacher-photo" class="form-label">Teacher Photo</label>
-                                                <input type="file" class="form-control" id="edit-teacher-photo" name="teacher_photo">
-                                                <img id="edit-teacher-img-preview" class="mt-2 img-fluid rounded-circle" style="max-width: 150px; max-height: 150px; display: block;">
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div class="modal-footer">
-                                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                                        <button type="submit" class="btn btn-primary">Save Changes</button>
-                                    </div>
-                                </form>
-                            </div>
-                        </div>
-                    </div>
-                </div>
             
                 
              
@@ -549,45 +774,104 @@
                 button.addEventListener("click", function() {
                     let teacher = JSON.parse(this.getAttribute("data-teacher"));
 
-                    document.getElementById("view-teacher-id").textContent = teacher.teacher_id;
-                    document.getElementById("view-teacher-name").textContent = teacher.first_name + " " + (teacher.middle_name || "") + " " + teacher.last_name;
-                    document.getElementById("view-teacher-gender").textContent = teacher.gender;
+                    // Update basic info
+                    document.getElementById("view-teacher-name").textContent = 
+                        `${teacher.first_name} ${teacher.middle_name || ''} ${teacher.last_name}`;
                     document.getElementById("view-teacher-email").textContent = teacher.email;
+                    document.getElementById("view-teacher-id").textContent = `ID: ${teacher.teacher_id}`;
+                    document.getElementById("view-teacher-gender").textContent = teacher.gender;
                     document.getElementById("view-teacher-mobile").textContent = teacher.mobile_number;
+                    document.getElementById("view-teacher-religion").textContent = teacher.religion || "Not specified";
+                    document.getElementById("view-teacher-address").textContent = teacher.address || "Not specified";
 
-                    // Fix image path handling
-                    let imgElement = document.getElementById("view-teacher-img");
-                    if (teacher.img_url && teacher.img_url !== "None" && teacher.img_url !== "") {
-                        imgElement.src = teacher.img_url;
+                    // Update photo
+                    let imgElement = document.getElementById("view-teacher-photo");
+                    imgElement.src = teacher.img_url || "{% static 'images/default-profile.png' %}";
+
+                    // Update advisory class - Minimal version
+                    let advisoryDiv = document.getElementById("view-teacher-advisory");
+                    if (teacher.sections_set && teacher.sections_set.length > 0) {
+                        advisoryDiv.innerHTML = teacher.sections_set.map(section => 
+                            `<span class="badge bg-success">G${section.grade_level}-${section.section_id}</span>`
+                        ).join(' ');
                     } else {
-                        imgElement.src = "{% static 'images/default-profile.png' %}";
+                        advisoryDiv.innerHTML = '<span class="text-muted small">None</span>';
+                    }
+
+                    // Update teaching subjects - Minimal version
+                    let subjectsDiv = document.getElementById("view-teacher-subjects");
+                    if (teacher.schedules_set && teacher.schedules_set.length > 0) {
+                        // Get unique subjects with their sections
+                        let subjects = {};
+                        teacher.schedules_set.forEach(schedule => {
+                            if (!subjects[schedule.subject.name]) {
+                                subjects[schedule.subject.name] = new Set();
+                            }
+                            subjects[schedule.subject.name].add(`G${schedule.grade_level}-${schedule.section.section_id}`);
+                        });
+
+                        // Create badges with tooltips
+                        subjectsDiv.innerHTML = Object.entries(subjects).map(([subject, sections]) => 
+                            `<span class="badge bg-primary me-1" 
+                                   data-bs-toggle="tooltip" 
+                                   data-bs-placement="top" 
+                                   title="${Array.from(sections).join(', ')}">
+                                ${subject}
+                            </span>`
+                        ).join('');
+
+                        // Initialize tooltips
+                        subjectsDiv.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(el => {
+                            new bootstrap.Tooltip(el);
+                        });
+                    } else {
+                        subjectsDiv.innerHTML = '<span class="text-muted small">None</span>';
                     }
                 });
             });
 
             // Edit teacher functionality
-            document.querySelectorAll(".edit-teacher").forEach(button => {
+            document.querySelectorAll(".edit-from-view").forEach(button => {
                 button.addEventListener("click", function() {
-                    let teacher = JSON.parse(this.getAttribute("data-teacher"));
+                    // Get the current teacher data from the view modal
+                    const teacherName = document.getElementById('view-teacher-name').textContent;
+                    const teacherId = document.getElementById('view-teacher-id').textContent.replace('ID: ', '');
+                    const email = document.getElementById('view-teacher-email').textContent;
+                    const gender = document.getElementById('view-teacher-gender').textContent;
+                    const mobile = document.getElementById('view-teacher-mobile').textContent;
+                    const religion = document.getElementById('view-teacher-religion').textContent;
+                    const address = document.getElementById('view-teacher-address').textContent;
+                    const photoSrc = document.getElementById('view-teacher-photo').src;
+                    const dob = document.getElementById('view-teacher-dob').textContent;
+
+                    // Close the view modal
+                    bootstrap.Modal.getInstance(document.getElementById('viewTeacherModal')).hide();
+
+                    // Populate the edit modal
+                    document.getElementById('edit-teacher-id').value = teacherId;
+                    const names = teacherName.trim().split(' ');
+                    document.getElementById('edit-first-name').value = names[0];
+                    document.getElementById('edit-last-name').value = names[names.length - 1];
+                    document.getElementById('edit-email').value = email;
+                    document.getElementById('edit-mobile').value = mobile;
+                    document.getElementById('edit-gender').value = gender;
+                    document.getElementById('edit-religion').value = religion !== 'Not specified' ? religion : '';
+                    document.getElementById('edit-address').value = address !== 'Not specified' ? address : '';
+                    document.getElementById('edit-teacher-photo-preview').src = photoSrc;
                     
-                    document.getElementById("edit-teacher-id").value = teacher.teacher_id;
-                    document.getElementById("edit-first-name").value = teacher.first_name;
-                    document.getElementById("edit-middle-name").value = teacher.middle_name || "";
-                    document.getElementById("edit-last-name").value = teacher.last_name;
-                    document.getElementById("edit-gender").value = teacher.gender;
-                    document.getElementById("edit-religion").value = teacher.religion || "";
-                    document.getElementById("edit-date-of-birth").value = teacher.date_of_birth || "";
-                    document.getElementById("edit-email").value = teacher.email;
-                    document.getElementById("edit-mobile").value = teacher.mobile_number;
-                    document.getElementById("edit-address").value = teacher.address || "";
-                    
-                    // Preview existing image if available
-                    let imgPreview = document.getElementById("edit-teacher-img-preview");
-                    if (teacher.img_url && teacher.img_url !== "None" && teacher.img_url !== "") {
-                        imgPreview.src = teacher.img_url;
-                        imgPreview.style.display = "block";
+                    // Keep existing date of birth if available
+                    const dateInput = document.getElementById('edit-date-of-birth');
+                    if (dob && dob !== 'Not specified') {
+                        try {
+                            const dateObj = new Date(dob);
+                            const formattedDate = dateObj.toISOString().split('T')[0];
+                            dateInput.value = formattedDate;
+                        } catch (e) {
+                            // If date parsing fails, leave the field empty
+                            dateInput.value = '';
+                        }
                     } else {
-                        imgPreview.style.display = "none";
+                        dateInput.value = '';
                     }
                 });
             });
@@ -595,8 +879,10 @@
             // Delete teacher functionality
             document.querySelectorAll(".delete-teacher").forEach(button => {
                 button.addEventListener("click", function() {
-                    let teacherId = this.getAttribute("data-teacher-id");
-                    document.getElementById("delete-teacher-id").value = teacherId;
+                    let teacher = JSON.parse(this.getAttribute("data-teacher"));
+                    document.getElementById("delete-teacher-id").value = teacher.teacher_id;
+                    document.getElementById("delete-teacher-name").textContent = 
+                        `${teacher.first_name} ${teacher.middle_name || ''} ${teacher.last_name}`;
                 });
             });
             
@@ -624,6 +910,109 @@
                         }
                     });
                 });
+            }
+        });
+
+        // View Teacher Modal
+        document.querySelectorAll('.view-teacher').forEach(button => {
+            button.addEventListener('click', function() {
+                const teacher = JSON.parse(this.getAttribute('data-teacher'));
+                
+                // Update modal content
+                document.getElementById('view-teacher-photo').src = teacher.img_url || "{% static 'images/default-profile.png' %}";
+                document.getElementById('view-teacher-name').textContent = `${teacher.first_name} ${teacher.middle_name || ''} ${teacher.last_name}`;
+                document.getElementById('view-teacher-email').textContent = teacher.email;
+                document.getElementById('view-teacher-id').textContent = teacher.teacher_id;
+                document.getElementById('view-teacher-gender').textContent = teacher.gender;
+                document.getElementById('view-teacher-mobile').textContent = teacher.mobile_number;
+                document.getElementById('view-teacher-religion').textContent = teacher.religion || 'Not specified';
+                document.getElementById('view-teacher-address').textContent = teacher.address || 'Not specified';
+            });
+        });
+
+        // Edit Teacher Modal
+        document.querySelectorAll('.edit-teacher').forEach(button => {
+            button.addEventListener('click', function() {
+                const teacher = JSON.parse(this.getAttribute('data-teacher'));
+                
+                // Populate form fields
+                document.getElementById('edit-teacher-id').value = teacher.teacher_id;
+                document.getElementById('edit-first-name').value = teacher.first_name;
+                document.getElementById('edit-last-name').value = teacher.last_name;
+                document.getElementById('edit-email').value = teacher.email;
+                document.getElementById('edit-mobile').value = teacher.mobile_number;
+                document.getElementById('edit-gender').value = teacher.gender;
+                document.getElementById('edit-religion').value = teacher.religion || '';
+                document.getElementById('edit-address').value = teacher.address || '';
+                
+                // Show current photo
+                const photoPreview = document.getElementById('edit-teacher-photo-preview');
+                photoPreview.src = teacher.img_url || "{% static 'images/default-profile.png' %}";
+            });
+        });
+
+        // Preview image before upload
+        document.getElementById('edit-teacher-photo').addEventListener('change', function(e) {
+            if (this.files && this.files[0]) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    document.getElementById('edit-teacher-photo-preview').src = e.target.result;
+                };
+                reader.readAsDataURL(this.files[0]);
+            }
+        });
+
+        document.addEventListener('DOMContentLoaded', function() {
+            // Initialize all tooltips
+            var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
+            var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+                return new bootstrap.Tooltip(tooltipTriggerEl, {
+                    trigger: 'hover',
+                    container: 'body'
+                })
+            })
+        });
+
+        document.querySelector('.edit-from-view').addEventListener('click', function() {
+            // Get the current teacher data from the view modal
+            const teacherName = document.getElementById('view-teacher-name').textContent;
+            const teacherId = document.getElementById('view-teacher-id').textContent.replace('ID: ', '');
+            const email = document.getElementById('view-teacher-email').textContent;
+            const gender = document.getElementById('view-teacher-gender').textContent;
+            const mobile = document.getElementById('view-teacher-mobile').textContent;
+            const religion = document.getElementById('view-teacher-religion').textContent;
+            const address = document.getElementById('view-teacher-address').textContent;
+            const photoSrc = document.getElementById('view-teacher-photo').src;
+            const dob = document.getElementById('view-teacher-dob').textContent;
+
+            // Close the view modal
+            bootstrap.Modal.getInstance(document.getElementById('viewTeacherModal')).hide();
+
+            // Populate the edit modal
+            document.getElementById('edit-teacher-id').value = teacherId;
+            const names = teacherName.trim().split(' ');
+            document.getElementById('edit-first-name').value = names[0];
+            document.getElementById('edit-last-name').value = names[names.length - 1];
+            document.getElementById('edit-email').value = email;
+            document.getElementById('edit-mobile').value = mobile;
+            document.getElementById('edit-gender').value = gender;
+            document.getElementById('edit-religion').value = religion !== 'Not specified' ? religion : '';
+            document.getElementById('edit-address').value = address !== 'Not specified' ? address : '';
+            document.getElementById('edit-teacher-photo-preview').src = photoSrc;
+            
+            // Keep existing date of birth if available
+            const dateInput = document.getElementById('edit-date-of-birth');
+            if (dob && dob !== 'Not specified') {
+                try {
+                    const dateObj = new Date(dob);
+                    const formattedDate = dateObj.toISOString().split('T')[0];
+                    dateInput.value = formattedDate;
+                } catch (e) {
+                    // If date parsing fails, leave the field empty
+                    dateInput.value = '';
+                }
+            } else {
+                dateInput.value = '';
             }
         });
     </script>

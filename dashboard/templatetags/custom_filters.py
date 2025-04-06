@@ -15,6 +15,27 @@ def safe_json(obj):
     Safely converts a Django model instance to JSON for use in JavaScript
     """
     if hasattr(obj, '__dict__'):
+        # Get sections data
+        sections_data = []
+        if hasattr(obj, 'sections_set'):
+            sections_data = [{
+                'grade_level': section.grade_level,
+                'section_id': section.section_id
+            } for section in obj.sections_set.all()]
+
+        # Get schedules data
+        schedules_data = []
+        if hasattr(obj, 'schedules_set'):
+            schedules_data = [{
+                'subject': {
+                    'name': schedule.subject.name
+                },
+                'grade_level': schedule.grade_level,
+                'section': {
+                    'section_id': schedule.section.section_id
+                }
+            } for schedule in obj.schedules_set.all()]
+
         data = {
             'teacher_id': obj.teacher_id,
             'first_name': obj.first_name,
@@ -27,6 +48,8 @@ def safe_json(obj):
             'mobile_number': obj.mobile_number,
             'address': obj.address,
             'img_url': obj.teacher_photo.url if obj.teacher_photo else None,
+            'sections_set': sections_data,
+            'schedules_set': schedules_data
         }
         return json.dumps(data, cls=DjangoJSONEncoder)
     return '{}'
@@ -48,3 +71,18 @@ def get_current_grade(student, subject):
         return None
     except:
         return None
+
+@register.filter
+def uniquify(value, arg):
+    """Remove duplicates from a list based on an attribute"""
+    seen = set()
+    unique_items = []
+    
+    for item in value:
+        # Get the attribute value using the arg string
+        attr_value = getattr(item, arg)
+        if attr_value not in seen:
+            seen.add(attr_value)
+            unique_items.append(item)
+    
+    return unique_items
