@@ -31,6 +31,10 @@ urlpatterns = [
     path('confirm-import-grades-ajax/', views.confirm_import_grades_ajax, name='confirm_import_grades_ajax'),
     path('get-enrolled-students/', views.get_enrolled_students, name='get_enrolled_students'),
     path('student-registration/', views.student_registration, name='student_registration'),
+    path('subject/<str:subject_id>/grade/<int:grade_level>/section/<str:section_id>/students/', 
+         views.subject_students_view, 
+         name='subject_students'),
+    path('get-subject-students/', views.get_subject_students, name='get_subject_students'),
 ]
 
 
