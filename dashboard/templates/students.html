@@ -83,9 +83,9 @@
                     </button>
                 </div>
                 <div class="row mb-4">
-                    <div class="col-md-4">
-                        <form method="GET" action="{% url 'students' %}" class="d-flex">
-                            <select name="school_year" class="form-select me-2 shadow-sm">
+                    <div class="col-md-8">
+                        <form method="GET" action="{% url 'students' %}" class="d-flex gap-2">
+                            <select name="school_year" class="form-select shadow-sm">
                                 {% if active_school_year %}
                                     <option value="{{ active_school_year.display_name }}" {% if selected_year == active_school_year.display_name %}selected{% endif %}>
                                         {{ active_school_year.display_name }} (Active)
@@ -99,12 +99,16 @@
                                     {% endif %}
                                 {% endfor %}
                             </select>
+                            <select name="status" class="form-select shadow-sm">
+                                <option value="">All Status</option>
+                                <option value="not_enrolled" {% if status_filter == 'not_enrolled' %}selected{% endif %}>Not Enrolled</option>
+                            </select>
                             <button type="submit" class="btn btn-primary shadow-sm">
                                 <i class="fas fa-filter me-2"></i> Filter
                             </button>
                         </form>
                     </div>
-                    <div class="col-md-8">
+                    <div class="col-md-4">
                         <div class="input-group shadow-sm">
                             <input type="text" id="student-search" class="form-control" placeholder="Search students...">
                             <button class="btn btn-outline-primary" type="button" id="search-button">

@@ -551,23 +551,13 @@ class SchoolYear(models.Model):
 
     def save(self, *args, **kwargs):
         if self.is_active:
+            # Set all other years as inactive and update previous year
             try:
-                # Get current active school year
-                previous_active = SchoolYear.objects.get(is_active=True)
-                if previous_active and previous_active.id != self.id:
-                    # Mark all students as Not Enrolled for new year
-                    Student.objects.filter(status='Active').update(status='Not Enrolled')
-                    
-                    # Mark all active enrollments as Completed
-                    Enrollment.objects.filter(
-                        school_year=previous_active.display_name,
-                        status='Active'
-                    ).update(status='Completed')
-                    
-                    # Set previous year
-                    previous_active.is_active = False
-                    previous_active.is_previous = True
-                    previous_active.save()
+                current_active = SchoolYear.objects.get(is_active=True)
+                if current_active and current_active.id != self.id:
+                    current_active.is_active = False
+                    current_active.is_previous = True
+                    current_active.save()
             except SchoolYear.DoesNotExist:
                 pass
 
@@ -586,6 +576,10 @@ class SchoolYear(models.Model):
     @classmethod
     def get_all_years(cls):
         return cls.objects.all().order_by('-year_start')
+
+    def __str__(self):
+        status = " (Active)" if self.is_active else " (Previous)" if self.is_previous else ""
+        return f"{self.display_name}{status}"
     
     
     

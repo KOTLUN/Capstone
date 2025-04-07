@@ -166,22 +166,26 @@ def students_view(request):
     active_school_year = SchoolYear.get_active()
     previous_school_year = SchoolYear.objects.filter(is_previous=True).first()
     
-    # Filter by school year if provided
+    # Get filter parameters
     selected_year = request.GET.get('school_year')
+    status_filter = request.GET.get('status')
     
+    # Start with all students
+    students = Student.objects.all()
+    
+    # Apply school year filter if provided
     if selected_year:
-        # Get only students who were enrolled in the selected school year
-        students = Student.objects.filter(
-            enrollments__school_year=selected_year
-        ).distinct()
-        
-        # Set display status based on the selected year
         if previous_school_year and selected_year == previous_school_year.display_name:
             # If viewing previous year, show all filtered students as completed
+            students = students.filter(enrollments__school_year=selected_year).distinct()
             for student in students:
                 student.display_status = 'Completed'
         elif active_school_year and selected_year == active_school_year.display_name:
             # If viewing active year, show actual enrollment status
+            students = students.filter(
+                Q(enrollments__school_year=selected_year) |
+                Q(status='Not Enrolled', school_year=selected_year)
+            ).distinct()
             for student in students:
                 enrollment = student.enrollments.filter(
                     school_year=active_school_year.display_name
@@ -189,22 +193,37 @@ def students_view(request):
                 student.display_status = enrollment.status if enrollment else student.status
     else:
         # If no year selected, show all students with current status
-        students = Student.objects.all()
-        for student in students:
-            if active_school_year:
+        if active_school_year:
+            for student in students:
                 enrollment = student.enrollments.filter(
                     school_year=active_school_year.display_name
                 ).first()
                 student.display_status = enrollment.status if enrollment else student.status
-            else:
+        else:
+            for student in students:
                 student.display_status = student.status
+    
+    # Apply status filter if provided
+    if status_filter == 'not_enrolled':
+        students = students.filter(
+            Q(status='Not Enrolled') &
+            Q(school_year=active_school_year.display_name if active_school_year else None)
+        ).exclude(
+            Q(enrollments__school_year=active_school_year.display_name) |
+            Q(grade8_enrollments__school_year=active_school_year.display_name) |
+            Q(grade9_enrollments__school_year=active_school_year.display_name) |
+            Q(grade10_enrollments__school_year=active_school_year.display_name) |
+            Q(grade11_enrollments__school_year=active_school_year.display_name) |
+            Q(grade12_enrollments__school_year=active_school_year.display_name)
+        ) if active_school_year else Student.objects.none()
     
     context = {
         'students': students,
         'school_years': school_years,
         'active_school_year': active_school_year,
         'previous_school_year': previous_school_year,
-        'selected_year': selected_year
+        'selected_year': selected_year,
+        'status_filter': status_filter
     }
     return render(request, 'students.html', context)
 
@@ -574,7 +593,7 @@ def enrollment_view(request):
     
     # Get all school years for the filter dropdown
     school_years = SchoolYear.objects.all().order_by('-year_start')
-    active_school_year = SchoolYear.objects.filter(is_active=True).first()
+    active_school_year = SchoolYear.get_active()
 
     # Initialize base querysets for different grade levels
     enrollment_models = {
@@ -639,18 +658,20 @@ def enrollment_view(request):
             
         all_enrollments.extend(enrollments)
 
-    # Get available students for enrollment - using correct field names from error message
+    # Get available students for enrollment - only those with "Not Enrolled" status in current year
     available_students = Student.objects.filter(
-        Q(enrollments__isnull=True) &
-        Q(grade8_enrollments__isnull=True) &
-        Q(grade9_enrollments__isnull=True) &
-        Q(grade10_enrollments__isnull=True) &
-        Q(grade11_enrollments__isnull=True) &
-        Q(grade12_enrollments__isnull=True)
-    )
+        status='Not Enrolled'
+    ).exclude(
+        Q(enrollments__school_year=active_school_year.display_name) |
+        Q(grade8_enrollments__school_year=active_school_year.display_name) |
+        Q(grade9_enrollments__school_year=active_school_year.display_name) |
+        Q(grade10_enrollments__school_year=active_school_year.display_name) |
+        Q(grade11_enrollments__school_year=active_school_year.display_name) |
+        Q(grade12_enrollments__school_year=active_school_year.display_name)
+    ).order_by('first_name', 'last_name') if active_school_year else Student.objects.none()
 
     # Get all students for the edit modal
-    all_students = Student.objects.all()
+    all_students = Student.objects.all().order_by('first_name', 'last_name')
 
     context = {
         'sections': sections,
@@ -717,6 +738,40 @@ def validate_enrollment(student, grade_level, school_year):
     except Exception as e:
         return False, f"Error validating enrollment: {str(e)}"
 
+def validate_grade_level_enrollment(student, grade_level):
+    """
+    Validates if a student can be enrolled in a specific grade level by checking all school years.
+    This function checks if the student has EVER been enrolled in the specified grade level.
+    Returns (is_valid, message)
+    """
+    try:
+        # Determine the appropriate enrollment model based on grade level
+        enrollment_model = {
+            7: Enrollment,
+            8: Grade8Enrollment,
+            9: Grade9Enrollment,
+            10: Grade10Enrollment,
+            11: Grade11Enrollment,
+            12: Grade12Enrollment
+        }.get(grade_level)
+        
+        if not enrollment_model:
+            return False, f"Invalid grade level: {grade_level}"
+        
+        # Check if student has ever been enrolled in this grade level in ANY school year
+        previous_enrollment = enrollment_model.objects.filter(
+            student=student,
+            section__grade_level=grade_level
+        ).exists()
+        
+        if previous_enrollment:
+            return False, f"Error: Student has already been enrolled in Grade {grade_level} in a previous or current school year."
+        
+        return True, "Student is eligible for enrollment in this grade level."
+        
+    except Exception as e:
+        return False, f"Error validating grade level enrollment: {str(e)}"
+
 def add_enrollment(request):
     if request.method == 'POST':
         try:
@@ -740,6 +795,12 @@ def add_enrollment(request):
             is_valid, message = validate_enrollment(student, grade_level, school_year)
             if not is_valid:
                 messages.error(request, message)
+                return redirect('enrollment')
+                
+            # Add the new validation check for grade level enrollment
+            is_grade_valid, grade_message = validate_grade_level_enrollment(student, grade_level)
+            if not is_grade_valid:
+                messages.error(request, grade_message)
                 return redirect('enrollment')
 
             # Check if student has already completed or is currently enrolled in this grade level
@@ -2059,85 +2120,69 @@ def school_year_management(request):
                 year_end = int(request.POST.get('year_end'))
                 is_active = request.POST.get('is_active') == 'true'
                 
+                # Validate year_end is year_start + 1
+                if year_end != year_start + 1:
+                    messages.error(request, 'End year must be the next year after start year')
+                    return redirect('school_year_management')
+                
                 school_year = SchoolYear.objects.create(
                     year_start=year_start,
                     year_end=year_end,
                     is_active=is_active
                 )
                 
-                log_admin_activity(
-                    request.user,
-                    f"Added new school year {school_year.display_name}",
-                    'school_year'
-                )
+                if is_active:
+                    # Handle student status transitions for the new school year
+                    return handle_school_year_transition(request)
                 
-                if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-                    return JsonResponse({
-                        'status': 'success',
-                        'message': f'School year {school_year.display_name} added successfully!',
-                        'redirect': reverse('enrollment')
-                    })
-                
-                messages.success(request, f'School year {school_year.display_name} added successfully!')
-                return redirect('enrollment')
+                messages.success(request, 'School year added successfully')
                 
             except Exception as e:
-                if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-                    return JsonResponse({
-                        'status': 'error',
-                        'message': str(e)
-                    })
-                messages.error(request, str(e))
-
+                messages.error(request, f'Error adding school year: {str(e)}')
+        
         elif action == 'activate':
             try:
-                school_year_id = request.POST.get('school_year_id')
-                school_year = SchoolYear.objects.get(id=school_year_id)
-                
-                # This will trigger the save method which handles status updates
+                year_id = request.POST.get('year_id')
+                school_year = SchoolYear.objects.get(id=year_id)
                 school_year.is_active = True
                 school_year.save()
                 
-                log_admin_activity(
-                    request.user,
-                    f"Set {school_year.display_name} as active school year",
-                    'school_year'
-                )
-                
-                if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-                    return JsonResponse({
-                        'status': 'success',
-                        'message': f'{school_year.display_name} has been set as the active school year.',
-                        'redirect': reverse('enrollment')
-                    })
-                
-                messages.success(request, 
-                    f'{school_year.display_name} has been set as the active school year. '
-                    'Student statuses have been updated for the new school year.'
-                )
-                return redirect('enrollment')
+                # Handle student status transitions for the newly activated school year
+                return handle_school_year_transition(request)
                 
             except SchoolYear.DoesNotExist:
-                messages.error(request, 'School year not found.')
-                if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-                    return JsonResponse({
-                        'status': 'error',
-                        'message': 'School year not found.'
-                    })
-
-    school_years = SchoolYear.get_all_years()
-    active_school_year = SchoolYear.get_active()
-    previous_school_year = SchoolYear.objects.filter(is_previous=True).first()
+                messages.error(request, 'School year not found')
+            except Exception as e:
+                messages.error(request, f'Error activating school year: {str(e)}')
+        
+        elif action == 'delete':
+            try:
+                year_id = request.POST.get('year_id')
+                school_year = SchoolYear.objects.get(id=year_id)
+                
+                if school_year.is_active:
+                    messages.error(request, 'Cannot delete active school year')
+                else:
+                    school_year.delete()
+                    messages.success(request, 'School year deleted successfully')
+                
+            except SchoolYear.DoesNotExist:
+                messages.error(request, 'School year not found')
+            except Exception as e:
+                messages.error(request, f'Error deleting school year: {str(e)}')
+    
+    # Get all school years for display
+    school_years = SchoolYear.objects.all().order_by('-year_start')
+    active_year = SchoolYear.get_active()
     
     context = {
         'school_years': school_years,
-        'active_school_year': active_school_year,
-        'previous_school_year': previous_school_year,
-        'current_year': datetime.now().year
+        'active_year': active_year
     }
     
     if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-        return render(request, 'school_year_management_table.html', context)
+        # Return only the table body for AJAX requests
+        return render(request, 'partials/school_year_table.html', context)
     
     return render(request, 'school_year_management.html', context)
 
@@ -2264,3 +2309,100 @@ def get_dashboard_data(request):
         
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=500)
+
+@transaction.atomic
+def handle_school_year_transition(request):
+    """
+    Handle student status transitions when activating a new school year.
+    This function should be called when activating a new school year.
+    """
+    try:
+        active_school_year = SchoolYear.get_active()
+        if not active_school_year:
+            messages.error(request, "No active school year found.")
+            return redirect('school_year_management')
+
+        # Get the previous school year
+        previous_school_year = SchoolYear.objects.filter(
+            year_start=active_school_year.year_start - 1
+        ).first()
+
+        # Store current states for rollback if needed
+        if previous_school_year:
+            # Backup current states
+            previous_active_enrollments = []
+            enrollment_models = {
+                7: Enrollment,
+                8: Grade8Enrollment,
+                9: Grade9Enrollment,
+                10: Grade10Enrollment,
+                11: Grade11Enrollment,
+                12: Grade12Enrollment
+            }
+
+            for grade, model in enrollment_models.items():
+                # Get all active enrollments before making changes
+                active_enrollments = list(model.objects.filter(
+                    school_year=previous_school_year.display_name,
+                    status='Active'
+                ).values())
+                previous_active_enrollments.extend(active_enrollments)
+
+            try:
+                # First, mark all enrollments from previous year as Completed
+                for grade, model in enrollment_models.items():
+                    model.objects.filter(
+                        school_year=previous_school_year.display_name,
+                        status='Active'
+                    ).update(
+                        status='Completed',
+                        updated_at=timezone.now()
+                    )
+
+                # Mark all students from previous year as Completed
+                Student.objects.filter(
+                    school_year=previous_school_year.display_name,
+                    status__in=['Active', 'Enrolled']
+                ).update(
+                    status='Completed',
+                    updated_at=timezone.now()
+                )
+
+            except Exception as e:
+                # If anything goes wrong, log the error and raise it
+                print(f"Error updating previous year records: {str(e)}")
+                raise e
+
+        # Set all current students to Not Enrolled for the new year
+        try:
+            Student.objects.filter(
+                status__in=['Active', 'Enrolled']
+            ).update(
+                status='Not Enrolled',
+                school_year=active_school_year.display_name,
+                updated_at=timezone.now()
+            )
+
+        except Exception as e:
+            # If anything goes wrong, log the error and raise it
+            print(f"Error updating current year records: {str(e)}")
+            raise e
+
+        messages.success(
+            request, 
+            f"Successfully transitioned student statuses to new school year {active_school_year.display_name}"
+        )
+        
+        # Log the transition
+        log_admin_activity(
+            request.user,
+            f"Transitioned student statuses to new school year {active_school_year.display_name}",
+            "school_year"
+        )
+
+    except Exception as e:
+        # Log the full error for debugging
+        print(f"Error in handle_school_year_transition: {str(e)}")
+        messages.error(request, f"Error transitioning school year: {str(e)}")
+
+    return redirect('school_year_management')

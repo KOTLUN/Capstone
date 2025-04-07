@@ -9,6 +9,7 @@ from dashboard.models import (
     Grade10Enrollment, Grade11Enrollment, Grade12Enrollment,
     SchoolYear
 )
+from dashboard.views import validate_grade_level_enrollment
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth import logout
 from django.contrib import messages
@@ -949,6 +950,12 @@ def advisory_enrollment(request):
                 # Get student and section
                 student = Student.objects.get(student_id=student_id)
                 section = Sections.objects.get(id=section_id, adviser=teacher)
+                
+                # Check if student has already been enrolled in this grade level in any school year
+                is_grade_valid, grade_message = validate_grade_level_enrollment(student, section.grade_level)
+                if not is_grade_valid:
+                    messages.error(request, grade_message)
+                    return render(request, 'advisory_enrollment.html', context)
                 
                 # Check student's previous enrollment grade level
                 previous_grade_level = None
