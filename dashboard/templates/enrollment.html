@@ -102,21 +102,7 @@
             <h1 class="h3 mb-0 text-gray-800">Student Enrollment</h1>
         </div>
 
-        <div class="mb-3 d-flex justify-content-between align-items-center">
-            <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#promoteStudentsModal">
-                <i class="fas fa-graduation-cap me-2"></i>Promote Students
-            </button>
-            <div>
-                <select class="form-select form-select-sm" id="schoolYearFilter" style="width: auto;">
-                    <option value="all">All School Years</option>
-                    {% for year in school_years %}
-                        <option value="{{ year }}" {% if year == selected_year %}selected{% endif %}>
-                            {{ year }}
-                        </option>
-                    {% endfor %}
-                </select>
-            </div>
-        </div>
+
 
         <!-- Display Messages -->
         {% if messages %}
@@ -191,16 +177,19 @@
         <div class="card shadow mb-4">
             <div class="card-header py-3 d-flex justify-content-between align-items-center">
                 <h6 class="m-0 fw-bold text-primary">Current Enrollments</h6>
-                <div class="d-flex align-items-center">
-                    <select class="form-select me-2" id="yearFilter">
-                        {% for year in school_years %}
-                            <option value="{{ year.display_name }}" 
-                                    {% if year.display_name == selected_year %}selected{% endif %}>
-                                {{ year.display_name }}
-                                {% if year.is_active %}(Active){% endif %}
-                            </option>
-                        {% endfor %}
-                    </select>
+                <div class="d-flex align-items-center gap-2">
+                    <div class="form-group mb-0">
+                        <select class="form-select" id="schoolYearFilter" name="school_year">
+                            <option value="all">All School Years</option>
+                            {% for year in school_years %}
+                                <option value="{{ year.display_name }}" 
+                                        {% if year.display_name == selected_year %}selected{% endif %}>
+                                    {{ year.display_name }}
+                                    {% if year.is_active %}(Active){% endif %}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
                 </div>
             </div>
             <div class="card-body">
@@ -209,7 +198,7 @@
                         <thead>
                             <tr>
                                 <th>Student ID</th>
-                                <th>Student Name</th>
+                                <th>Name</th>
                                 <th>Section</th>
                                 <th>Grade Level</th>
                                 <th>School Year</th>
@@ -240,7 +229,8 @@
                                             data-id="{{ enrollment.id }}"
                                             data-student="{{ enrollment.student.id }}"
                                             data-section="{{ enrollment.section.id }}"
-                                            data-status="{{ enrollment.status }}">
+                                            data-status="{{ enrollment.status }}"
+                                            data-school-year="{{ enrollment.school_year }}">
                                         <i class="fas fa-edit"></i>
                                     </button>
                                     <button class="btn btn-sm btn-danger delete-enrollment"
@@ -252,7 +242,7 @@
                             </tr>
                             {% empty %}
                             <tr>
-                                <td colspan="7" class="text-center">No enrollments found for this school year</td>
+                                <td colspan="7" class="text-center">No enrollments found</td>
                             </tr>
                             {% endfor %}
                         </tbody>
@@ -270,10 +260,19 @@
             {% for grade, sections in sections_by_grade.items %}
             <div class="card shadow-sm mb-4">
                 <div class="card-header bg-white py-3">
-                    <h5 class="mb-0 fw-bold text-primary">Grade {{ grade }}</h5>
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0 fw-bold text-primary">Grade {{ grade }}</h5>
+                        <div>
+                            <span class="badge bg-primary rounded-pill me-2">Total Sections: {{ sections|length }}</span>
+                            <button class="btn btn-sm btn-outline-primary" type="button" data-bs-toggle="modal" data-bs-target="#gradeModal{{ grade }}">
+                                <i class="fas fa-table me-1"></i>View All Students
+                            </button>
+                        </div>
+                    </div>
                 </div>
                 <div class="card-body">
-                    <div class="row">
+                    <!-- Section Summary Cards -->
+                    <div class="row mb-4">
                         {% for section_data in sections %}
                         <div class="col-xl-3 col-lg-4 col-md-6 mb-4">
                             <div class="card h-100 border">
@@ -292,78 +291,101 @@
                                         <div class="text-muted small">Section Adviser</div>
                                     </div>
                                     {% endif %}
-                                    <button class="btn btn-primary w-100" 
-                                            data-bs-toggle="modal" 
-                                            data-bs-target="#sectionEnrollmentsModal{{ section_data.section.id }}">
-                                        <i class="fas fa-users me-2"></i>View Students
-                                    </button>
                                 </div>
                             </div>
                         </div>
+                        {% endfor %}
+                    </div>
 
-                        <!-- Section Enrollments Modal -->
-                        <div class="modal fade" id="sectionEnrollmentsModal{{ section_data.section.id }}" tabindex="-1">
-                            <div class="modal-dialog modal-lg">
-                                <div class="modal-content">
-                                    <div class="modal-header">
-                                        <h5 class="modal-title">
-                                            Section {{ section_data.section.section_id }} Enrollments
-                                            <small class="text-muted d-block">Grade {{ grade }}</small>
-                                        </h5>
-                                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    <!-- Grade Level Students Modal -->
+                    <div class="modal fade" id="gradeModal{{ grade }}" tabindex="-1" aria-labelledby="gradeModalLabel{{ grade }}" aria-hidden="true">
+                        <div class="modal-dialog modal-xl">
+                            <div class="modal-content">
+                                <div class="modal-header">
+                                    <h5 class="modal-title" id="gradeModalLabel{{ grade }}">Grade {{ grade }} - All Students</h5>
+                                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                </div>
+                                <div class="modal-body">
+                                    <div class="d-flex justify-content-between align-items-center mb-3">
+                                        <div class="form-group mb-0">
+                                            <select class="form-select grade-year-filter" data-grade="{{ grade }}">
+                                                <option value="all">All School Years</option>
+                                                {% for year in school_years %}
+                                                    <option value="{{ year.display_name }}" 
+                                                            {% if year.display_name == selected_year %}selected{% endif %}>
+                                                        {{ year.display_name }}
+                                                        {% if year.is_active %}(Active){% endif %}
+                                                    </option>
+                                                {% endfor %}
+                                            </select>
+                                        </div>
                                     </div>
-                                    <div class="modal-body">
-                                        <div class="table-responsive">
-                                            <table class="table table-hover">
-                                                <thead>
-                                                    <tr>
-                                                        <th>Student ID</th>
-                                                        <th>Name</th>
-                                                        <th>Status</th>
-                                                        <th class="text-center">Actions</th>
-                                                    </tr>
-                                                </thead>
-                                                <tbody>
-                                                    {% for enrollment in section_data.enrollments %}
-                                                    <tr>
-                                                        <td>{{ enrollment.student.student_id }}</td>
-                                                        <td>{{ enrollment.student.first_name }} {{ enrollment.student.last_name }}</td>
+                                    <div class="table-responsive">
+                                        <table class="table table-hover" id="gradeTable{{ grade }}">
+                                            <thead class="table-light">
+                                                <tr>
+                                                    <th>Student ID</th>
+                                                    <th>Name</th>
+                                                    <th>Section</th>
+                                                    <th>Year Level</th>
+                                                    <th>School Year</th>
+                                                    <th>Status</th>
+                                                    <th>Actions</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {% for section_data in sections %}
+                                                    {% for student in section_data.students %}
+                                                    <tr data-school-year="{{ student.school_year }}">
+                                                        <td>{{ student.student_id }}</td>
+                                                        <td>{{ student.name }}</td>
+                                                        <td>{{ student.section }}</td>
+                                                        <td>{{ student.grade_level }}</td>
+                                                        <td>{{ student.school_year }}</td>
                                                         <td>
-                                                            <span class="badge {% if enrollment.status == 'Active' %}bg-success
-                                                                      {% elif enrollment.status == 'Completed' %}bg-info
-                                                                      {% elif enrollment.status == 'Dropped' %}bg-danger
-                                                                      {% else %}bg-secondary{% endif %} rounded-pill">
-                                                                {{ enrollment.status }}
+                                                            <span class="badge {% if student.status == 'Active' %}bg-success
+                                                              {% elif student.status == 'Completed' %}bg-info
+                                                              {% elif student.status == 'Dropped' %}bg-danger
+                                                              {% else %}bg-secondary{% endif %} rounded-pill">
+                                                                {{ student.status }}
                                                             </span>
                                                         </td>
-                                                        <td class="text-center">
+                                                        <td>
                                                             <button class="btn btn-sm btn-info edit-enrollment" 
                                                                     data-bs-toggle="modal" 
                                                                     data-bs-target="#editEnrollmentModal"
-                                                                    data-id="{{ enrollment.id }}">
+                                                                    data-id="{{ student.enrollment_id }}"
+                                                                    data-student="{{ student.student_id }}"
+                                                                    data-section="{{ student.section }}"
+                                                                    data-status="{{ student.status }}"
+                                                                    data-school-year="{{ student.school_year }}">
                                                                 <i class="fas fa-edit"></i>
                                                             </button>
-                                                            <button class="btn btn-sm btn-danger">
+                                                            <button class="btn btn-sm btn-danger delete-enrollment"
+                                                                    data-id="{{ student.enrollment_id }}"
+                                                                    data-student-name="{{ student.name }}">
                                                                 <i class="fas fa-trash"></i>
                                                             </button>
                                                         </td>
                                                     </tr>
                                                     {% empty %}
                                                     <tr>
-                                                        <td colspan="4" class="text-center py-4 text-muted">
-                                                            <i class="fas fa-user-graduate fa-2x mb-2"></i><br>
-                                                            No students enrolled in this section
+                                                        <td colspan="7" class="text-center py-4">
+                                                            <i class="fas fa-user-graduate fa-2x mb-2 d-block text-muted"></i>
+                                                            No students enrolled in this grade level
                                                         </td>
                                                     </tr>
                                                     {% endfor %}
-                                                </tbody>
-                                            </table>
-                                        </div>
+                                                {% endfor %}
+                                            </tbody>
+                                        </table>
                                     </div>
+                                </div>
+                                <div class="modal-footer">
+                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
                                 </div>
                             </div>
                         </div>
-                        {% endfor %}
                     </div>
                 </div>
             </div>
@@ -511,7 +533,11 @@
     <script>
         $(document).ready(function() {
             // Initialize DataTable
-            $('#enrollmentsTable').DataTable();
+            $('#enrollmentsTable').DataTable({
+                "pageLength": 10,
+                "order": [[1, "asc"]], // Sort by name by default
+                "responsive": true
+            });
             
             // Initialize Select2 for student dropdowns
             $('.student-select').select2({
@@ -736,10 +762,100 @@
                 }
             });
 
-            // Add this JavaScript for the year filter
-            document.getElementById('yearFilter').addEventListener('change', function() {
-                const year = this.value;
-                window.location.href = `?school_year=${encodeURIComponent(year)}`;
+            // Handle school year filter changes
+            $('#schoolYearFilter').change(function() {
+                const selectedYear = $(this).val();
+                let url = new URL(window.location.href);
+                
+                if (selectedYear === 'all') {
+                    url.searchParams.delete('year');
+                } else {
+                    url.searchParams.set('year', selectedYear);
+                }
+                
+                window.location.href = url.toString();
+            });
+
+            // Initialize DataTables for grade level tables with custom filtering
+            $('[id^=gradeTable]').each(function() {
+                const table = $(this).DataTable({
+                    "pageLength": 10,
+                    "order": [[0, "asc"]], // Sort by Student ID by default
+                    "responsive": true,
+                    "language": {
+                        "emptyTable": "No students enrolled in this grade level"
+                    }
+                });
+
+                // Get the grade number from the table ID
+                const gradeNumber = this.id.replace('gradeTable', '');
+                
+                // Add event listener for the grade year filter
+                $(`.grade-year-filter[data-grade="${gradeNumber}"]`).on('change', function() {
+                    const selectedYear = $(this).val();
+                    
+                    // Filter the table rows
+                    table.rows().every(function() {
+                        const rowData = this.node();
+                        const rowYear = $(rowData).data('school-year');
+                        
+                        if (selectedYear === 'all' || rowYear === selectedYear) {
+                            $(rowData).show();
+                        } else {
+                            $(rowData).hide();
+                        }
+                    });
+                    
+                    // Adjust the table
+                    table.columns.adjust().draw();
+                });
+            });
+
+            // Handle modal show event to properly render DataTables
+            $('[id^=gradeModal]').on('shown.bs.modal', function() {
+                const table = $(this).find('table').DataTable();
+                table.columns.adjust().draw();
+            });
+
+            // Handle edit enrollment button clicks within the modal
+            $(document).on('click', '.edit-enrollment', function() {
+                const id = $(this).data('id');
+                const student = $(this).data('student');
+                const section = $(this).data('section');
+                const schoolYear = $(this).data('schoolyear');
+                const status = $(this).data('status');
+                
+                $('#edit_enrollment_id').val(id);
+                $('#edit_student').val(student).trigger('change');
+                $('#edit_section').val(section);
+                $('#edit_school_year').val(schoolYear);
+                $('#edit_status').val(status);
+            });
+
+            // Handle delete enrollment button clicks within the modal
+            $(document).on('click', '.delete-enrollment', function() {
+                const enrollmentId = $(this).data('id');
+                const studentName = $(this).data('student-name');
+
+                // Update modal content
+                $('#deleteConfirmationModal .modal-body p:first').html(
+                    `Are you sure you want to delete the enrollment of <strong>${studentName}</strong>?`
+                );
+
+                // Store the enrollment ID for deletion
+                $('#confirmDelete').data('enrollment-id', enrollmentId);
+
+                // Show the delete confirmation modal
+                $('#deleteConfirmationModal').modal('show');
+            });
+
+            // Ensure tables are properly redrawn when grade level cards are expanded
+            $('[data-bs-toggle="collapse"]').on('click', function() {
+                const target = $($(this).data('bs-target'));
+                setTimeout(function() {
+                    const table = target.find('table').DataTable();
+                    table.columns.adjust().draw();
+                }, 500);
             });
         });
     </script>
@@ -808,76 +924,7 @@
         </div>
     </div>
 
-    <!-- Promote Students Modal -->
-    <div class="modal fade" id="promoteStudentsModal" tabindex="-1">
-        <div class="modal-dialog modal-xl">
-            <div class="modal-content">
-                <div class="modal-header bg-success text-white">
-                    <h5 class="modal-title">Promote Students</h5>
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body">
-                    <form id="promoteStudentsForm" method="POST" action="{% url 'promote_students' %}">
-                        {% csrf_token %}
-                        <div class="row mb-3">
-                            <div class="col-md-4">
-                                <label class="form-label">From School Year</label>
-                                <select class="form-select" name="from_school_year" required>
-                                    <option value="all">All School Years</option>
-                                    {% for year in school_years %}
-                                        <option value="{{ year }}">{{ year }}</option>
-                                    {% endfor %}
-                                </select>
-                            </div>
-                            <div class="col-md-4">
-                                <label class="form-label">To School Year</label>
-                                <input type="text" class="form-control" name="to_school_year" 
-                                       placeholder="e.g., 2024-2025" required>
-                            </div>
-                            <div class="col-md-4">
-                                <label class="form-label">Grade Level to Promote</label>
-                                <select class="form-select" name="current_grade" required>
-                                    <option value="Grade 7">Grade 7 to 8</option>
-                                    <option value="Grade 8">Grade 8 to 9</option>
-                                    <option value="Grade 9">Grade 9 to 10</option>
-                                    <option value="Grade 10">Grade 10 to 11</option>
-                                    <option value="Grade 11">Grade 11 to 12</option>
-                                </select>
-                            </div>
-                        </div>
-                        
-                        <div class="table-responsive">
-                            <table class="table table-bordered" id="eligibleStudentsTable">
-                                <thead>
-                                    <tr>
-                                        <th>
-                                            <input type="checkbox" id="selectAllStudents">
-                                        </th>
-                                        <th>Student ID</th>
-                                        <th>Name</th>
-                                        <th>Current Grade</th>
-                                        <th>School Year</th>
-                                        <th>Overall Grade</th>
-                                        <th>Status</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <!-- Will be populated via AJAX -->
-                                </tbody>
-                            </table>
-                        </div>
-                        
-                        <div class="modal-footer">
-                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                            <button type="submit" class="btn btn-success" id="promoteButton">
-                                Promote Selected Students
-                            </button>
-                        </div>
-                    </form>
-                </div>
-            </div>
-        </div>
-    </div>
+  
 
     <!-- Add this JavaScript -->
     <script>

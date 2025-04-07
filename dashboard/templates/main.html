@@ -18,102 +18,120 @@
 
         <!-- Main Content Area -->
         <div class="main-content" style="margin-left:250px; padding:20px; background-color: #f8f9fa;">
-            <!-- Navbar -->
+            <!-- Navbar --> 
             {% include 'structures/navbar.html' %}
             
-            <!-- Dashboard Content -->
-            <div class="row mb-4 g-4">
-                <div class="col-md-3 mb-4">
-                    <div class="card bg-primary text-white border-0 rounded-4 shadow-sm h-100">
-                        <div class="card-body d-flex justify-content-between align-items-start p-4">
-                            <div>
-                                <h6 class="card-subtitle mb-2 text-white-50">Total Students</h6>
-                                <h2 class="card-title mb-0 fw-bold">{{ total_students }}</h2>
-                                <p class="card-text mt-2 mb-0">
-                                    <span class="badge bg-white text-primary">{{ student_growth }}% </span>
-                                    <small class="text-white-50">from last month</small>
-                                </p>
-                            </div>
-                            <div class="icon-box">
-                                <i class="fas fa-user-graduate fa-3x opacity-25"></i>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-3 mb-4">
-                    <div class="card bg-success text-white border-0 rounded-4 shadow-sm h-100">
-                        <div class="card-body d-flex justify-content-between align-items-start p-4">
-                            <div>
-                                <h6 class="card-subtitle mb-2 text-white-50">Total Teachers</h6>
-                                <h2 class="card-title mb-0 fw-bold">{{ total_teachers }}</h2>
-                                <p class="card-text mt-2 mb-0">
-                                    <span class="badge bg-white text-success">{{ teacher_growth }}% </span>
-                                    <small class="text-white-50">from last month</small>
-                                </p>
-                            </div>
-                            <div class="icon-box">
-                                <i class="fas fa-chalkboard-teacher fa-3x opacity-25"></i>
+            {% if error_message %}
+            <div class="alert alert-danger" role="alert">
+                {{ error_message }}
+            </div>
+            {% endif %}
+
+            <!-- Filter Section -->
+            <div class="card border-0 rounded-4 shadow-sm mb-4">
+                <div class="card-body p-4">
+                    <h5 class="card-title mb-3">Dashboard Filters</h5>
+                    <form method="get" id="filterForm">
+                        <div class="row g-3">
+                            <div class="col-md-4">
+                                <label class="form-label">School Year</label>
+                                <select class="form-select" name="school_year" onchange="this.form.submit()">
+                                    <option value="">All School Years</option>
+                                    {% for year in school_years %}
+                                        <option value="{{ year.display_name }}" 
+                                                {% if year.display_name == selected_year %}selected{% endif %}>
+                                            {{ year.display_name }} {% if year.is_active %}(Active){% endif %}
+                                        </option>
+                                    {% endfor %}
+                                </select>
                             </div>
                         </div>
-                    </div>
-                </div>
-                <div class="col-md-3 mb-4">
-                    <div class="card bg-warning text-white border-0 rounded-4 shadow-sm h-100">
-                        <div class="card-body d-flex justify-content-between align-items-start p-4">
-                            <div>
-                                <h6 class="card-subtitle mb-2 text-white-50">Strand & Sections</h6>
-                                <h2 class="card-title mb-0 fw-bold">{{ total_sections }}</h2>
-                                <p class="card-text mt-2 mb-0">
-                                    <span class="badge bg-white text-warning">{{ section_growth }}% </span>
-                                    <small class="text-white-50">from last month</small>
-                                </p>
-                            </div>
-                            <div class="icon-box">
-                                <i class="fas fa-school fa-3x opacity-25"></i>
-                            </div>
-                        </div>
-                    </div>
+                    </form>
                 </div>
             </div>
 
-            <!-- Student Statistics Graph -->
-            <div class="row mb-4">
-                <div class="col-12">
-                    <div class="card border-0 rounded-4 shadow-sm">
-                        <div class="card-header bg-white d-flex justify-content-between align-items-center p-4 border-0">
-                            <h5 class="card-title mb-0 fw-bold">Student Enrollment Trends</h5>
-                            <div class="d-flex gap-3 align-items-center">
-                                <select class="form-select form-select-sm" id="schoolYearSelect" style="width: auto;">
-                                    {% if active_school_year %}
-                                        <option value="{{ active_school_year.display_name }}" selected>
-                                            {{ active_school_year.display_name }} (Active)
-                                        </option>
-                                    {% else %}
-                                        <option value="">No Active School Year</option>
-                                    {% endif %}
-                                </select>
-                                <div class="btn-group" role="group" aria-label="Chart period">
-                                    <button class="btn btn-sm btn-primary active" onclick="updateChart('monthly')">Monthly</button>
-                                    <button class="btn btn-sm btn-outline-primary" onclick="updateChart('yearly')">Yearly</button>
+            <!-- Dashboard Content -->
+            <div class="row mb-4 g-4">
+                <!-- Total Students Card -->
+                <div class="col-md-4">
+                    <div class="card bg-primary text-white border-0 rounded-4 shadow-sm h-100">
+                        <div class="card-body p-4">
+                            <div class="d-flex justify-content-between">
+                                <div>
+                                    <h6 class="card-subtitle mb-2 text-white-50">Total Students</h6>
+                                    <h2 class="card-title mb-0">{{ total_students }}</h2>
+                                    <p class="card-text mt-2 mb-0">
+                                        <span class="badge {% if student_growth >= 0 %}bg-white text-primary{% else %}bg-danger text-white{% endif %}">
+                                            {{ student_growth }}%
+                                        </span>
+                                        <small class="text-white-50">from last month</small>
+                                    </p>
+                                </div>
+                                <div class="icon-box">
+                                    <i class="fas fa-user-graduate fa-3x opacity-25"></i>
                                 </div>
                             </div>
                         </div>
+                    </div>
+                </div>
+
+                <!-- Total Teachers Card -->
+                <div class="col-md-4">
+                    <div class="card bg-success text-white border-0 rounded-4 shadow-sm h-100">
                         <div class="card-body p-4">
-                            <canvas id="studentChart" height="300"></canvas>
+                            <div class="d-flex justify-content-between">
+                                <div>
+                                    <h6 class="card-subtitle mb-2 text-white-50">Total Teachers</h6>
+                                    <h2 class="card-title mb-0">{{ total_teachers }}</h2>
+                                </div>
+                                <div class="icon-box">
+                                    <i class="fas fa-chalkboard-teacher fa-3x opacity-25"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Total Sections Card -->
+                <div class="col-md-4">
+                    <div class="card bg-warning text-white border-0 rounded-4 shadow-sm h-100">
+                        <div class="card-body p-4">
+                            <div class="d-flex justify-content-between">
+                                <div>
+                                    <h6 class="card-subtitle mb-2 text-white-50">Total Sections</h6>
+                                    <h2 class="card-title mb-0">{{ total_sections }}</h2>
+                                </div>
+                                <div class="icon-box">
+                                    <i class="fas fa-school fa-3x opacity-25"></i>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <!-- Additional Statistics Row -->
+            <!-- Charts Row -->
             <div class="row g-4">
-                <div class="col-md-6 mb-4">
+                <!-- Gender Distribution -->
+                <div class="col-md-6">
                     <div class="card border-0 rounded-4 shadow-sm h-100">
                         <div class="card-header bg-white p-4 border-0">
-                            <h5 class="card-title mb-0 fw-bold">Gender Distribution</h5>
+                            <h5 class="card-title mb-0">Gender Distribution</h5>
                         </div>
                         <div class="card-body p-4">
-                            <canvas id="genderChart" height="250"></canvas>
+                            <canvas id="genderChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Grade Level Distribution -->
+                <div class="col-md-6">
+                    <div class="card border-0 rounded-4 shadow-sm h-100">
+                        <div class="card-header bg-white p-4 border-0">
+                            <h5 class="card-title mb-0">Grade Level Distribution</h5>
+                        </div>
+                        <div class="card-body p-4">
+                            <canvas id="gradeLevelChart"></canvas>
                         </div>
                     </div>
                 </div>
@@ -126,152 +144,64 @@
 
     <!-- Charts Script -->
     <script>
-    let studentChart, genderChart;
-    
-    // Parse the school years data from the server
-    const schoolYearData = JSON.parse('{{ school_years_data|safe }}');
-    console.log("School Year Data:", schoolYearData);
-
-    document.addEventListener('DOMContentLoaded', function() {
-        const schoolYearSelect = document.getElementById('schoolYearSelect');
-        
-        // Add event listener for school year select to update total students
-        schoolYearSelect.addEventListener('change', function() {
-            const selectedYear = this.value;
-            // Reload page with selected school year
-            window.location.href = `?school_year=${selectedYear}`;
-        });
-
-        // Get initial school year
-        const initialYear = schoolYearSelect.value;
-        console.log("Initial Year:", initialYear); // Debug logging
-        
-        const initialData = schoolYearData[initialYear] || {
-            monthly: {
-                labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
-                data: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
-            }
-        };
-        console.log("Initial Data:", initialData); // Debug logging
-
-        // Student Enrollment Chart
-        const studentCtx = document.getElementById('studentChart').getContext('2d');
-        studentChart = new Chart(studentCtx, {
-            type: 'line',
-            data: {
-                labels: initialData.monthly.labels,
-                datasets: [{
-                    label: 'Total Enrollments',
-                    data: initialData.monthly.data,
-                    backgroundColor: 'rgba(13, 110, 253, 0.2)',
-                    borderColor: 'rgba(13, 110, 253, 1)',
-                    borderWidth: 2,
-                    fill: true,
-                    tension: 0.4
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: {
-                        display: true,
-                        position: 'top'
-                    },
-                    tooltip: {
-                        callbacks: {
-                            label: function(context) {
-                                return `Enrollments: ${context.raw}`;
-                            }
-                        }
-                    }
+        document.addEventListener('DOMContentLoaded', function() {
+            // Gender Distribution Chart
+            const genderData = JSON.parse('{{ gender_data|safe }}');
+            const genderCtx = document.getElementById('genderChart').getContext('2d');
+            new Chart(genderCtx, {
+                type: 'doughnut',
+                data: {
+                    labels: genderData.labels,
+                    datasets: [{
+                        data: genderData.data,
+                        backgroundColor: [
+                            'rgba(13, 110, 253, 0.8)',  // Blue for Male
+                            'rgba(255, 99, 132, 0.8)'   // Pink for Female
+                        ],
+                        borderWidth: 1
+                    }]
                 },
-                scales: {
-                    y: {
-                        beginAtZero: true,
-                        title: {
-                            display: true,
-                            text: 'Number of Enrollments'
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'right'
                         }
                     }
                 }
-            }
-        });
+            });
 
-        // Gender Distribution Chart
-        const genderCtx = document.getElementById('genderChart').getContext('2d');
-        genderChart = new Chart(genderCtx, {
-            type: 'doughnut',
-            data: {
-                labels: ['Male', 'Female'],
-                datasets: [{
-                    data: [55, 42],
-                    backgroundColor: [
-                        'rgba(13, 110, 253, 0.8)',
-                        'rgba(255, 99, 132, 0.8)'
-                    ],
-                    borderWidth: 1
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: {
-                        position: 'right'
-                    }
+            // Grade Level Distribution Chart
+            const gradeLevelData = JSON.parse('{{ grade_level_data|safe }}');
+            const gradeLevelCtx = document.getElementById('gradeLevelChart').getContext('2d');
+            new Chart(gradeLevelCtx, {
+                type: 'bar',
+                data: {
+                    labels: gradeLevelData.labels,
+                    datasets: [{
+                        label: 'Number of Students',
+                        data: gradeLevelData.data,
+                        backgroundColor: 'rgba(13, 110, 253, 0.8)',
+                        borderColor: 'rgba(13, 110, 253, 1)',
+                        borderWidth: 1
+                    }]
                 },
-                cutout: '70%'
-            }
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            title: {
+                                display: true,
+                                text: 'Number of Students'
+                            }
+                        }
+                    }
+                }
+            });
         });
-
-        // Add event listener for school year select
-        schoolYearSelect.addEventListener('change', function() {
-            const period = document.querySelector('.btn-primary').textContent.trim().toLowerCase();
-            updateChart(period);
-        });
-    });
-
-    function updateChart(period) {
-        const selectedYear = document.getElementById('schoolYearSelect').value;
-        const yearData = schoolYearData[selectedYear];
-
-        if (!yearData) {
-            console.error('No data found for year:', selectedYear);
-            return;
-        }
-
-        const chartData = {
-            labels: yearData[period].labels,
-            datasets: [{
-                label: period === 'yearly' ? 'Yearly Enrollments' : 'Monthly Enrollments',
-                data: yearData[period].data,
-                backgroundColor: period === 'yearly' ? 'rgba(20, 184, 166, 0.2)' : 'rgba(13, 110, 253, 0.2)',
-                borderColor: period === 'yearly' ? 'rgba(20, 184, 166, 1)' : 'rgba(13, 110, 253, 1)',
-                borderWidth: 2,
-                fill: true,
-                tension: 0.4
-            }]
-        };
-
-        studentChart.data = chartData;
-        studentChart.options.scales.y.title.text = `Number of ${period === 'yearly' ? 'Yearly' : 'Monthly'} Enrollments`;
-        studentChart.update();
-
-        // Update button states
-        document.querySelectorAll('.btn-outline-primary, .btn-primary').forEach(btn => {
-            const isYearly = period === 'yearly';
-            const buttonIsYearly = btn.textContent.trim() === 'Yearly';
-            
-            if (isYearly === buttonIsYearly) {
-                btn.classList.remove('btn-outline-primary');
-                btn.classList.add('btn-primary');
-            } else {
-                btn.classList.remove('btn-primary');
-                btn.classList.add('btn-outline-primary');
-            }
-        });
-    }
     </script>
 
     <style>
@@ -284,27 +214,12 @@
         box-shadow: 0 10px 20px rgba(0,0,0,0.1) !important;
     }
     
-    .btn-group .btn {
-        border-radius: 0.5rem;
-        padding: 0.5rem 1rem;
-    }
-    
-    .btn-group .btn:first-child {
-        border-top-right-radius: 0;
-        border-bottom-right-radius: 0;
-    }
-    
-    .btn-group .btn:last-child {
-        border-top-left-radius: 0;
-        border-bottom-left-radius: 0;
-    }
-    
-    canvas {
-        width: 100% !important;
-    }
-    
     .icon-box {
         margin-top: -10px;
+    }
+
+    canvas {
+        min-height: 300px;
     }
     </style>
 </body>

@@ -127,6 +127,34 @@ class Schedules(models.Model):
             models.Q(end_time__gt=start_time)
         ).exists()
 
+    def get_schedule_info(self):
+        """Get formatted schedule information"""
+        return {
+            'subject_name': self.subject.name,
+            'subject_id': self.subject.subject_id,
+            'section': self.section.section_id,
+            'day': self.day,
+            'time': f"{self.start_time.strftime('%I:%M %p')} - {self.end_time.strftime('%I:%M %p')}",
+            'room': self.room,
+            'teacher': f"{self.teacher_id.first_name} {self.teacher_id.last_name}"
+        }
+
+    def get_enrolled_students(self):
+        """Get enrolled students based on grade level"""
+        enrollment_model = {
+            7: 'enrollments',
+            8: 'grade8_enrollments',
+            9: 'grade9_enrollments',
+            10: 'grade10_enrollments',
+            11: 'grade11_enrollments',
+            12: 'grade12_enrollments'
+        }.get(self.section.grade_level, 'enrollments')
+
+        return Student.objects.filter(
+            **{f"{enrollment_model}__section": self.section,
+               f"{enrollment_model}__status": 'Active'}
+        ).distinct()
+
 
 class Sections(models.Model):
     section_id = models.CharField(max_length=50, unique=True)
@@ -140,6 +168,32 @@ class Sections(models.Model):
 
     def get_grade_level_display(self):
         return f"Grade {self.grade_level}"
+
+    def get_section_info(self):
+        """Get section information"""
+        return {
+            'section_id': self.section_id,
+            'grade_level': self.grade_level,
+            'adviser': f"{self.adviser.first_name} {self.adviser.last_name}",
+            'student_count': self.get_student_count(),
+            'schedules': list(self.schedules_set.values('day', 'start_time', 'end_time', 'subject__name'))
+        }
+
+    def get_student_count(self):
+        """Get count of enrolled students"""
+        enrollment_model = {
+            7: 'enrollments',
+            8: 'grade8_enrollments',
+            9: 'grade9_enrollments',
+            10: 'grade10_enrollments',
+            11: 'grade11_enrollments',
+            12: 'grade12_enrollments'
+        }.get(self.grade_level, 'enrollments')
+
+        return Student.objects.filter(
+            **{f"{enrollment_model}__section": self,
+               f"{enrollment_model}__status": 'Active'}
+        ).count()
 
     class Meta:
         ordering = ['grade_level', 'section_id']
