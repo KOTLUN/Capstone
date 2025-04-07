@@ -8,29 +8,54 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
     <link rel="stylesheet" href="{% static 'css/sidebar.css' %}">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/jquery/latest/jquery.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/momentjs/latest/moment.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.min.js"></script>
 </head>
 
-<body>
+<body class="bg-light">
     <div class="layout-wrapper">
         <!-- Sidebar -->
         {% include 'structures/sidebar.html' %}
 
         <!-- Main Content Area -->
-        <div class="main-content" style="margin-left:250px; padding:20px; background-color: #f8f9fa;">
+        <div class="main-content" style="margin-left:250px; padding:20px;">
             <!-- Navbar --> 
             {% include 'structures/navbar.html' %}
             
             {% if error_message %}
-            <div class="alert alert-danger" role="alert">
+            <div class="alert alert-danger alert-dismissible fade show rounded-4 mb-4" role="alert">
                 {{ error_message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
             </div>
             {% endif %}
+
+            <!-- Welcome Section -->
+            <div class="welcome-section card border-0 rounded-4 shadow-sm mb-4 bg-primary bg-gradient text-white">
+                <div class="card-body p-4">
+                    <div class="row align-items-center">
+                        <div class="col-md-8">
+                            <h2 class="display-6 fw-bold mb-3">Welcome to Dashboard</h2>
+                            <p class="lead mb-0">School Year: {{ active_school_year.display_name }}</p>
+                        </div>
+                        <div class="col-md-4 text-end">
+                            <i class="fas fa-chart-line fa-4x opacity-25"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
 
             <!-- Filter Section -->
             <div class="card border-0 rounded-4 shadow-sm mb-4">
                 <div class="card-body p-4">
-                    <h5 class="card-title mb-3">Dashboard Filters</h5>
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h5 class="card-title mb-0">Dashboard Filters</h5>
+                        <button class="btn btn-outline-primary btn-sm" onclick="resetFilters()">
+                            <i class="fas fa-redo-alt me-2"></i>Reset Filters
+                        </button>
+                    </div>
                     <form method="get" id="filterForm">
                         <div class="row g-3">
                             <div class="col-md-4">
@@ -45,31 +70,63 @@
                                     {% endfor %}
                                 </select>
                             </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Date Range</label>
+                                <input type="text" class="form-control" id="daterange" name="daterange">
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Quick Filters</label>
+                                <div class="d-flex gap-2">
+                                    <button type="button" class="btn btn-outline-secondary btn-sm flex-grow-1" onclick="setDateRange('today')">Today</button>
+                                    <button type="button" class="btn btn-outline-secondary btn-sm flex-grow-1" onclick="setDateRange('week')">This Week</button>
+                                    <button type="button" class="btn btn-outline-secondary btn-sm flex-grow-1" onclick="setDateRange('month')">This Month</button>
+                                </div>
+                            </div>
                         </div>
                     </form>
                 </div>
             </div>
 
-            <!-- Dashboard Content -->
+            <!-- Stats Cards Row -->
             <div class="row mb-4 g-4">
                 <!-- Total Students Card -->
                 <div class="col-md-4">
-                    <div class="card bg-primary text-white border-0 rounded-4 shadow-sm h-100">
+                    <div class="card bg-primary text-white border-0 rounded-4 shadow-sm h-100 position-relative overflow-hidden">
                         <div class="card-body p-4">
-                            <div class="d-flex justify-content-between">
+                            <div class="d-flex justify-content-between align-items-start">
                                 <div>
                                     <h6 class="card-subtitle mb-2 text-white-50">Total Students</h6>
-                                    <h2 class="card-title mb-0">{{ total_students }}</h2>
-                                    <p class="card-text mt-2 mb-0">
-                                        <span class="badge {% if student_growth >= 0 %}bg-white text-primary{% else %}bg-danger text-white{% endif %}">
-                                            {{ student_growth }}%
-                                        </span>
-                                        <small class="text-white-50">from last month</small>
-                                    </p>
+                                    <h2 class="card-title display-5 fw-bold mb-0">{{ total_students }}</h2>
+                                    <div class="mt-3">
+                                        <p class="card-text mb-1">
+                                            <span class="badge {% if student_growth >= 0 %}bg-white text-primary{% else %}bg-danger text-white{% endif %} px-3 py-2">
+                                                <i class="fas {% if student_growth >= 0 %}fa-arrow-up{% else %}fa-arrow-down{% endif %} me-1"></i>
+                                                {{ student_growth }}%
+                                            </span>
+                                            <small class="text-white-50 ms-2">from last month</small>
+                                        </p>
+                                    </div>
                                 </div>
                                 <div class="icon-box">
-                                    <i class="fas fa-user-graduate fa-3x opacity-25"></i>
+                                    <i class="fas fa-user-graduate fa-3x text-white opacity-25"></i>
                                 </div>
+                            </div>
+                        </div>
+                        <div class="card-footer bg-primary-dark border-0 py-3">
+                            <a href="#" class="text-white text-decoration-none d-flex align-items-center">
+                                <span class="flex-grow-1">View Details</span>
+                                <i class="fas fa-arrow-right"></i>
+                            </a>
+                        </div>
+                        <div class="position-absolute top-0 end-0 mt-2 me-2">
+                            <div class="dropdown">
+                                <button class="btn text-white btn-sm" type="button" data-bs-toggle="dropdown">
+                                    <i class="fas fa-ellipsis-v"></i>
+                                </button>
+                                <ul class="dropdown-menu">
+                                    <li><a class="dropdown-item" href="#"><i class="fas fa-download me-2"></i>Export Data</a></li>
+                                    <li><a class="dropdown-item" href="#"><i class="fas fa-sync me-2"></i>Refresh</a></li>
+                                </ul>
                             </div>
                         </div>
                     </div>
@@ -77,16 +134,38 @@
 
                 <!-- Total Teachers Card -->
                 <div class="col-md-4">
-                    <div class="card bg-success text-white border-0 rounded-4 shadow-sm h-100">
+                    <div class="card bg-success text-white border-0 rounded-4 shadow-sm h-100 position-relative overflow-hidden">
                         <div class="card-body p-4">
-                            <div class="d-flex justify-content-between">
+                            <div class="d-flex justify-content-between align-items-start">
                                 <div>
                                     <h6 class="card-subtitle mb-2 text-white-50">Total Teachers</h6>
-                                    <h2 class="card-title mb-0">{{ total_teachers }}</h2>
+                                    <h2 class="card-title display-5 fw-bold mb-0">{{ total_teachers }}</h2>
+                                    <div class="mt-3">
+                                        <small class="text-white-50">
+                                            <i class="fas fa-clock me-1"></i>Last updated today
+                                        </small>
+                                    </div>
                                 </div>
                                 <div class="icon-box">
-                                    <i class="fas fa-chalkboard-teacher fa-3x opacity-25"></i>
+                                    <i class="fas fa-chalkboard-teacher fa-3x text-white opacity-25"></i>
                                 </div>
+                            </div>
+                        </div>
+                        <div class="card-footer bg-success-dark border-0 py-3">
+                            <a href="#" class="text-white text-decoration-none d-flex align-items-center">
+                                <span class="flex-grow-1">View Details</span>
+                                <i class="fas fa-arrow-right"></i>
+                            </a>
+                        </div>
+                        <div class="position-absolute top-0 end-0 mt-2 me-2">
+                            <div class="dropdown">
+                                <button class="btn text-white btn-sm" type="button" data-bs-toggle="dropdown">
+                                    <i class="fas fa-ellipsis-v"></i>
+                                </button>
+                                <ul class="dropdown-menu">
+                                    <li><a class="dropdown-item" href="#"><i class="fas fa-download me-2"></i>Export Data</a></li>
+                                    <li><a class="dropdown-item" href="#"><i class="fas fa-sync me-2"></i>Refresh</a></li>
+                                </ul>
                             </div>
                         </div>
                     </div>
@@ -94,16 +173,38 @@
 
                 <!-- Total Sections Card -->
                 <div class="col-md-4">
-                    <div class="card bg-warning text-white border-0 rounded-4 shadow-sm h-100">
+                    <div class="card bg-warning text-white border-0 rounded-4 shadow-sm h-100 position-relative overflow-hidden">
                         <div class="card-body p-4">
-                            <div class="d-flex justify-content-between">
+                            <div class="d-flex justify-content-between align-items-start">
                                 <div>
                                     <h6 class="card-subtitle mb-2 text-white-50">Total Sections</h6>
-                                    <h2 class="card-title mb-0">{{ total_sections }}</h2>
+                                    <h2 class="card-title display-5 fw-bold mb-0">{{ total_sections }}</h2>
+                                    <div class="mt-3">
+                                        <small class="text-white-50">
+                                            <i class="fas fa-clock me-1"></i>Last updated today
+                                        </small>
+                                    </div>
                                 </div>
                                 <div class="icon-box">
-                                    <i class="fas fa-school fa-3x opacity-25"></i>
+                                    <i class="fas fa-school fa-3x text-white opacity-25"></i>
                                 </div>
+                            </div>
+                        </div>
+                        <div class="card-footer bg-warning-dark border-0 py-3">
+                            <a href="#" class="text-white text-decoration-none d-flex align-items-center">
+                                <span class="flex-grow-1">View Details</span>
+                                <i class="fas fa-arrow-right"></i>
+                            </a>
+                        </div>
+                        <div class="position-absolute top-0 end-0 mt-2 me-2">
+                            <div class="dropdown">
+                                <button class="btn text-white btn-sm" type="button" data-bs-toggle="dropdown">
+                                    <i class="fas fa-ellipsis-v"></i>
+                                </button>
+                                <ul class="dropdown-menu">
+                                    <li><a class="dropdown-item" href="#"><i class="fas fa-download me-2"></i>Export Data</a></li>
+                                    <li><a class="dropdown-item" href="#"><i class="fas fa-sync me-2"></i>Refresh</a></li>
+                                </ul>
                             </div>
                         </div>
                     </div>
@@ -116,10 +217,30 @@
                 <div class="col-md-6">
                     <div class="card border-0 rounded-4 shadow-sm h-100">
                         <div class="card-header bg-white p-4 border-0">
-                            <h5 class="card-title mb-0">Gender Distribution</h5>
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <h5 class="card-title mb-1">Gender Distribution</h5>
+                                    <p class="text-muted small mb-0">Overview of student gender ratio</p>
+                                </div>
+                                <div class="dropdown">
+                                    <button class="btn btn-light btn-sm" type="button" data-bs-toggle="dropdown">
+                                        <i class="fas fa-ellipsis-v"></i>
+                                    </button>
+                                    <ul class="dropdown-menu">
+                                        <li><a class="dropdown-item" href="#" onclick="downloadChart('genderChart')">
+                                            <i class="fas fa-download me-2"></i>Download Chart
+                                        </a></li>
+                                        <li><a class="dropdown-item" href="#" onclick="refreshChart('genderChart')">
+                                            <i class="fas fa-sync me-2"></i>Refresh Data
+                                        </a></li>
+                                    </ul>
+                                </div>
+                            </div>
                         </div>
                         <div class="card-body p-4">
-                            <canvas id="genderChart"></canvas>
+                            <div class="chart-container position-relative" style="height:300px;">
+                                <canvas id="genderChart"></canvas>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -128,10 +249,30 @@
                 <div class="col-md-6">
                     <div class="card border-0 rounded-4 shadow-sm h-100">
                         <div class="card-header bg-white p-4 border-0">
-                            <h5 class="card-title mb-0">Grade Level Distribution</h5>
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <h5 class="card-title mb-1">Grade Level Distribution</h5>
+                                    <p class="text-muted small mb-0">Students per grade level</p>
+                                </div>
+                                <div class="dropdown">
+                                    <button class="btn btn-light btn-sm" type="button" data-bs-toggle="dropdown">
+                                        <i class="fas fa-ellipsis-v"></i>
+                                    </button>
+                                    <ul class="dropdown-menu">
+                                        <li><a class="dropdown-item" href="#" onclick="downloadChart('gradeLevelChart')">
+                                            <i class="fas fa-download me-2"></i>Download Chart
+                                        </a></li>
+                                        <li><a class="dropdown-item" href="#" onclick="refreshChart('gradeLevelChart')">
+                                            <i class="fas fa-sync me-2"></i>Refresh Data
+                                        </a></li>
+                                    </ul>
+                                </div>
+                            </div>
                         </div>
                         <div class="card-body p-4">
-                            <canvas id="gradeLevelChart"></canvas>
+                            <div class="chart-container position-relative" style="height:300px;">
+                                <canvas id="gradeLevelChart"></canvas>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -144,30 +285,115 @@
 
     <!-- Charts Script -->
     <script>
+        // Initialize date range picker
+        $(function() {
+            $('#daterange').daterangepicker({
+                opens: 'left',
+                maxDate: new Date(),
+                ranges: {
+                    'Today': [moment(), moment()],
+                    'Yesterday': [moment().subtract(1, 'days'), moment().subtract(1, 'days')],
+                    'Last 7 Days': [moment().subtract(6, 'days'), moment()],
+                    'Last 30 Days': [moment().subtract(29, 'days'), moment()],
+                    'This Month': [moment().startOf('month'), moment().endOf('month')],
+                    'Last Month': [moment().subtract(1, 'month').startOf('month'), moment().subtract(1, 'month').endOf('month')]
+                }
+            }, function(start, end, label) {
+                document.getElementById('filterForm').submit();
+            });
+        });
+
+        // Quick filter functions
+        function setDateRange(period) {
+            let start, end;
+            switch(period) {
+                case 'today':
+                    start = end = moment();
+                    break;
+                case 'week':
+                    start = moment().startOf('week');
+                    end = moment().endOf('week');
+                    break;
+                case 'month':
+                    start = moment().startOf('month');
+                    end = moment().endOf('month');
+                    break;
+            }
+            $('#daterange').data('daterangepicker').setStartDate(start);
+            $('#daterange').data('daterangepicker').setEndDate(end);
+            document.getElementById('filterForm').submit();
+        }
+
+        function resetFilters() {
+            document.getElementById('filterForm').reset();
+            document.getElementById('filterForm').submit();
+        }
+
         document.addEventListener('DOMContentLoaded', function() {
             // Gender Distribution Chart
             const genderData = JSON.parse('{{ gender_data|safe }}');
             const genderCtx = document.getElementById('genderChart').getContext('2d');
-            new Chart(genderCtx, {
+            const genderChart = new Chart(genderCtx, {
                 type: 'doughnut',
                 data: {
                     labels: genderData.labels,
                     datasets: [{
                         data: genderData.data,
                         backgroundColor: [
-                            'rgba(13, 110, 253, 0.8)',  // Blue for Male
-                            'rgba(255, 99, 132, 0.8)'   // Pink for Female
+                            'rgba(54, 162, 235, 0.8)',   // Blue for Male
+                            'rgba(255, 99, 132, 0.8)'    // Pink for Female
                         ],
-                        borderWidth: 1
+                        borderColor: [
+                            'rgba(54, 162, 235, 1)',
+                            'rgba(255, 99, 132, 1)'
+                        ],
+                        borderWidth: 2,
+                        hoverOffset: 4
                     }]
                 },
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
+                    cutout: '65%',
                     plugins: {
                         legend: {
-                            position: 'right'
+                            position: 'right',
+                            labels: {
+                                padding: 20,
+                                usePointStyle: true,
+                                pointStyle: 'circle',
+                                font: {
+                                    size: 12,
+                                    family: "'Helvetica Neue', 'Helvetica', 'Arial', sans-serif"
+                                }
+                            }
+                        },
+                        tooltip: {
+                            backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                            padding: 12,
+                            titleFont: {
+                                size: 14,
+                                weight: 'bold'
+                            },
+                            bodyFont: {
+                                size: 13
+                            },
+                            callbacks: {
+                                label: function(context) {
+                                    const label = context.label || '';
+                                    const value = context.formattedValue;
+                                    const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                    const percentage = Math.round((context.raw / total) * 100);
+                                    return `${label}: ${value} (${percentage}%)`;
+                                }
+                            }
                         }
+                    },
+                    animation: {
+                        animateScale: true,
+                        animateRotate: true,
+                        duration: 2000,
+                        easing: 'easeInOutQuart'
                     }
                 }
             });
@@ -175,16 +401,20 @@
             // Grade Level Distribution Chart
             const gradeLevelData = JSON.parse('{{ grade_level_data|safe }}');
             const gradeLevelCtx = document.getElementById('gradeLevelChart').getContext('2d');
-            new Chart(gradeLevelCtx, {
+            const gradeLevelChart = new Chart(gradeLevelCtx, {
                 type: 'bar',
                 data: {
                     labels: gradeLevelData.labels,
                     datasets: [{
                         label: 'Number of Students',
                         data: gradeLevelData.data,
-                        backgroundColor: 'rgba(13, 110, 253, 0.8)',
-                        borderColor: 'rgba(13, 110, 253, 1)',
-                        borderWidth: 1
+                        backgroundColor: 'rgba(54, 162, 235, 0.8)',
+                        borderColor: 'rgba(54, 162, 235, 1)',
+                        borderWidth: 2,
+                        borderRadius: 8,
+                        borderSkipped: false,
+                        maxBarThickness: 50,
+                        hoverBackgroundColor: 'rgba(54, 162, 235, 1)'
                     }]
                 },
                 options: {
@@ -193,18 +423,136 @@
                     scales: {
                         y: {
                             beginAtZero: true,
-                            title: {
-                                display: true,
-                                text: 'Number of Students'
+                            grid: {
+                                drawBorder: false,
+                                color: 'rgba(0, 0, 0, 0.05)'
+                            },
+                            ticks: {
+                                font: {
+                                    size: 12,
+                                    family: "'Helvetica Neue', 'Helvetica', 'Arial', sans-serif"
+                                },
+                                color: 'rgba(0, 0, 0, 0.7)'
                             }
+                        },
+                        x: {
+                            grid: {
+                                display: false
+                            },
+                            ticks: {
+                                font: {
+                                    size: 12,
+                                    family: "'Helvetica Neue', 'Helvetica', 'Arial', sans-serif"
+                                },
+                                color: 'rgba(0, 0, 0, 0.7)'
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            display: false
+                        },
+                        tooltip: {
+                            backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                            padding: 12,
+                            titleFont: {
+                                size: 14,
+                                weight: 'bold'
+                            },
+                            bodyFont: {
+                                size: 13
+                            },
+                            callbacks: {
+                                label: function(context) {
+                                    return `Students: ${context.formattedValue}`;
+                                }
+                            }
+                        }
+                    },
+                    animation: {
+                        duration: 2000,
+                        easing: 'easeInOutQuart',
+                        delay: function(context) {
+                            return context.dataIndex * 100;
                         }
                     }
                 }
             });
+
+            // Function to fetch and update dashboard statistics
+            function updateDashboardStats() {
+                fetch('/dashboard/get-data/')
+                    .then(response => response.json())
+                    .then(data => {
+                        if (!data.error) {
+                            // Update total students
+                            document.querySelector('.card.bg-primary .display-5').textContent = data.total_students;
+                            
+                            // Update total teachers
+                            document.querySelector('.card.bg-success .display-5').textContent = data.total_teachers;
+                            
+                            // Update total sections
+                            document.querySelector('.card.bg-warning .display-5').textContent = data.total_sections;
+                            
+                            // Update student growth if available
+                            if (data.student_growth !== undefined) {
+                                const growthBadge = document.querySelector('.card.bg-primary .badge');
+                                growthBadge.className = `badge ${data.student_growth >= 0 ? 'bg-white text-primary' : 'bg-danger text-white'} px-3 py-2`;
+                                growthBadge.innerHTML = `
+                                    <i class="fas ${data.student_growth >= 0 ? 'fa-arrow-up' : 'fa-arrow-down'} me-1"></i>
+                                    ${data.student_growth}%
+                                `;
+                            }
+                        }
+                    })
+                    .catch(error => console.error('Error updating dashboard stats:', error));
+            }
+
+            // Update stats when page loads
+            updateDashboardStats();
+            
+            // Add click handlers for refresh buttons
+            document.querySelectorAll('.dropdown-item').forEach(item => {
+                if (item.textContent.includes('Refresh')) {
+                    item.addEventListener('click', function(e) {
+                        e.preventDefault();
+                        updateDashboardStats();
+                    });
+                }
+            });
         });
+
+        // Chart download function
+        function downloadChart(chartId) {
+            const canvas = document.getElementById(chartId);
+            const link = document.createElement('a');
+            link.download = `${chartId}-${new Date().toISOString()}.png`;
+            link.href = canvas.toDataURL('image/png', 1.0);
+            link.click();
+        }
+
+        // Chart refresh function with loading animation
+        function refreshChart(chartId) {
+            const chartContainer = document.getElementById(chartId).parentElement;
+            chartContainer.classList.add('loading');
+            
+            setTimeout(() => {
+                chartContainer.classList.remove('loading');
+            }, 1000);
+        }
     </script>
 
     <style>
+    :root {
+        --primary-dark: #0d47a1;
+        --success-dark: #1b5e20;
+        --warning-dark: #f57f17;
+    }
+
+    body {
+        background-color: #f8f9fa;
+    }
+
     .card {
         transition: transform 0.2s, box-shadow 0.2s;
     }
@@ -213,13 +561,107 @@
         transform: translateY(-5px);
         box-shadow: 0 10px 20px rgba(0,0,0,0.1) !important;
     }
+
+    .welcome-section {
+        background: linear-gradient(135deg, var(--bs-primary) 0%, var(--primary-dark) 100%);
+    }
     
-    .icon-box {
-        margin-top: -10px;
+    .bg-primary-dark {
+        background-color: var(--primary-dark);
+    }
+    
+    .bg-success-dark {
+        background-color: var(--success-dark);
+    }
+    
+    .bg-warning-dark {
+        background-color: var(--warning-dark);
     }
 
-    canvas {
-        min-height: 300px;
+    .chart-container {
+        position: relative;
+        margin: auto;
+        height: 300px;
+    }
+
+    .icon-box {
+        position: relative;
+        z-index: 1;
+    }
+
+    .icon-box i {
+        transition: transform 0.3s;
+    }
+
+    .card:hover .icon-box i {
+        transform: scale(1.1);
+    }
+
+    .dropdown-item {
+        padding: 0.5rem 1rem;
+        font-size: 0.875rem;
+    }
+
+    .dropdown-item i {
+        width: 20px;
+    }
+
+    /* Loading animation */
+    .loading {
+        position: relative;
+        opacity: 0.6;
+    }
+
+    .loading::after {
+        content: '';
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        width: 40px;
+        height: 40px;
+        margin-top: -20px;
+        margin-left: -20px;
+        border: 4px solid #f3f3f3;
+        border-top: 4px solid #3498db;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+    }
+
+    /* Card hover effects */
+    .card .card-footer {
+        transition: padding 0.3s;
+    }
+
+    .card:hover .card-footer {
+        padding-left: 2rem;
+    }
+
+    .card-footer i {
+        transition: transform 0.3s;
+    }
+
+    .card:hover .card-footer i {
+        transform: translateX(5px);
+    }
+
+    /* Responsive adjustments */
+    @media (max-width: 768px) {
+        .display-5 {
+            font-size: 2rem;
+        }
+        
+        .welcome-section .display-6 {
+            font-size: 1.5rem;
+        }
+        
+        .card-body {
+            padding: 1.5rem !important;
+        }
     }
     </style>
 </body>

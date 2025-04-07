@@ -60,6 +60,7 @@ urlpatterns = [
     path('school-year-management/', views.school_year_management, name='school_year_management'),
     path('get-teacher-schedule/', views.get_teacher_schedule, name='get_teacher_schedule'),
     path('api/dashboard-data/', views.get_dashboard_data, name='dashboard_data'),
+    path('get-data/', views.get_dashboard_data, name='get_dashboard_data'),
 ]
 
 if settings.DEBUG:

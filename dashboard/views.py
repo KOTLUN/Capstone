@@ -28,66 +28,137 @@ from django.db.models import Prefetch
 
 # Create your views here.
 def dashboard_view(request):
-    # Get active school year
-    active_school_year = SchoolYear.get_active()
-    
-    # Get total number of enrolled students for active school year
-    total_students = Enrollment.objects.filter(
-        school_year=active_school_year.display_name if active_school_year else None,
-        status='Active'
-    ).count()
-    
-    # Calculate student growth (comparing to last month for the selected school year)
-    last_month = datetime.now() - timedelta(days=30)
-    students_last_month = Enrollment.objects.filter(
-        school_year=active_school_year.display_name if active_school_year else None,
-        status='Active',
-        enrollment_date__lt=last_month
-    ).count()
-    
-    if students_last_month > 0:
-        student_growth = ((total_students - students_last_month) / students_last_month) * 100
-    else:
-        student_growth = 0
-    
-    # Initialize school years data structure
-    school_years_data = {}
-    
-    if active_school_year:
-        year_data = {
-            'monthly': {
-                'labels': ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
-                'data': [0] * 12  # Initialize with zeros
-            }
+    try:
+        # Get active school year and all school years for filtering
+        active_school_year = SchoolYear.get_active()
+        school_years = SchoolYear.objects.all().order_by('-year_start')
+        selected_year = request.GET.get('school_year', active_school_year.display_name if active_school_year else None)
+
+        # Initialize context with school year data
+        context = {
+            'active_school_year': active_school_year,
+            'school_years': school_years,
+            'selected_year': selected_year
         }
-        
-        # Get monthly enrollment data
-        monthly_data = (
-            Enrollment.objects
-            .filter(
-                school_year=active_school_year.display_name,
-                status='Active'
-            )
-            .annotate(month=ExtractMonth('enrollment_date'))
-            .values('month')
-            .annotate(count=Count('id'))
+
+        # Get enrollment statistics
+        enrollment_stats = {
+            'total': 0,
+            'by_grade': {},
+            'by_gender': {'Male': 0, 'Female': 0},
+            'by_status': {'Active': 0, 'Dropped': 0, 'Transferred': 0, 'Completed': 0}
+        }
+
+        # Define enrollment models for each grade
+        enrollment_models = {
+            7: Enrollment,
+            8: Grade8Enrollment,
+            9: Grade9Enrollment,
+            10: Grade10Enrollment,
+            11: Grade11Enrollment,
+            12: Grade12Enrollment
+        }
+
+        # Calculate enrollment statistics
+        for grade, model in enrollment_models.items():
+            grade_enrollments = model.objects.filter(
+                school_year=selected_year
+            ).select_related('student')
+
+            grade_count = grade_enrollments.count()
+            enrollment_stats['total'] += grade_count
+            enrollment_stats['by_grade'][f'Grade {grade}'] = grade_count
+
+            # Update gender statistics
+            for enrollment in grade_enrollments:
+                enrollment_stats['by_gender'][enrollment.student.gender] += 1
+                enrollment_stats['by_status'][enrollment.status] += 1
+
+        # Calculate student growth (comparing to last month)
+        last_month = datetime.now() - timedelta(days=30)
+        students_last_month = sum(
+            model.objects.filter(
+                school_year=selected_year,
+                enrollment_date__lt=last_month
+            ).count()
+            for model in enrollment_models.values()
         )
 
-        # Fill in the actual monthly counts
-        for item in monthly_data:
-            month_index = item['month'] - 1
-            year_data['monthly']['data'][month_index] = item['count']
+        current_total = enrollment_stats['total']
+        if students_last_month > 0:
+            student_growth = ((current_total - students_last_month) / students_last_month) * 100
+        else:
+            student_growth = 0
 
-        school_years_data[active_school_year.display_name] = year_data
+        # Get teacher statistics
+        teacher_stats = {
+            'total': Teachers.objects.count(),
+            'by_gender': {
+                'Male': Teachers.objects.filter(gender='Male').count(),
+                'Female': Teachers.objects.filter(gender='Female').count()
+            }
+        }
 
-    context = {
-        'total_students': total_students,
-        'student_growth': round(student_growth, 1),
-        'active_school_year': active_school_year,
-        'school_years_data': json.dumps(school_years_data, cls=DjangoJSONEncoder),
-    }
-    
-    return render(request, 'main.html', context)
+        # Get section statistics
+        section_stats = {
+            'total': Sections.objects.count(),
+            'by_grade': {
+                grade: Sections.objects.filter(grade_level=grade).count()
+                for grade in range(7, 13)
+            }
+        }
+
+        # Prepare chart data
+        gender_data = {
+            'labels': ['Male', 'Female'],
+            'data': [
+                enrollment_stats['by_gender']['Male'],
+                enrollment_stats['by_gender']['Female']
+            ]
+        }
+
+        grade_level_data = {
+            'labels': list(enrollment_stats['by_grade'].keys()),
+            'data': list(enrollment_stats['by_grade'].values())
+        }
+
+        # Get monthly enrollment trends
+        monthly_data = defaultdict(lambda: [0] * 12)
+        for model in enrollment_models.values():
+            enrollments = (
+                model.objects
+                .filter(school_year=selected_year)
+                .annotate(month=ExtractMonth('enrollment_date'))
+                .values('month')
+                .annotate(count=Count('id'))
+            )
+            for item in enrollments:
+                monthly_data['enrollments'][item['month'] - 1] = item['count']
+
+        enrollment_trends = {
+            'labels': ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
+            'datasets': [{
+                'label': 'Monthly Enrollments',
+                'data': monthly_data['enrollments']
+            }]
+        }
+
+        # Update context with all statistics
+        context.update({
+            'enrollment_stats': enrollment_stats,
+            'teacher_stats': teacher_stats,
+            'section_stats': section_stats,
+            'student_growth': round(student_growth, 1),
+            'gender_data': json.dumps(gender_data),
+            'grade_level_data': json.dumps(grade_level_data),
+            'enrollment_trends': json.dumps(enrollment_trends)
+        })
+
+        return render(request, 'main.html', context)
+
+    except Exception as e:
+        messages.error(request, f"Error loading dashboard: {str(e)}")
+        return render(request, 'main.html', {'error_message': str(e)})
 
 def students_view(request):
     # Get school years from SchoolYear model
