@@ -220,24 +220,60 @@ def teacher_schedule_view(request):
     """View for teacher's schedule"""
     try:
         teacher = Teachers.objects.get(user=request.user)
+        active_school_year = SchoolYear.get_active()
+        
+        # Define time slots
+        time_slots = [
+            '07:00', '08:00', '09:00', '10:00', '11:00',
+            '12:00', '13:00', '14:00', '15:00', '16:00', '17:00'
+        ]
+        
+        # Get all schedules for the teacher
         schedules = Schedules.objects.filter(
             teacher_id=teacher
-        ).select_related('subject', 'section')
+        ).select_related('subject', 'section').order_by('day', 'start_time')
         
-        # Get detailed schedule info
-        schedule_info = []
-        for schedule in schedules:
-            info = schedule.get_schedule_info()
-            info['enrolled_count'] = schedule.get_enrolled_students().count()
-            schedule_info.append(info)
+        # Organize schedules by day
+        days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday']
+        schedule_matrix = []
+        
+        # Create schedule matrix
+        for time in time_slots:
+            row = {
+                'time': datetime.strptime(time, '%H:%M').strftime('%I:%M %p'),
+                'slots': []
+            }
+            
+            for day in days:
+                day_schedules = schedules.filter(day=day)
+                slot_schedule = None
+                
+                for schedule in day_schedules:
+                    if schedule.start_time.strftime('%H:%M') == time:
+                        slot_schedule = {
+                            'subject': schedule.subject.name,
+                            'grade_level': schedule.grade_level,
+                            'section': schedule.section.section_id,
+                            'room': schedule.room or '-'
+                        }
+                        break
+                
+                row['slots'].append(slot_schedule)
+            
+            schedule_matrix.append(row)
         
         context = {
             'teacher': teacher,
-            'schedules': schedule_info
+            'days': days,
+            'schedule_matrix': schedule_matrix,
+            'active_school_year': active_school_year,
+            'total_subjects': schedules.values('subject').distinct().count(),
+            'total_sections': schedules.values('section').distinct().count()
         }
         
         return render(request, 'teacher_schedule.html', context)
     except Exception as e:
+        print(f"Error in teacher_schedule_view: {str(e)}")
         return render(request, 'teacher_schedule.html', {
             'error': f'Error: {str(e)}',
             'user': request.user
