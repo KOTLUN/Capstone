@@ -101,10 +101,10 @@
                                         <p class="card-text mb-1">
                                             <span class="badge {% if student_growth >= 0 %}bg-white text-primary{% else %}bg-danger text-white{% endif %} px-3 py-2">
                                                 <i class="fas {% if student_growth >= 0 %}fa-arrow-up{% else %}fa-arrow-down{% endif %} me-1"></i>
-                                                {{ student_growth }}%
-                                            </span>
+                                            {{ student_growth }}%
+                                        </span>
                                             <small class="text-white-50 ms-2">from last month</small>
-                                        </p>
+                                    </p>
                                     </div>
                                 </div>
                                 <div class="icon-box">
@@ -239,7 +239,7 @@
                         </div>
                         <div class="card-body p-4">
                             <div class="chart-container position-relative" style="height:300px;">
-                                <canvas id="genderChart"></canvas>
+                            <canvas id="genderChart"></canvas>
                             </div>
                         </div>
                     </div>
@@ -271,7 +271,7 @@
                         </div>
                         <div class="card-body p-4">
                             <div class="chart-container position-relative" style="height:300px;">
-                                <canvas id="gradeLevelChart"></canvas>
+                            <canvas id="gradeLevelChart"></canvas>
                             </div>
                         </div>
                     </div>
@@ -583,7 +583,7 @@
         margin: auto;
         height: 300px;
     }
-
+    
     .icon-box {
         position: relative;
         z-index: 1;

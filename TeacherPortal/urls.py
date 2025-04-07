@@ -35,6 +35,11 @@ urlpatterns = [
          views.subject_students_view, 
          name='subject_students'),
     path('get-subject-students/', views.get_subject_students, name='get_subject_students'),
+    path('student-enrollment/', views.student_enrollment, name='student_enrollment'),
+    path('get-sections/', views.get_sections, name='get_sections'),
+    path('search-student/', views.search_student, name='search_student'),
+    path('advisory-enrollment/', views.advisory_enrollment, name='advisory_enrollment'),
+    path('search-students/', views.search_students, name='search_students'),
 ]
 
 

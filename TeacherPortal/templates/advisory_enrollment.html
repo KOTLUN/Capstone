@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Advisory Enrollment</title>
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <!-- DataTables CSS -->
+    <link href="https://cdn.datatables.net/1.11.5/css/dataTables.bootstrap5.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+    <link href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css" rel="stylesheet" />
+    <style>
+        :root {
+            --primary-color: rgb(255, 17, 166);
+            --primary-dark: #6018ee;
+            --gradient-bg: linear-gradient(180deg, rgb(255, 17, 166) 0%, #ed3777 100%);
+        }
+
+        .main-content {
+            margin-left: 250px;
+            padding: 20px;
+            background-color: #f8f9fa;
+        }
+
+        .card {
+            border: none;
+            box-shadow: 0 0.15rem 1.75rem rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+        }
+
+        .card-header {
+            background: var(--gradient-bg);
+            color: white;
+            border: none;
+        }
+
+        .floating-year {
+            position: fixed;
+            top: 20px;
+            right: 30px;
+            z-index: 9999;
+            display: flex;
+            flex-direction: row;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .year-badge {
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            padding: 8px 15px;
+            text-align: center;
+            min-width: 150px;
+            margin-bottom: 0;
+        }
+
+        .section-card {
+            transition: transform 0.2s;
+        }
+
+        .section-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .status-badge {
+            font-size: 0.8rem;
+            padding: 0.3rem 0.6rem;
+        }
+    </style>
+</head>
+<body>
+    {% include 'structures/sidebars.html' %}
+
+    <!-- Main Content -->
+    <div class="main-content">
+        <!-- Active School Year Display -->
+        <div class="floating-year">
+            <div class="year-badge">
+                {% if active_school_year %}
+                    <span class="text-primary fw-bold">{{ active_school_year.display_name }}</span>
+                {% else %}
+                    <span class="text-muted">No Active SY</span>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Page Header -->
+        <div class="d-sm-flex align-items-center justify-content-between mb-4">
+            <h1 class="h3 mb-0 text-gray-800">Advisory Class Enrollment</h1>
+        </div>
+
+        <!-- Alert Messages -->
+        {% if messages %}
+            {% for message in messages %}
+                <div class="alert {% if message.tags == 'error' %}alert-danger{% else %}alert-{{ message.tags }}{% endif %} alert-dismissible fade show" role="alert">
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            {% endfor %}
+        {% endif %}
+
+        <!-- Enrollment Form Card -->
+        <div class="card shadow">
+            <div class="card-header py-3">
+                <h6 class="m-0 fw-bold text-white">Enroll Student</h6>
+            </div>
+            <div class="card-body">
+                <form method="POST" id="enrollmentForm">
+                    {% csrf_token %}
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label for="student-search" class="form-label">Search Student</label>
+                            <div class="input-group">
+                                <input type="text" id="student-search" class="form-control" placeholder="Search by ID or name" 
+                                       {% if not active_school_year %}disabled{% endif %}>
+                                <button class="btn btn-outline-secondary" type="button" id="search-btn" 
+                                        {% if not active_school_year %}disabled{% endif %}>
+                                    <i class="fas fa-search"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="student-id" class="form-label">Student ID</label>
+                            <input type="text" id="student-id" name="student_id" class="form-control" required readonly
+                                   {% if not active_school_year %}disabled{% endif %}>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="section" class="form-label">Advisory Section</label>
+                            <select id="section" name="section" class="form-select" required 
+                                    {% if not active_school_year %}disabled{% endif %}>
+                                <option value="">Select Section</option>
+                                {% for section_data in sections_data %}
+                                    <option value="{{ section_data.section.id }}">
+                                        Grade {{ section_data.section.grade_level }} - {{ section_data.section.section_id }}
+                                    </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="enrollment-status" class="form-label">Status</label>
+                            <select id="enrollment-status" name="status" class="form-select" required 
+                                    {% if not active_school_year %}disabled{% endif %}>
+                                <option value="Active">Active</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Student Information Display -->
+                    <div class="card mt-3">
+                        <div class="card-body">
+                            <div class="student-info" style="display: none;">
+                                <h6 class="mb-3">Student Information</h6>
+                                <div class="row">
+                                    <div class="col-md-4">
+                                        <p><strong>Name:</strong> <span id="student-name">-</span></p>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <p><strong>Gender:</strong> <span id="student-gender">-</span></p>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <p><strong>Current Status:</strong> <span id="student-status">-</span></p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div id="student-not-found" class="alert alert-warning" style="display: none;">
+                                <i class="fas fa-exclamation-triangle me-2"></i>Student not found
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="text-end mt-4">
+                        <button type="submit" class="btn btn-primary" {% if not active_school_year %}disabled{% endif %}>
+                            <i class="fas fa-user-plus me-2"></i>Enroll Student
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Advisory Sections -->
+        <div class="row mt-4">
+            {% for section_data in sections_data %}
+            <div class="col-xl-4 col-md-6 mb-4">
+                <div class="card shadow section-card">
+                    <div class="card-header py-3">
+                        <h6 class="m-0 fw-bold text-white">
+                            Grade {{ section_data.section.grade_level }} - {{ section_data.section.section_id }}
+                        </h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="text-center mb-3">
+                            <h2 class="display-4 fw-bold text-primary">{{ section_data.total_count }}</h2>
+                            <p class="text-muted mb-0">Total Students</p>
+                        </div>
+                        <!-- <div class="d-flex justify-content-around mb-3">
+                            <div class="text-center">
+                                <span class="d-block h4 mb-0 text-success">{{ section_data.active_count }}</span>
+                                <small class="text-muted">Active</small>
+                            </div>
+                            <div class="text-center">
+                                <span class="d-block h4 mb-0 text-warning">{{ section_data.pending_count }}</span>
+                                <small class="text-muted">Pending</small>
+                            </div>
+                        </div>
+                        <button class="btn btn-primary w-100" onclick="viewStudents({{ section_data.section.id }})">
+                            <i class="fas fa-users me-2"></i>View Students
+                        </button> -->
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- Students Modal -->
+    <div class="modal fade" id="studentsModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Section Students</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover" id="studentsTable">
+                            <thead>
+                                <tr>
+                                    <th>Student ID</th>
+                                    <th>Name</th>
+                                    <th>Gender</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody id="studentsTableBody">
+                                <!-- Students will be loaded here -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Student Search Results Modal -->
+    <div class="modal fade" id="searchResultsModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Search Results</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="list-group" id="searchResults">
+                        <!-- Search results will be populated here -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <!-- DataTables JS -->
+    <script src="https://cdn.datatables.net/1.11.5/js/jquery.dataTables.min.js"></script>
+    <script src="https://cdn.datatables.net/1.11.5/js/dataTables.bootstrap5.min.js"></script>
+    
+    <script>
+        $(document).ready(function() {
+            // Auto-dismiss alerts
+            setTimeout(function() {
+                $('.alert').alert('close');
+            }, 5000);
+
+            let searchTimeout;
+            const searchModal = new bootstrap.Modal(document.getElementById('searchResultsModal'));
+            
+            // Handle search input
+            $('#student-search').on('input', function() {
+                clearTimeout(searchTimeout);
+                const query = $(this).val().trim();
+                
+                if (query.length >= 2) {
+                    searchTimeout = setTimeout(function() {
+                        searchStudents(query);
+                    }, 300);
+                }
+            });
+            
+            // Handle search button click
+            $('#search-btn').on('click', function() {
+                const query = $('#student-search').val().trim();
+                if (query.length >= 2) {
+                    searchStudents(query);
+                }
+            });
+            
+            function searchStudents(query) {
+                $.get('/teacher/search-students/', { query: query })
+                    .done(function(response) {
+                        if (response.success) {
+                            const resultsHtml = response.students.map(student => `
+                                <a href="#" class="list-group-item list-group-item-action student-result" 
+                                   data-student-id="${student.student_id}"
+                                   data-student-name="${student.first_name} ${student.last_name}"
+                                   data-student-gender="${student.gender}"
+                                   data-student-status="${student.status}">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <div>
+                                            <h6 class="mb-1">${student.first_name} ${student.last_name}</h6>
+                                            <small class="text-muted">ID: ${student.student_id}</small>
+                                        </div>
+                                        <span class="badge bg-secondary">${student.status}</span>
+                                    </div>
+                                </a>
+                            `).join('');
+                            
+                            $('#searchResults').html(resultsHtml);
+                            searchModal.show();
+                        } else {
+                            $('#searchResults').html('<div class="alert alert-warning">No students found</div>');
+                            searchModal.show();
+                        }
+                    })
+                    .fail(function() {
+                        $('#searchResults').html('<div class="alert alert-danger">Error searching for students</div>');
+                        searchModal.show();
+                    });
+            }
+            
+            // Handle student selection
+            $(document).on('click', '.student-result', function(e) {
+                e.preventDefault();
+                const studentId = $(this).data('student-id');
+                const studentName = $(this).data('student-name');
+                const studentGender = $(this).data('student-gender');
+                const studentStatus = $(this).data('student-status');
+                
+                // Update form fields
+                $('#student-id').val(studentId);
+                $('#student-search').val(studentName);
+                
+                // Update student info display
+                $('.student-info').show();
+                $('#student-name').text(studentName);
+                $('#student-gender').text(studentGender);
+                $('#student-status').text(studentStatus);
+                $('#student-not-found').hide();
+                
+                searchModal.hide();
+            });
+
+            // Form validation
+            $('#enrollmentForm').submit(function(e) {
+                e.preventDefault();
+                const studentId = $('#student-id').val();
+                const section = $('#section').val();
+                
+                if (!studentId || !section) {
+                    alert('Please fill in all required fields');
+                    return;
+                }
+
+                {% if active_school_year %}
+                this.submit();
+                {% else %}
+                alert('Enrollment is not available. No active school year.');
+                {% endif %}
+            });
+        });
+
+        // View students function
+        function viewStudents(sectionId) {
+            $.get(`/teacher/get-enrolled-students/?section_id=${sectionId}&is_advisory=true`, function(response) {
+                if (response.success) {
+                    let tableBody = '';
+                    response.students.forEach(student => {
+                        tableBody += `
+                            <tr>
+                                <td>${student.student_id}</td>
+                                <td>${student.last_name}, ${student.first_name}</td>
+                                <td>${student.gender}</td>
+                                <td>
+                                    <span class="badge ${
+                                        student.status === 'Active' ? 'bg-success' :
+                                        student.status === 'Pending' ? 'bg-warning' :
+                                        'bg-secondary'
+                                    } status-badge">
+                                        ${student.status}
+                                    </span>
+                                </td>
+                            </tr>
+                        `;
+                    });
+                    $('#studentsTableBody').html(tableBody);
+                    
+                    // Initialize DataTable
+                    if ($.fn.DataTable.isDataTable('#studentsTable')) {
+                        $('#studentsTable').DataTable().destroy();
+                    }
+                    $('#studentsTable').DataTable({
+                        "pageLength": 10,
+                        "order": [[1, "asc"]]
+                    });
+                    
+                    $('#studentsModal').modal('show');
+                } else {
+                    alert('Error loading students: ' + response.error);
+                }
+            });
+        }
+    </script>
+</body>
+</html> 
