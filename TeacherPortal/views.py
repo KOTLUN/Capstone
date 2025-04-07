@@ -1,8 +1,9 @@
-from django.shortcuts import render, redirect
-from django.http import HttpResponse, JsonResponse
+from django.shortcuts import render, redirect, get_object_or_404
+from django.http import HttpResponse, JsonResponse, HttpResponseNotAllowed
 import csv
 import pandas as pd
-from .models import Grade
+from .models import Grade, GradeComment
+from .forms import GradeImportForm
 from dashboard.models import (
     Student, Teachers, Subject, Sections, Schedules, 
     Enrollment, Grade8Enrollment, Grade9Enrollment,
@@ -20,6 +21,25 @@ from django.views.decorators.http import require_POST
 from django.core.files.storage import default_storage
 import json
 import os
+from django.http import HttpResponse
+import pandas as pd
+from io import BytesIO
+import xlsxwriter
+from decimal import Decimal
+import io
+
+def get_current_quarter():
+    """Determine the current quarter based on the date"""
+    current_month = timezone.now().month
+    
+    if current_month >= 6 and current_month <= 8:  # June to August
+        return '1'
+    elif current_month >= 9 and current_month <= 11:  # September to November
+        return '2'
+    elif current_month >= 12 or current_month <= 2:  # December to February
+        return '3'
+    else:  # March to May
+        return '4'
 
 @login_required
 def profile_view(request):
@@ -552,54 +572,93 @@ def confirm_import_grades_ajax(request):
 
 @login_required
 def generate_grade_template(request):
-    """Generate Excel template for grade uploads"""
+    """Generate an Excel template for grade import"""
     try:
+        teacher = Teachers.objects.get(user=request.user)
+        
+        # Get parameters from request
         subject_id = request.GET.get('subject')
         quarter = request.GET.get('quarter')
         school_year = request.GET.get('school_year')
-
-        if not all([subject_id, quarter, school_year]):
-            return JsonResponse({
-                'status': 'error',
-                'message': 'Missing required parameters'
-            })
-
-        subject = Subject.objects.get(id=subject_id)
-        teacher = Teachers.objects.get(user=request.user)
-
-        # Get students for this subject
-        students = []
-        schedules = Schedules.objects.filter(
-            subject=subject,
-            teacher_id=teacher
+        
+        # Create Excel workbook in memory
+        output = io.BytesIO()
+        workbook = xlsxwriter.Workbook(output)
+        worksheet = workbook.add_worksheet('Grade Template')
+        
+        # Add headers
+        headers = ['Student ID', 'Student Name', 'Grade', 'Remarks']
+        for col, header in enumerate(headers):
+            worksheet.write(0, col, header)
+        
+        # If subject is provided, add students
+        row = 1
+        if subject_id:
+            try:
+                subject = Subject.objects.get(id=subject_id)
+                
+                # Get students enrolled in this subject
+                schedules = Schedules.objects.filter(
+                    subject=subject,
+                    teacher_id=teacher
+                ).select_related('section')
+                
+                students = []
+                for schedule in schedules:
+                    section = schedule.section
+                    
+                    # Get appropriate enrollment model
+                    enrollment_model = {
+                        7: Enrollment,
+                        8: Grade8Enrollment,
+                        9: Grade9Enrollment,
+                        10: Grade10Enrollment,
+                        11: Grade11Enrollment,
+                        12: Grade12Enrollment
+                    }.get(section.grade_level)
+                    
+                    if enrollment_model:
+                        # Get enrollments
+                        enrollments = enrollment_model.objects.filter(
+                            section=section,
+                            school_year=school_year,
+                            status='Active'
+                        ).select_related('student')
+                        
+                        # Add students to template
+                        for enrollment in enrollments:
+                            student = enrollment.student
+                            student_name = f"{student.last_name}, {student.first_name}"
+                            
+                            # Only add if not already in list
+                            if not any(s.student_id == student.student_id for s in students):
+                                worksheet.write(row, 0, student.student_id)
+                                worksheet.write(row, 1, student_name)
+                                # Leave grade and remarks columns empty
+                                row += 1
+                                students.append(student)
+            except Subject.DoesNotExist:
+                pass
+        
+        # Close the workbook
+        workbook.close()
+        
+        # Prepare response
+        output.seek(0)
+        response = HttpResponse(
+            output.read(),
+            content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
         )
-
-        for schedule in schedules:
-            students.extend(schedule.get_enrolled_students())
-
-        # Create template data
-        template_data = [['Student ID', 'Student Name', 'Grade']]
-        for student in students:
-            template_data.append([
-                student.student_id,
-                f"{student.last_name}, {student.first_name}",
-                ''  # Empty grade column
-            ])
-
-        return JsonResponse({
-            'status': 'success',
-            'subject_name': subject.name,
-            'quarter': quarter,
-            'school_year': school_year,
-            'template_data': template_data,
-            'students': [{'student_name': f"{s.last_name}, {s.first_name}"} for s in students]
-        })
-
+        
+        # Generate filename
+        filename = f"grade_template_{school_year}_{quarter}.xlsx"
+        response['Content-Disposition'] = f'attachment; filename="{filename}"'
+        
+        return response
+        
     except Exception as e:
-        return JsonResponse({
-            'status': 'error',
-            'message': str(e)
-        })
+        print(f"Error generating template: {str(e)}")
+        return HttpResponse(f"Error generating template: {str(e)}", status=500)
 
 @login_required
 def student_registration(request):
@@ -1082,6 +1141,373 @@ def search_students(request):
         })
         
     except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        })
+
+@login_required
+def grades_view(request):
+    """Combined view for managing both subject and advisory grades"""
+    try:
+        teacher = Teachers.objects.get(user=request.user)
+        active_school_year = SchoolYear.get_active()
+        
+        # Get the currently active quarter
+        current_quarter = get_current_quarter()
+        
+        # Get filter parameters
+        selected_quarter = request.GET.get('quarter', current_quarter)
+        selected_subject_id = request.GET.get('subject')
+        selected_section_id = request.GET.get('section')
+        selected_year = request.GET.get('school_year', active_school_year.display_name if active_school_year else None)
+        
+        # Initialize forms
+        import_form = GradeImportForm(teacher=teacher)
+        
+        # Initialize grades lists
+        subject_grades = []
+        advisory_grades = []
+        students = []
+        
+        # Get all subjects taught by the teacher
+        subjects = Subject.objects.filter(
+            schedules__teacher_id=teacher
+        ).distinct()
+        
+        # Get advisory sections
+        advisory_sections = Sections.objects.filter(adviser=teacher)
+        
+        # Handle subject grades
+        if selected_subject_id:
+            try:
+                subject = Subject.objects.get(id=selected_subject_id)
+                # Remove 'status' from the query to avoid DB error
+                subject_grades = Grade.objects.filter(
+                    course=subject.subject_id,
+                    quarter=selected_quarter,
+                    school_year=selected_year
+                ).order_by('student')
+                
+                # Get students enrolled in this subject
+                schedules = Schedules.objects.filter(
+                    subject=subject,
+                    teacher_id=teacher
+                ).select_related('section')
+                
+                # Clear the students list before adding new ones
+                students = []
+                
+                for schedule in schedules:
+                    section = schedule.section
+                    # Get the appropriate enrollment model based on grade level
+                    enrollment_model = {
+                        7: Enrollment,
+                        8: Grade8Enrollment,
+                        9: Grade9Enrollment,
+                        10: Grade10Enrollment,
+                        11: Grade11Enrollment,
+                        12: Grade12Enrollment
+                    }.get(section.grade_level)
+                    
+                    if enrollment_model:
+                        # Get active enrollments for this section
+                        enrollments = enrollment_model.objects.filter(
+                            section=section,
+                            school_year=selected_year,
+                            status='Active'
+                        ).select_related('student')
+                        
+                        # Append student info to the list
+                        for enrollment in enrollments:
+                            student = enrollment.student
+                            student_data = {
+                                'student_id': student.student_id,
+                                'last_name': student.last_name,
+                                'first_name': student.first_name,
+                                'middle_name': student.middle_name or '',
+                                'grade_level': section.grade_level,
+                                'section': section.section_id
+                            }
+                            # Check if this student is already in the list
+                            if not any(s['student_id'] == student.student_id for s in students):
+                                students.append(student_data)
+            except Subject.DoesNotExist:
+                messages.error(request, f"Subject with ID {selected_subject_id} not found")
+            except Exception as e:
+                print(f"Error getting subject data: {str(e)}")
+                messages.error(request, f"Error loading subject data: {str(e)}")
+        
+        # Handle advisory grades
+        if advisory_sections.exists():
+            try:
+                selected_section = advisory_sections.first()
+                if selected_section_id:
+                    selected_section = get_object_or_404(Sections, id=selected_section_id, adviser=teacher)
+                
+                # Get enrollment model for this section's grade level
+                enrollment_model = {
+                    7: Enrollment,
+                    8: Grade8Enrollment,
+                    9: Grade9Enrollment,
+                    10: Grade10Enrollment,
+                    11: Grade11Enrollment,
+                    12: Grade12Enrollment
+                }.get(selected_section.grade_level)
+                
+                if enrollment_model:
+                    # Get enrolled students
+                    enrollments = enrollment_model.objects.filter(
+                        section=selected_section,
+                        school_year=selected_year,
+                        status='Active'
+                    ).select_related('student')
+                    
+                    # If we're looking at advisory grades and no subject is selected,
+                    # populate the students list with advisory students
+                    if not selected_subject_id:
+                        students = []
+                        for enrollment in enrollments:
+                            student = enrollment.student
+                            student_data = {
+                                'student_id': student.student_id,
+                                'last_name': student.last_name,
+                                'first_name': student.first_name,
+                                'middle_name': student.middle_name or '',
+                                'grade_level': selected_section.grade_level,
+                                'section': selected_section.section_id
+                            }
+                            students.append(student_data)
+                    
+                    # Get all grades for these students
+                    student_ids = [e.student.student_id for e in enrollments]
+                    advisory_grades = Grade.objects.filter(
+                        student__in=student_ids,
+                        quarter=selected_quarter,
+                        school_year=selected_year
+                    ).order_by('student', 'course')
+            except Exception as e:
+                print(f"Error getting advisory data: {str(e)}")
+                messages.error(request, f"Error loading advisory data: {str(e)}")
+
+        # Print out number of students for debugging
+        print(f"Number of students fetched: {len(students)}")
+        
+        # Handle form submissions
+        if request.method == 'POST':
+            if 'import_grades' in request.POST:
+                import_form = GradeImportForm(request.POST, request.FILES, teacher=teacher)
+                if import_form.is_valid():
+                    try:
+                        # Process Excel file
+                        file = request.FILES['file']
+                        subject = import_form.cleaned_data['subject']
+                        quarter = import_form.cleaned_data['quarter']
+                        school_year = import_form.cleaned_data['school_year']
+                        
+                        # Read Excel file
+                        df = pd.read_excel(file)
+                        
+                        # Process each row
+                        grades_updated = 0
+                        for _, row in df.iterrows():
+                            student_id = str(row['Student ID'])
+                            grade_value = float(row['Grade'])
+                            remarks = str(row.get('Remarks', ''))
+                            
+                            # Create or update grade - remove 'status' field to avoid DB error
+                            grade, created = Grade.objects.update_or_create(
+                                student=student_id,
+                                course=subject.subject_id,
+                                quarter=quarter,
+                                school_year=school_year,
+                                defaults={
+                                    'grade': grade_value,
+                                    'remarks': remarks,
+                                    # Remove status field
+                                }
+                            )
+                            grades_updated += 1
+                        
+                        messages.success(request, f'Successfully imported/updated {grades_updated} grades')
+                        return redirect('grades')
+                    except Exception as e:
+                        messages.error(request, f'Error importing grades: {str(e)}')
+        
+        context = {
+            'teacher': teacher,
+            'active_school_year': active_school_year,
+            'school_years': SchoolYear.objects.all().order_by('-year_start'),
+            'selected_year': selected_year,
+            'subject_grades': subject_grades,
+            'advisory_grades': advisory_grades,
+            'subjects': subjects,
+            'advisory_sections': advisory_sections,
+            'current_quarter': current_quarter,
+            'selected_quarter': selected_quarter,
+            'selected_subject': selected_subject_id,
+            'selected_section': selected_section_id,
+            'Grade': Grade,
+            'import_form': import_form,
+            'students': students,
+        }
+        
+        return render(request, 'grades.html', context)
+        
+    except Exception as e:
+        print(f"Error in grades_view: {str(e)}")
+        return render(request, 'grades.html', {
+            'error': f'Error: {str(e)}',
+            'user': request.user,
+            'Grade': Grade,
+        })
+
+@login_required
+@require_POST
+def update_grade(request):
+    """API endpoint to update a student's grade"""
+    try:
+        teacher = Teachers.objects.get(user=request.user)
+        
+        # Get all required data from the form
+        student_id = request.POST.get('student_id')
+        subject_id = request.POST.get('subject')  # Changed from subject_id to subject to match form
+        quarter = request.POST.get('quarter')
+        grade_value = request.POST.get('grade')
+        remarks = request.POST.get('remarks', '')
+        school_year = request.POST.get('school_year')
+        
+        # Print received data for debugging
+        print(f"Received data - student: {student_id}, subject: {subject_id}, quarter: {quarter}, grade: {grade_value}, school_year: {school_year}")
+        
+        # If any required fields are missing, try to fill them from the form or session
+        if not subject_id:
+            subject_id = request.POST.get('subject_id')
+            
+        if not quarter:
+            quarter = request.session.get('selected_quarter', get_current_quarter())
+            
+        if not school_year:
+            active_year = SchoolYear.get_active()
+            school_year = active_year.display_name if active_year else None
+        
+        # Validate required fields
+        if not all([student_id, subject_id, quarter, grade_value, school_year]):
+            missing_fields = []
+            if not student_id: missing_fields.append('student_id')
+            if not subject_id: missing_fields.append('subject_id')
+            if not quarter: missing_fields.append('quarter')
+            if not grade_value: missing_fields.append('grade_value')
+            if not school_year: missing_fields.append('school_year')
+            
+            return JsonResponse({
+                'success': False,
+                'error': f'Missing required parameters: {", ".join(missing_fields)}',
+                'missing': missing_fields
+            })
+        
+        # Validate the grade value
+        try:
+            grade_value = float(grade_value)
+            if grade_value < 0 or grade_value > 100:
+                return JsonResponse({
+                    'success': False,
+                    'error': 'Grade must be between 0 and 100'
+                })
+        except ValueError:
+            return JsonResponse({
+                'success': False,
+                'error': 'Invalid grade value'
+            })
+        
+        # Get the subject
+        try:
+            subject = Subject.objects.get(id=subject_id)
+            
+            # Check if teacher teaches this subject
+            teaches_subject = Schedules.objects.filter(
+                teacher_id=teacher,
+                subject=subject
+            ).exists()
+            
+            if not teaches_subject:
+                return JsonResponse({
+                    'success': False,
+                    'error': 'You are not authorized to grade this subject'
+                })
+                
+            # For debugging, let's print info about the student
+            try:
+                student_obj = Student.objects.get(student_id=student_id)
+                print(f"Found student: {student_obj.first_name} {student_obj.last_name} (ID: {student_obj.student_id})")
+            except Student.DoesNotExist:
+                return JsonResponse({
+                    'success': False,
+                    'error': f'Student with ID {student_id} not found'
+                })
+            
+            # Create or update the grade using only fields that exist in the model
+            try:
+                # Check if grade already exists
+                try:
+                    grade = Grade.objects.get(
+                        student=student_id,
+                        course=subject.subject_id,
+                        quarter=quarter,
+                        school_year=school_year
+                    )
+                    grade.grade = Decimal(str(grade_value))
+                    grade.remarks = remarks
+                    grade.save()
+                    created = False
+                except Grade.DoesNotExist:
+                    # Create a new grade
+                    grade = Grade.objects.create(
+                        student=student_id,
+                        course=subject.subject_id,
+                        quarter=quarter,
+                        school_year=school_year,
+                        grade=Decimal(str(grade_value)),
+                        remarks=remarks
+                    )
+                    created = True
+                
+                # For debugging, print details about what was saved
+                print(f"Grade {'created' if created else 'updated'}: {grade.id}, value: {grade.grade}")
+                
+                # Create a comment if there are remarks
+                if remarks and remarks.strip():
+                    try:
+                        GradeComment.objects.create(
+                            grade=grade,
+                            author=teacher,
+                            comment=remarks
+                        )
+                        print(f"Remark added: {remarks}")
+                    except Exception as comment_error:
+                        print(f"Error adding comment: {str(comment_error)}")
+                
+                return JsonResponse({
+                    'success': True,
+                    'grade_id': grade.id,
+                    'created': created,
+                    'message': 'Grade updated successfully'
+                })
+            except Exception as grade_error:
+                print(f"Error saving grade: {str(grade_error)}")
+                return JsonResponse({
+                    'success': False,
+                    'error': f'Error saving grade: {str(grade_error)}'
+                })
+            
+        except Subject.DoesNotExist:
+            return JsonResponse({
+                'success': False,
+                'error': f'Subject with ID {subject_id} not found'
+            })
+            
+    except Exception as e:
+        print(f"Error in update_grade: {str(e)}")
         return JsonResponse({
             'success': False,
             'error': str(e)

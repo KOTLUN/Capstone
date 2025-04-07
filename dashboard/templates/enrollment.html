@@ -551,14 +551,14 @@
             
             // Edit Enrollment Modal
             $('.edit-enrollment').click(function() {
-                const id = $(this).data('id');
-                const student = $(this).data('student');
-                const section = $(this).data('section');
-                const schoolYear = $(this).data('school-year');
-                const status = $(this).data('status');
+                var id = $(this).data('id');
+                var student = $(this).data('student');
+                var section = $(this).data('section');
+                var schoolYear = $(this).data('schoolyear');
+                var status = $(this).data('status');
                 
                 $('#edit_enrollment_id').val(id);
-                $('#edit_student').val(student).trigger('change');
+                $('#edit_student').val(student).trigger('change'); // Add trigger change for Select2
                 $('#edit_section').val(section);
                 $('#edit_school_year').val(schoolYear);
                 $('#edit_status').val(status);
@@ -764,7 +764,7 @@
                 }
             });
 
-            // Handle school year filter changes - use URL redirection for main page filtering
+            // Handle school year filter changes
             $('#schoolYearFilter').change(function() {
                 const selectedYear = $(this).val();
                 let url = new URL(window.location.href);
@@ -780,7 +780,6 @@
 
             // Initialize DataTables for grade level tables with custom filtering
             $('[id^=gradeTable]').each(function() {
-                const tableId = this.id;
                 const table = $(this).DataTable({
                     "pageLength": 10,
                     "order": [[0, "asc"]], // Sort by Student ID by default
@@ -791,38 +790,27 @@
                 });
 
                 // Get the grade number from the table ID
-                const gradeNumber = tableId.replace('gradeTable', '');
-                
-                // Set initial visibility based on any existing filter
-                const initialFilter = $(`.grade-year-filter[data-grade="${gradeNumber}"]`).val();
-                if (initialFilter !== 'all') {
-                    applyYearFilter(tableId, initialFilter);
-                }
+                const gradeNumber = this.id.replace('gradeTable', '');
                 
                 // Add event listener for the grade year filter
                 $(`.grade-year-filter[data-grade="${gradeNumber}"]`).on('change', function() {
                     const selectedYear = $(this).val();
-                    applyYearFilter(tableId, selectedYear);
-                });
-            });
-            
-            // Function to apply school year filter to a table
-            function applyYearFilter(tableId, selectedYear) {
-                if (selectedYear === 'all') {
-                    // Show all rows when "All School Years" is selected
-                    $(`#${tableId} tbody tr`).show();
-                } else {
-                    // Filter the table rows based on the school year column
-                    $(`#${tableId} tbody tr`).each(function() {
+                    
+                    // Filter the table rows based on data attribute
+                    $(`#gradeTable${gradeNumber} tbody tr`).each(function() {
                         const rowYear = $(this).data('school-year');
-                        if (rowYear === selectedYear) {
+                        
+                        if (selectedYear === 'all' || rowYear === selectedYear) {
                             $(this).show();
                         } else {
                             $(this).hide();
                         }
                     });
-                }
-            }
+                    
+                    // Redraw the table to adjust column widths
+                    table.columns.adjust();
+                });
+            });
 
             // Handle modal show event to properly render DataTables
             $('[id^=gradeModal]').on('shown.bs.modal', function() {
@@ -830,12 +818,12 @@
                 table.columns.adjust().draw();
             });
 
-            // Handle edit enrollment button clicks within the modal 
+            // Handle edit enrollment button clicks within the modal
             $(document).on('click', '.edit-enrollment', function() {
                 const id = $(this).data('id');
                 const student = $(this).data('student');
                 const section = $(this).data('section');
-                const schoolYear = $(this).data('school-year');
+                const schoolYear = $(this).data('schoolyear');
                 const status = $(this).data('status');
                 
                 $('#edit_enrollment_id').val(id);

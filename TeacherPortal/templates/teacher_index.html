@@ -1,0 +1,77 @@
+{% extends 'structures/sidebars.html' %}
+{% load static %}
+
+{% block styles %}
+<style>
+    .welcome-section {
+        padding: 2rem;
+        text-align: center;
+        margin-bottom: 2rem;
+    }
+    .quick-links {
+        margin-bottom: 2rem;
+    }
+    .quick-link-card {
+        transition: transform 0.2s;
+    }
+    .quick-link-card:hover {
+        transform: translateY(-5px);
+    }
+</style>
+{% endblock styles %}
+
+{% block content %}
+<div class="main-content">
+    <div class="layout-wrapper">
+        <div class="container-fluid">
+            <!-- Welcome Section -->
+            <div class="welcome-section">
+                <h1>Welcome, {{ teacher.first_name }}!</h1>
+                <p class="lead">Access your teaching tools and manage your classes</p>
+            </div>
+
+            <!-- Quick Links -->
+            <div class="row quick-links">
+                <div class="col-md-4">
+                    <div class="card quick-link-card">
+                        <div class="card-body text-center">
+                            <i class="fas fa-book-reader fa-3x mb-3 text-primary"></i>
+                            <h5 class="card-title">Manage Grades</h5>
+                            <p class="card-text">View and update student grades</p>
+                            <a href="{% url 'grades' %}" class="btn btn-primary">Go to Grades</a>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card quick-link-card">
+                        <div class="card-body text-center">
+                            <i class="fas fa-calendar-alt fa-3x mb-3 text-success"></i>
+                            <h5 class="card-title">Schedule</h5>
+                            <p class="card-text">View your teaching schedule</p>
+                            <a href="{% url 'teacher_schedule' %}" class="btn btn-success">View Schedule</a>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card quick-link-card">
+                        <div class="card-body text-center">
+                            <i class="fas fa-users fa-3x mb-3 text-info"></i>
+                            <h5 class="card-title">My Subjects</h5>
+                            <p class="card-text">View your assigned subjects</p>
+                            <a href="{% url 'teacher_subjects' %}" class="btn btn-info">View Subjects</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock content %}
+
+{% block scripts %}
+<script>
+$(document).ready(function() {
+    // Any additional JavaScript can go here
+});
+</script>
+{% endblock scripts %} 

@@ -1,0 +1,581 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Grades Management - Teacher Portal</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.11.5/css/dataTables.bootstrap5.min.css">
+    {% load static %}
+    <style>
+        /* Common Styles */
+        html, body {
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            overflow-x: hidden;
+        }
+
+        /* Layout Structure */
+        .layout-wrapper {
+            display: flex;
+            min-height: 100vh;
+        }
+
+        /* Sidebar Styles */
+        .sidebar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            background: linear-gradient(180deg, rgb(255, 17, 166) 0%, #9a9ca8 100%);
+            width: 250px;
+            height: 100vh;
+            overflow-y: auto;
+            z-index: 1050;
+            transition: all 0.3s ease;
+        }
+
+        .sidebar .nav-link {
+            color: #fff;
+            padding: 15px 20px;
+            transition: all 0.3s ease;
+            display: block;
+            border: 2px solid transparent;
+            border-radius: 8px;
+            margin: 4px 8px;
+            position: relative;
+            top: 0;
+        }
+
+        .sidebar .nav-link:hover,
+        .sidebar .nav-link.active {
+            background-color: rgba(240, 98, 146, 0.8);
+            color: #fff;
+            border: 2px solid #fff;
+            top: -3px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        }
+
+        .sidebar .nav-link i {
+            margin-right: 10px;
+            transition: transform 0.3s ease;
+        }
+
+        .sidebar .nav-link:hover i {
+            transform: translateY(-2px);
+        }
+
+        /* Main Content Styles */
+        .main-content {
+            margin-left: 250px;
+            flex: 1;
+            padding: 20px;
+            background: #f8f9fa;
+            transition: margin-left 0.3s ease;
+        }
+
+        /* Grades Specific Styles */
+        .nav-tabs .nav-link {
+            color: #555;
+            font-weight: 500;
+            border: 0;
+            border-bottom: 3px solid transparent;
+            transition: all 0.2s ease;
+            cursor: pointer;
+        }
+
+        .nav-tabs .nav-link.active {
+            color: #ff11a6;
+            border-bottom: 3px solid #ff11a6;
+            background-color: transparent;
+        }
+
+        .card {
+            border-radius: 8px;
+            overflow: hidden;
+            border: none;
+            box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+        }
+
+        .card-header {
+            border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+        }
+
+        .form-control, .form-select {
+            border-radius: 6px;
+        }
+
+        .table {
+            vertical-align: middle;
+        }
+
+        .btn-primary {
+            background: linear-gradient(90deg, #ff11a6 0%, #c226ad 100%);
+            border: none;
+        }
+
+        .btn-primary:hover {
+            background: linear-gradient(90deg, #e60c93 0%, #a71f95 100%);
+        }
+
+        .btn-info {
+            background-color: #17a2b8;
+            border-color: #17a2b8;
+            color: white;
+        }
+
+        .btn-info:hover {
+            background-color: #138496;
+            border-color: #117a8b;
+            color: white;
+        }
+
+        /* Mobile Styles */
+        @media (max-width: 768px) {
+            .sidebar {
+                transform: translateX(-100%);
+                width: 80%;
+            }
+            
+            .sidebar.show {
+                transform: translateX(0);
+            }
+            
+            .main-content {
+                margin-left: 0;
+                padding: 15px;
+            }
+            
+            .mobile-toggle {
+                display: block;
+                position: fixed;
+                top: 1rem;
+                left: 1rem;
+                z-index: 1060;
+                background: #ff11a6;
+                color: white;
+                width: 40px;
+                height: 40px;
+                border-radius: 50%;
+                text-align: center;
+                line-height: 40px;
+                box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.2);
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="layout-wrapper">
+        <!-- Sidebar -->
+        <div class="sidebar">
+            <div class="d-flex flex-column">
+                <div class="p-3 text-white text-center">
+                    <img class="logo-img" style="height:50%; width:50%; margin: 10px 0;" src="{% static 'img/logo1.png' %}" alt="School Logo">
+                    <h3 class="school-name">Sta. Catalina Science High School</h3>
+                </div>
+                <nav class="nav flex-column">
+                    <a href="{% url 'profile' %}" class="nav-link {% if request.path == '/profile/' %}active{% endif %}">
+                        <i class="fas fa-user"></i> <span>Profile</span>
+                    </a>
+                    <a href="{% url 'teacher_subjects' %}" class="nav-link {% if request.path == '/teacher_subjects/' %}active{% endif %}">
+                        <i class="fas fa-book"></i> <span>Subjects & Advisory</span>
+                    </a>  
+                    <a href="{% url 'teacher_schedule' %}" class="nav-link {% if request.path == '/teacher_schedule/' %}active{% endif %}">
+                        <i class="fas fa-calendar-alt"></i> <span>Schedule</span>
+                    </a>
+                    <a href="{% url 'grades' %}" class="nav-link {% if request.path == '/grades/' %}active{% endif %}">
+                        <i class="fas fa-graduation-cap"></i> <span>Grades</span>
+                    </a>
+                    <a href="{% url 'advisory_enrollment' %}" class="nav-link {% if request.path == '/advisory_enrollment/' %}active{% endif %}">
+                        <i class="fas fa-user-plus"></i> <span>Advisory Enrollment</span>
+                    </a>
+                    <a href="#" class="nav-link" data-bs-toggle="modal" data-bs-target="#logoutModal">
+                        <i class="fas fa-sign-out-alt"></i> <span>Logout</span>
+                    </a>
+                </nav>
+            </div>
+        </div>
+
+        <!-- Mobile menu toggle (shows on small screens) -->
+        <button class="mobile-toggle d-md-none" id="sidebarToggle">
+            <i class="fas fa-bars"></i>
+        </button>
+
+        <!-- Main Content -->
+        <div class="main-content">
+            <div class="container-fluid px-4">
+                <div class="row mt-4">
+                    <div class="col-12">
+                        <div class="card shadow">
+                            <div class="card-header bg-white py-3">
+                                <h3 class="card-title m-0 fw-bold">Grades Management</h3>
+                            </div>
+                            <div class="card-body">
+                                <!-- Navigation Tabs -->
+                                <ul class="nav nav-tabs mb-4" id="gradesTab" role="tablist">
+                                    <li class="nav-item" role="presentation">
+                                        <button class="nav-link active" id="subject-tab" data-bs-toggle="tab" data-bs-target="#subject-grades" type="button" role="tab">
+                                            <i class="fas fa-book me-2"></i>Subject Grades
+                                        </button>
+                                    </li>
+                                    <li class="nav-item" role="presentation">
+                                        <button class="nav-link" id="advisory-tab" data-bs-toggle="tab" data-bs-target="#advisory-grades" type="button" role="tab">
+                                            <i class="fas fa-users me-2"></i>Advisory Class Grades
+                                        </button>
+                                    </li>
+                                </ul>
+
+                                <!-- Tab Content -->
+                                <div class="tab-content" id="gradesTabContent">
+                                    <!-- Subject Grades Tab -->
+                                    <div class="tab-pane fade show active" id="subject-grades" role="tabpanel">
+                                        <form method="GET" class="mb-4">
+                                            <div class="row g-3">
+                                                <div class="col-md-3">
+                                                    <div class="form-group">
+                                                        <label for="school_year" class="form-label">School Year</label>
+                                                        <select name="school_year" id="school_year" class="form-select">
+                                                            <option value="">Select School Year</option>
+                                                            {% for year in school_years %}
+                                                                <option value="{{ year.display_name }}" {% if selected_year == year.display_name %}selected{% endif %}>
+                                                                    {{ year.display_name }}
+                                                                </option>
+                                                            {% endfor %}
+                                                        </select>
+                                                    </div>
+                                                </div>
+                                                <div class="col-md-3">
+                                                    <div class="form-group">
+                                                        <label for="quarter" class="form-label">Quarter</label>
+                                                        <select name="quarter" id="quarter" class="form-select">
+                                                            <option value="">Select Quarter</option>
+                                                            {% for value, label in Grade.QUARTER_CHOICES %}
+                                                                <option value="{{ value }}" {% if selected_quarter == value %}selected{% endif %}>
+                                                                    {{ label }}
+                                                                </option>
+                                                            {% endfor %}
+                                                        </select>
+                                                    </div>
+                                                </div>
+                                                <div class="col-md-3">
+                                                    <div class="form-group">
+                                                        <label for="subject" class="form-label">Subject</label>
+                                                        <select name="subject" id="subject" class="form-select">
+                                                            <option value="">Select Subject</option>
+                                                            {% for subject in subjects %}
+                                                                <option value="{{ subject.id }}" {% if selected_subject == subject.id %}selected{% endif %}>
+                                                                    {{ subject.name }}
+                                                                </option>
+                                                            {% endfor %}
+                                                        </select>
+                                                    </div>
+                                                </div>
+                                                <div class="col-md-3">
+                                                    <div class="form-group">
+                                                        <label class="form-label">&nbsp;</label>
+                                                        <button type="submit" class="btn btn-primary w-100">Filter</button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </form>
+
+                                        <!-- Modified to only show Import Grades from Excel -->
+                                        <div class="row mb-4">
+                                            <div class="col-md-8 mx-auto">
+                                                <div class="card">
+                                                    <div class="card-header">
+                                                        <h5 class="card-title mb-0">Import Grades from Excel</h5>
+                                                    </div>
+                                                    <div class="card-body">
+                                                        <form method="POST" enctype="multipart/form-data" id="importForm">
+                                                            {% csrf_token %}
+                                                            <input type="hidden" name="import_grades" value="1">
+                                                            <div class="mb-3">
+                                                                <label for="subject" class="form-label">Subject</label>
+                                                                {{ import_form.subject }}
+                                                            </div>
+                                                            <div class="mb-3">
+                                                                <label for="quarter" class="form-label">Quarter</label>
+                                                                {{ import_form.quarter }}
+                                                            </div>
+                                                            <div class="mb-3">
+                                                                <label for="school_year" class="form-label">School Year</label>
+                                                                {{ import_form.school_year }}
+                                                            </div>
+                                                            <div class="mb-3">
+                                                                <label for="file" class="form-label">Excel File</label>
+                                                                {{ import_form.file }}
+                                                                <div class="form-text">
+                                                                    <a href="{% url 'generate_grade_template' %}?subject={{ selected_subject }}&quarter={{ selected_quarter }}&school_year={{ selected_year }}"
+                                                                       class="btn btn-sm btn-outline-primary mt-2">
+                                                                        <i class="fas fa-download me-1"></i> Download Template
+                                                                    </a>
+                                                                </div>
+                                                            </div>
+                                                            <div id="import-feedback" class="mb-3" style="display: none;">
+                                                                <div class="alert alert-danger"></div>
+                                                            </div>
+                                                            <button type="submit" class="btn btn-primary">Import Grades</button>
+                                                        </form>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div class="table-responsive mt-3">
+                                            <table class="table table-bordered table-striped table-hover" id="subjectGradesTable">
+                                                <thead class="table-light">
+                                                    <tr>
+                                                        <th>Student ID</th>
+                                                        <th>Student Name</th>
+                                                        <th>Grade</th>
+                                                        <th>Components</th>
+                                                        <th>Remarks</th>
+                                                        <th>Actions</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    {% for grade in subject_grades %}
+                                                    <tr>
+                                                        <td>{{ grade.student }}</td>
+                                                        <td>{{ grade.student }}</td>
+                                                        <td>{{ grade.grade }}</td>
+                                                        <td>
+                                                            <button class="btn btn-sm btn-info view-components" data-grade-id="{{ grade.id }}">
+                                                                <i class="fas fa-list-ul me-1"></i> View
+                                                            </button>
+                                                        </td>
+                                                        <td>{{ grade.remarks }}</td>
+                                                        <td>
+                                                            <button class="btn btn-sm btn-primary edit-grade" data-grade-id="{{ grade.id }}">
+                                                                <i class="fas fa-edit me-1"></i> Edit
+                                                            </button>
+                                                        </td>
+                                                    </tr>
+                                                    {% endfor %}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+
+                                    <!-- Advisory Grades Tab -->
+                                    <div class="tab-pane fade" id="advisory-grades" role="tabpanel">
+                                        <form method="GET" class="mb-4">
+                                            <div class="row g-3">
+                                                <div class="col-md-4">
+                                                    <div class="form-group">
+                                                        <label for="advisory_school_year" class="form-label">School Year</label>
+                                                        <select name="school_year" id="advisory_school_year" class="form-select">
+                                                            <option value="">Select School Year</option>
+                                                            {% for year in school_years %}
+                                                                <option value="{{ year.display_name }}" {% if selected_year == year.display_name %}selected{% endif %}>
+                                                                    {{ year.display_name }}
+                                                                </option>
+                                                            {% endfor %}
+                                                        </select>
+                                                    </div>
+                                                </div>
+                                                <div class="col-md-4">
+                                                    <div class="form-group">
+                                                        <label for="advisory_quarter" class="form-label">Quarter</label>
+                                                        <select name="quarter" id="advisory_quarter" class="form-select">
+                                                            <option value="">Select Quarter</option>
+                                                            {% for value, label in Grade.QUARTER_CHOICES %}
+                                                                <option value="{{ value }}" {% if selected_quarter == value %}selected{% endif %}>
+                                                                    {{ label }}
+                                                                </option>
+                                                            {% endfor %}
+                                                        </select>
+                                                    </div>
+                                                </div>
+                                                <div class="col-md-4">
+                                                    <div class="form-group">
+                                                        <label class="form-label">&nbsp;</label>
+                                                        <button type="submit" class="btn btn-primary w-100">Filter</button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </form>
+
+                                        <div class="table-responsive mt-3">
+                                            <table class="table table-bordered table-striped table-hover" id="advisoryGradesTable">
+                                                <thead class="table-light">
+                                                    <tr>
+                                                        <th>Student ID</th>
+                                                        <th>Student Name</th>
+                                                        <th>Subject</th>
+                                                        <th>Grade</th>
+                                                        <th>Status</th>
+                                                        <th>Actions</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    {% for grade in advisory_grades %}
+                                                    <tr>
+                                                        <td>{{ grade.student }}</td>
+                                                        <td>{{ grade.student }}</td>
+                                                        <td>{{ grade.course }}</td>
+                                                        <td>{{ grade.grade }}</td>
+                                                        <td>{{ grade.status }}</td>
+                                                        <td>
+                                                            <button class="btn btn-sm btn-info view-details" data-grade-id="{{ grade.id }}">
+                                                                <i class="fas fa-info-circle me-1"></i> Details
+                                                            </button>
+                                                        </td>
+                                                    </tr>
+                                                    {% endfor %}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Logout Modal -->
+    <div class="modal fade" id="logoutModal" tabindex="-1" aria-labelledby="logoutModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header" style="background: linear-gradient(90deg, rgb(255, 17, 166) 0%, #c226ad 100%); color: white;">
+                    <h5 class="modal-title" id="logoutModalLabel"><i class="fas fa-sign-out-alt me-2"></i>Logout Confirmation</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="mb-0">Are you sure you want to logout from your account?</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <a href="{% url 'logout' %}" class="btn" style="background: linear-gradient(90deg, rgb(255, 17, 166) 0%, #c226ad 100%); color: white;">Yes, Logout</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.datatables.net/1.11.5/js/jquery.dataTables.min.js"></script>
+    <script src="https://cdn.datatables.net/1.11.5/js/dataTables.bootstrap5.min.js"></script>
+    <script>
+        $(document).ready(function() {
+            // Initialize DataTables
+            $('#subjectGradesTable').DataTable({
+                "order": [[1, "asc"]],
+                "pageLength": 10,
+                "responsive": true,
+                "lengthMenu": [[10, 25, 50, -1], [10, 25, 50, "All"]],
+                "language": {
+                    "search": "Search:"
+                }
+            });
+            
+            $('#advisoryGradesTable').DataTable({
+                "order": [[1, "asc"]],
+                "pageLength": 10,
+                "responsive": true,
+                "lengthMenu": [[10, 25, 50, -1], [10, 25, 50, "All"]],
+                "language": {
+                    "search": "Search:"
+                }
+            });
+
+            // Handle view components button click
+            $('.view-components').click(function() {
+                var gradeId = $(this).data('grade-id');
+                $('#grade_id').val(gradeId);
+                $.get(`/teacher/grade-components/${gradeId}/`, function(data) {
+                    $('#componentsList').html(data);
+                    $('#componentsModal').modal('show');
+                });
+            });
+
+            // Handle edit grade button click
+            $('.edit-grade').click(function() {
+                var gradeId = $(this).data('grade-id');
+                // Add your edit grade logic here
+            });
+
+            $('.view-details').click(function() {
+                var gradeId = $(this).data('grade-id');
+                // Add your view details logic here
+            });
+            
+            // Mobile sidebar toggle
+            $('#sidebarToggle').click(function() {
+                $('.sidebar').toggleClass('show');
+            });
+            
+            // Close sidebar when clicking outside on mobile
+            $(document).click(function(event) {
+                if (!$(event.target).closest('.sidebar').length && 
+                    !$(event.target).closest('#sidebarToggle').length && 
+                    $('.sidebar').hasClass('show')) {
+                    $('.sidebar').removeClass('show');
+                }
+            });
+
+            // Handle form submissions for Excel import
+            $('#importForm').on('submit', function(e) {
+                e.preventDefault();
+                
+                // Reset any previous error messages
+                $('#import-feedback').hide().find('.alert').empty();
+                
+                // Check for required fields
+                var subject = $('#id_subject').val();
+                var quarter = $('#id_quarter').val();
+                var schoolYear = $('#id_school_year').val();
+                var file = $('#id_file').val();
+                
+                // Validate each field
+                var errors = [];
+                if (!subject) errors.push("Please select a subject");
+                if (!quarter) errors.push("Please select a quarter");
+                if (!schoolYear) errors.push("Please select a school year");
+                if (!file) errors.push("Please select an Excel file");
+                
+                // Show errors if any
+                if (errors.length > 0) {
+                    $('#import-feedback').show().find('.alert').html(errors.join('<br>'));
+                    return;
+                }
+                
+                // Create a FormData object to properly handle the file upload
+                var formData = new FormData(this);
+                
+                // Display loading message
+                $('#import-feedback').show().find('.alert').removeClass('alert-danger').addClass('alert-info').html('Importing grades. Please wait...');
+                
+                $.ajax({
+                    url: '{% url "grades" %}',
+                    method: 'POST',
+                    data: formData,
+                    processData: false,  // Important for file uploads
+                    contentType: false,  // Important for file uploads
+                    success: function(response) {
+                        console.log("Import Response:", response);
+                        if (response.success) {
+                            $('#import-feedback').show().find('.alert').removeClass('alert-danger').addClass('alert-success').html('Grades imported successfully!');
+                            setTimeout(function() {
+                                location.reload();
+                            }, 2000);
+                        } else {
+                            $('#import-feedback').show().find('.alert').removeClass('alert-info').addClass('alert-danger').html(response.error || 'An error occurred while importing grades.');
+                        }
+                    },
+                    error: function(xhr, status, error) {
+                        console.error("AJAX Error:", xhr.responseText);
+                        $('#import-feedback').show().find('.alert').removeClass('alert-info').addClass('alert-danger').html('Failed to import grades. Please check the console for details.');
+                    }
+                });
+            });
+        });
+    </script>
+</body>
+</html>

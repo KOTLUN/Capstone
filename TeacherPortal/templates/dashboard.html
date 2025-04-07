@@ -1,0 +1,43 @@
+<!-- Add this to the navigation or dashboard cards section -->
+<div class="row mt-4">
+    <!-- ... existing cards ... -->
+    
+    <!-- Add these new cards for grade management -->
+    <div class="col-lg-4 col-md-6 mb-4">
+        <div class="card h-100 border-0 shadow hover-card">
+            <div class="card-body">
+                <div class="d-flex align-items-center mb-3">
+                    <div class="icon-circle bg-primary text-white">
+                        <i class="fas fa-book"></i>
+                    </div>
+                    <h5 class="card-title ms-3 mb-0">Subject Grades</h5>
+                </div>
+                <p class="card-text text-muted">Manage and record grades for your subjects. Enter scores, create assessments, and track student performance.</p>
+                <a href="{% url 'teacher_grades' %}" class="btn btn-primary w-100">
+                    <i class="fas fa-edit me-2"></i>Manage Subject Grades
+                </a>
+            </div>
+        </div>
+    </div>
+    
+    {% if is_adviser %}
+    <div class="col-lg-4 col-md-6 mb-4">
+        <div class="card h-100 border-0 shadow hover-card">
+            <div class="card-body">
+                <div class="d-flex align-items-center mb-3">
+                    <div class="icon-circle bg-success text-white">
+                        <i class="fas fa-users"></i>
+                    </div>
+                    <h5 class="card-title ms-3 mb-0">Advisory Class Grades</h5>
+                </div>
+                <p class="card-text text-muted">View and monitor academic performance for all students in your advisory class across all subjects.</p>
+                <a href="{% url 'advisory_grades' %}" class="btn btn-success w-100">
+                    <i class="fas fa-chart-line me-2"></i>View Advisory Grades
+                </a>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+    
+    <!-- ... existing cards ... -->
+</div> 

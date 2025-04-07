@@ -178,11 +178,11 @@ html, body {
             <a href="{% url 'teacher_schedule' %}" class="nav-link {% if request.path == '/teacher_schedule/' %}active{% endif %}">
               <i class="fas fa-calendar-alt"></i> <span>Schedule</span>
             </a>
+            <a href="{% url 'grades' %}" class="nav-link {% if request.path == '/grades/' %}active{% endif %}">
+              <i class="fas fa-graduation-cap"></i> <span>Grades</span>
+            </a>
             <a href="{% url 'advisory_enrollment' %}" class="nav-link {% if request.path == '/advisory_enrollment/' %}active{% endif %}">
               <i class="fas fa-user-plus"></i> <span>Advisory Enrollment</span>
-            </a>
-            <a href="{% url 'import_grades' %}" class="nav-link {% if request.path == '/import_grades/' %}active{% endif %}">
-              <i class="fas fa-chart-line"></i> <span>Grades</span>
             </a>
             <a href="#" class="nav-link" data-bs-toggle="modal" data-bs-target="#logoutModal">
               <i class="fas fa-sign-out-alt"></i> <span>Logout</span>
@@ -249,5 +249,18 @@ html, body {
       }
     });
   </script>
+  
+  <!-- Main Content -->
+  <div class="col-md-9 col-lg-10 ms-sm-auto main-content">
+    {% block content %}
+    <!-- Page content will go here -->
+    {% endblock %}
+  </div>
+</div>
+</div>
+  
+{% block extra_js %}
+<!-- Extra JavaScript will go here -->
+{% endblock %}
 </body>
 </html>

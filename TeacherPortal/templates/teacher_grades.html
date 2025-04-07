@@ -1,0 +1,203 @@
+{% extends 'structures/sidebars.html' %}
+{% load static %}
+
+{% block styles %}
+<link rel="stylesheet" href="https://cdn.datatables.net/1.11.5/css/dataTables.bootstrap5.min.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+<style>
+    .grade-table th, .grade-table td {
+        vertical-align: middle;
+    }
+    .grade-cell {
+        cursor: pointer;
+        position: relative;
+        min-width: 80px;
+    }
+    .grade-cell:hover {
+        background-color: #f8f9fa;
+    }
+    .grade-cell.edited {
+        background-color: #e8f4fe;
+    }
+    .grade-form input {
+        width: 60px;
+        text-align: center;
+    }
+    .grade-form textarea {
+        width: 100%;
+        min-height: 60px;
+    }
+    .passing {
+        background-color: #d4edda;
+        color: #155724;
+    }
+    .failing {
+        background-color: #f8d7da;
+        color: #721c24;
+    }
+    .assignment-card {
+        transition: all 0.3s ease;
+    }
+    .assignment-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+    }
+    .quarter-tabs .nav-link {
+        cursor: pointer;
+    }
+    .quarter-tabs .nav-link.active {
+        font-weight: bold;
+        border-bottom: 2px solid #0d6efd;
+    }
+    .selected-assignment {
+        background-color: #e8f4fe;
+        border-left: 4px solid #0d6efd;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">Manage Grades</h3>
+                </div>
+                <div class="card-body">
+                    <form method="GET" class="mb-4">
+                        <div class="row">
+                            <div class="col-md-3">
+                                <div class="form-group">
+                                    <label for="school_year">School Year</label>
+                                    <select name="school_year" id="school_year" class="form-control">
+                                        <option value="">Select School Year</option>
+                                        {% for year in school_years %}
+                                            <option value="{{ year.display_name }}" {% if selected_year == year.display_name %}selected{% endif %}>
+                                                {{ year.display_name }}
+                                            </option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="form-group">
+                                    <label for="quarter">Quarter</label>
+                                    <select name="quarter" id="quarter" class="form-control">
+                                        <option value="">Select Quarter</option>
+                                        {% for value, label in Grade.QUARTER_CHOICES %}
+                                            <option value="{{ value }}" {% if selected_quarter == value %}selected{% endif %}>
+                                                {{ label }}
+                                            </option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="form-group">
+                                    <label for="subject">Subject</label>
+                                    <select name="subject" id="subject" class="form-control">
+                                        <option value="">Select Subject</option>
+                                        {% for subject in subjects %}
+                                            <option value="{{ subject.id }}" {% if selected_subject == subject.id %}selected{% endif %}>
+                                                {{ subject.name }}
+                                            </option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="form-group">
+                                    <label>&nbsp;</label>
+                                    <button type="submit" class="btn btn-primary form-control">Filter</button>
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+
+                    <div class="table-responsive">
+                        <table class="table table-bordered table-striped" id="gradesTable">
+                            <thead>
+                                <tr>
+                                    <th>Student ID</th>
+                                    <th>Student Name</th>
+                                    <th>Grade</th>
+                                    <th>Components</th>
+                                    <th>Remarks</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for grade in grades %}
+                                <tr>
+                                    <td>{{ grade.student }}</td>
+                                    <td>{{ grade.student }}</td>
+                                    <td>{{ grade.grade }}</td>
+                                    <td>
+                                        <button class="btn btn-sm btn-info view-components" data-grade-id="{{ grade.id }}">
+                                            View Components
+                                        </button>
+                                    </td>
+                                    <td>{{ grade.remarks }}</td>
+                                    <td>
+                                        <button class="btn btn-sm btn-primary edit-grade" data-grade-id="{{ grade.id }}">
+                                            Edit
+                                        </button>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Grade Components Modal -->
+<div class="modal fade" id="componentsModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Grade Components</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div id="componentsList"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.datatables.net/1.11.5/js/jquery.dataTables.min.js"></script>
+<script src="https://cdn.datatables.net/1.11.5/js/dataTables.bootstrap5.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+
+<script>
+$(document).ready(function() {
+    // Initialize DataTable
+    $('#gradesTable').DataTable({
+        "order": [[1, "asc"]]
+    });
+
+    // Handle view components button click
+    $('.view-components').click(function() {
+        var gradeId = $(this).data('grade-id');
+        $.get(`/teacher/grades/${gradeId}/components/`, function(data) {
+            $('#componentsList').html(data);
+            $('#componentsModal').modal('show');
+        });
+    });
+
+    // Handle edit grade button click
+    $('.edit-grade').click(function() {
+        var gradeId = $(this).data('grade-id');
+        // Add your edit grade logic here
+    });
+});
+</script>
+{% endblock %} 
