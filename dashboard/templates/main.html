@@ -659,7 +659,7 @@
 
             // Function to fetch and update dashboard statistics
             function updateDashboardStats() {
-                fetch('/dashboard/get-data/')
+                fetch('{% url "administrator:get_dashboard_data" %}')
                     .then(response => response.json())
                     .then(data => {
                         if (!data.error) {

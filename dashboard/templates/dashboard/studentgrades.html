@@ -151,7 +151,7 @@
                         Student Grades
                     </h2>
                     <div class="school-year">
-                        School Year: {{ active_school_year.display_name|default:"No active school year" }}
+                        School Year: {{ school_year.display_name|default:"No active school year" }}
                     </div>
                 </div>
 
@@ -160,7 +160,7 @@
                     <h5>Debug Information:</h5>
                     <p>Number of Grade Levels: {{ sections_by_grade|length }}</p>
                     <p>Grade Levels Available: {{ sections_by_grade.keys|join:", "|default:"None" }}</p>
-                    <p>Active School Year: {{ active_school_year|default:"None" }}</p>
+                    <p>Active School Year: {{ school_year|default:"None" }}</p>
                 </div>
 
                 <!-- Search Box -->
@@ -168,9 +168,9 @@
                     <div class="row">
                         <div class="col-md-6">
                             <div class="input-group">
-                                <input type="text" class="form-control" id="studentSearch" 
+                                <input type="text" class="form-control search-input" id="studentSearch" 
                                        placeholder="Search by Name or ID">
-                                <button class="btn btn-primary" type="button" id="searchBtn">
+                                <button class="btn btn-primary search-button" type="button" id="searchBtn">
                                     <i class="fas fa-search me-2"></i>Search
                                 </button>
                             </div>
@@ -239,7 +239,7 @@
                                                 {% with section_students=students_by_section|get_item:section.id %}
                                                     <!-- Debug info for section -->
                                                     <div class="debug-info mb-3">
-                                                        <p>Section Name: {{ section.section_id }}</p>
+                                                        <p>Section ID: {{ section.section_id }}</p>
                                                         <p>Number of Students: {{ section_students|length|default:"0" }}</p>
                                                     </div>
 
@@ -250,7 +250,7 @@
                                                                     <tr>
                                                                         <th>Student Name</th>
                                                                         <th>ID</th>
-                                                                        <th>Course</th>
+                                                                        <th>Subject</th>
                                                                         <th class="text-center">1st Quarter</th>
                                                                         <th class="text-center">2nd Quarter</th>
                                                                         <th class="text-center">3rd Quarter</th>
@@ -261,25 +261,25 @@
                                                                 </thead>
                                                                 <tbody>
                                                                     {% if section_students %}
-                                                                        {% for student_data in section_students %}
-                                                                            {% for grade in student_data.processed_grades %}
+                                                                        {% for student in section_students %}
+                                                                            {% for grade in student.processed_grades %}
                                                                                 <tr>
-                                                                                    <td>{{ student_data.last_name }}, {{ student_data.first_name }}</td>
-                                                                                    <td>{{ student_data.student_id }}</td>
+                                                                                    <td>{{ student.last_name }}, {{ student.first_name }}</td>
+                                                                                    <td>{{ student.student_id }}</td>
                                                                                     <td>{{ grade.subject_name }}</td>
-                                                                                    <td class="grade-value {% if grade.grades.1 >= 75 %}passing{% elif grade.grades.1 %}failing{% endif %}">
+                                                                                    <td class="grade-value {% if grade.grades.1 >= 75 %}passing{% else %}failing{% endif %}">
                                                                                         {{ grade.grades.1|default:"-" }}
                                                                                     </td>
-                                                                                    <td class="grade-value {% if grade.grades.2 >= 75 %}passing{% elif grade.grades.2 %}failing{% endif %}">
+                                                                                    <td class="grade-value {% if grade.grades.2 >= 75 %}passing{% else %}failing{% endif %}">
                                                                                         {{ grade.grades.2|default:"-" }}
                                                                                     </td>
-                                                                                    <td class="grade-value {% if grade.grades.3 >= 75 %}passing{% elif grade.grades.3 %}failing{% endif %}">
+                                                                                    <td class="grade-value {% if grade.grades.3 >= 75 %}passing{% else %}failing{% endif %}">
                                                                                         {{ grade.grades.3|default:"-" }}
                                                                                     </td>
-                                                                                    <td class="grade-value {% if grade.grades.4 >= 75 %}passing{% elif grade.grades.4 %}failing{% endif %}">
+                                                                                    <td class="grade-value {% if grade.grades.4 >= 75 %}passing{% else %}failing{% endif %}">
                                                                                         {{ grade.grades.4|default:"-" }}
                                                                                     </td>
-                                                                                    <td class="grade-value {% if grade.final_grade >= 75 %}passing{% elif grade.final_grade %}failing{% endif %}">
+                                                                                    <td class="grade-value {% if grade.final_grade >= 75 %}passing{% else %}failing{% endif %}">
                                                                                         {{ grade.final_grade|default:"-" }}
                                                                                     </td>
                                                                                     <td class="text-center">
@@ -292,7 +292,7 @@
                                                                                 <tr>
                                                                                     <td colspan="9" class="text-center py-4">
                                                                                         <i class="fas fa-info-circle me-2"></i>
-                                                                                        No grades recorded for {{ student_data.first_name }} {{ student_data.last_name }}
+                                                                                        No grades recorded for {{ student.first_name }} {{ student.last_name }}
                                                                                     </td>
                                                                                 </tr>
                                                                             {% endfor %}
@@ -368,4 +368,4 @@
         });
     </script>
 </body>
-</html>
+</html> 

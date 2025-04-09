@@ -82,7 +82,7 @@
             position: fixed;
             top: 20px;
             right: 30px;
-            z-index: 9999;
+            z-index: 1000;
             display: flex;
             flex-direction: row;
             align-items: center;
@@ -117,6 +117,14 @@
             background-color: #0b5ed7;
         }
 
+        .modal {
+            z-index: 1050;
+        }
+
+        .modal-backdrop {
+            z-index: 1040;
+        }
+
         @media (max-width: 768px) {
             .floating-year {
                 right: 20px;
@@ -126,6 +134,47 @@
                 margin-left: 0;
                 width: 100%;
             }
+        }
+
+        /* Add these new styles */
+        .modal .table {
+            margin-bottom: 0;
+            width: 100% !important;
+        }
+
+        .modal .table-hover tbody tr:hover {
+            background-color: rgba(0,0,0,.075) !important;
+            transition: none !important;
+        }
+
+        .modal .dataTables_wrapper {
+            position: static !important;
+        }
+
+        .modal .table-responsive {
+            overflow: visible !important;
+        }
+
+        .modal .table td, .modal .table th {
+            vertical-align: middle;
+            white-space: nowrap;
+        }
+
+        /* Prevent DataTables processing display */
+        .dataTables_processing {
+            display: none !important;
+        }
+
+        /* Force hardware acceleration */
+        .modal-content {
+            transform: translateZ(0);
+            backface-visibility: hidden;
+            perspective: 1000;
+        }
+
+        /* Prevent hover effects during table processing */
+        .processing {
+            pointer-events: none;
         }
     </style>
 </head>
@@ -374,8 +423,8 @@
                                                 </div>
                                             </div>
                                             <div class="table-responsive">
-                                                <table class="table table-hover" id="gradeTable{{ grade }}">
-                                                    <thead class="table-light">
+                                                <table class="table" id="gradeTable{{ grade }}">
+                                                    <thead>
                                                         <tr>
                                                             <th>Student ID</th>
                                                             <th>Name</th>
@@ -389,7 +438,7 @@
                                                     <tbody>
                                                         {% for section_data in sections %}
                                                             {% for student in section_data.students %}
-                                                            <tr data-school-year="{{ student.school_year }}">
+                                                            <tr>
                                                                 <td>{{ student.student_id }}</td>
                                                                 <td>{{ student.name }}</td>
                                                                 <td>{{ student.section }}</td>
@@ -399,7 +448,7 @@
                                                                     <span class="badge {% if student.status == 'Active' %}bg-success
                                                                       {% elif student.status == 'Completed' %}bg-info
                                                                       {% elif student.status == 'Dropped' %}bg-danger
-                                                                      {% else %}bg-secondary{% endif %} rounded-pill">
+                                                                      {% else %}bg-secondary{% endif %}">
                                                                         {{ student.status }}
                                                                     </span>
                                                                 </td>
@@ -421,21 +470,11 @@
                                                                     </button>
                                                                 </td>
                                                             </tr>
-                                                            {% empty %}
-                                                            <tr>
-                                                                <td colspan="7" class="text-center py-4">
-                                                                    <i class="fas fa-user-graduate fa-2x mb-2 d-block text-muted"></i>
-                                                                    No students enrolled in this grade level
-                                                                </td>
-                                                            </tr>
                                                             {% endfor %}
                                                         {% endfor %}
                                                     </tbody>
                                                 </table>
                                             </div>
-                                        </div>
-                                        <div class="modal-footer">
-                                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
                                         </div>
                                     </div>
                                 </div>
@@ -831,85 +870,65 @@
                 window.location.href = url.toString();
             });
 
-            // Initialize DataTables for grade level tables with custom filtering
-            $('[id^=gradeTable]').each(function() {
-                const table = $(this).DataTable({
-                    "pageLength": 10,
-                    "order": [[0, "asc"]], // Sort by Student ID by default
-                    "responsive": true,
-                    "language": {
-                        "emptyTable": "No students enrolled in this grade level"
+            // Remove the old initialization code
+            let gradeTables = {};
+
+            $(document).ready(function() {
+                // Initialize all grade tables on page load
+                $('[id^=gradeTable]').each(function() {
+                    const tableId = $(this).attr('id');
+                    const gradeNumber = tableId.replace('gradeTable', '');
+                    
+                    const table = $(this).DataTable({
+                        pageLength: 10,
+                        searching: true,
+                        info: true,
+                        ordering: true,
+                        autoWidth: false,
+                        scrollX: false,
+                        columnDefs: [
+                            { orderable: false, targets: 6 }
+                        ],
+                        order: [[1, 'asc']],
+                        dom: '<"row"<"col-sm-12"tr>><"row"<"col-sm-12 col-md-5"i><"col-sm-12 col-md-7"p>>',
+                        language: {
+                            emptyTable: "No students enrolled in this grade level",
+                            info: "Showing _START_ to _END_ of _TOTAL_ entries",
+                            infoEmpty: "Showing 0 to 0 of 0 entries",
+                            paginate: {
+                                first: "First",
+                                last: "Last",
+                                next: "Next",
+                                previous: "Previous"
+                            }
+                        }
+                    });
+
+                    // Store the table instance
+                    gradeTables[gradeNumber] = table;
+
+                    // Handle year filter for this table
+                    $(`.grade-year-filter[data-grade="${gradeNumber}"]`).on('change', function() {
+                        const selectedYear = $(this).val();
+                        if (selectedYear === 'all') {
+                            table.column(4).search('').draw();
+                        } else {
+                            table.column(4).search(selectedYear).draw();
+                        }
+                    });
+                });
+
+                // Handle modal events
+                $('[id^=gradeModal]').on('shown.bs.modal', function() {
+                    const gradeNumber = this.id.replace('gradeModal', '');
+                    const table = gradeTables[gradeNumber];
+                    if (table) {
+                        table.columns.adjust();
                     }
                 });
 
-                // Get the grade number from the table ID
-                const gradeNumber = this.id.replace('gradeTable', '');
-                
-                // Add event listener for the grade year filter
-                $(`.grade-year-filter[data-grade="${gradeNumber}"]`).on('change', function() {
-                    const selectedYear = $(this).val();
-                    
-                    // Filter the table rows based on data attribute
-                    $(`#gradeTable${gradeNumber} tbody tr`).each(function() {
-                        const rowYear = $(this).data('school-year');
-                        
-                        if (selectedYear === 'all' || rowYear === selectedYear) {
-                            $(this).show();
-                        } else {
-                            $(this).hide();
-                        }
-                    });
-                    
-                    // Redraw the table to adjust column widths
-                    table.columns.adjust();
-                });
-            });
-
-            // Handle modal show event to properly render DataTables
-            $('[id^=gradeModal]').on('shown.bs.modal', function() {
-                const table = $(this).find('table').DataTable();
-                table.columns.adjust().draw();
-            });
-
-            // Handle edit enrollment button clicks within the modal
-            $(document).on('click', '.edit-enrollment', function() {
-                const id = $(this).data('id');
-                const student = $(this).data('student');
-                const section = $(this).data('section');
-                const schoolYear = $(this).data('schoolyear');
-                const status = $(this).data('status');
-                
-                $('#edit_enrollment_id').val(id);
-                $('#edit_student').val(student).trigger('change');
-                $('#edit_section').val(section);
-                $('#edit_school_year').val(schoolYear);
-                $('#edit_status').val(status);
-            });
-
-            // Handle delete enrollment button clicks within the modal
-            $(document).on('click', '.delete-enrollment', function() {
-                const enrollmentId = $(this).data('id');
-                const studentName = $(this).data('student-name');
-
-                // Update modal content
-                $('#deleteConfirmationModal .modal-body p:first').html(
-                    `Are you sure you want to delete the enrollment of <strong>${studentName}</strong>?`
-                );
-
-                // Store the enrollment ID for deletion
-                $('#confirmDelete').data('enrollment-id', enrollmentId);
-
-                // Show the delete confirmation modal
-                $('#deleteConfirmationModal').modal('show');
-            });
-
-            // Ensure tables are properly redrawn when grade level cards are expanded
-            $('[data-bs-toggle="collapse"]').on('click', function() {
-                const target = $($(this).data('bs-target'));
-                setTimeout(function() {
-                    const table = target.find('table').DataTable();
-                    table.columns.adjust().draw();
-                }, 500);
+                // No need to destroy tables on modal hide anymore
+                // Just adjust columns when shown
             });
         });
     </script>

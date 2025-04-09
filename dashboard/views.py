@@ -24,6 +24,7 @@ from django.db.models import Q
 from collections import defaultdict
 from django.urls import reverse
 from django.db.models import Prefetch
+from TeacherPortal.models import Grade
 
 
 # Create your views here.
@@ -1213,61 +1214,103 @@ def student_profile_view(request, student_id):
     
     return render(request, 'StudentProfiles/templates/student_profile.html', context)
 
-@login_required
 def student_grades_view(request):
-    try:
-        # Get active school year
-        active_school_year = SchoolYear.get_active()
+    # Get active school year
+    active_school_year = SchoolYear.objects.filter(is_active=True).first()
+    
+    # Get all sections ordered by grade level
+    sections = Sections.objects.all().order_by('grade_level', 'section_id')
+    
+    # Initialize dictionaries to store organized data
+    sections_by_grade = {}
+    students_by_section = {}
+    
+    # Organize sections by grade level and fetch students with their grades
+    for section in sections:
+        # Organize sections by grade level
+        if section.grade_level not in sections_by_grade:
+            sections_by_grade[section.grade_level] = []
+        sections_by_grade[section.grade_level].append(section)
         
-        # Get all sections organized by grade level
-        sections = Sections.objects.all().order_by('grade_level', 'section_id')
-        sections_by_grade = {}
+        # Get enrolled students based on grade level
+        enrollment_model = {
+            7: Enrollment,
+            8: Grade8Enrollment,
+            9: Grade9Enrollment,
+            10: Grade10Enrollment,
+            11: Grade11Enrollment,
+            12: Grade12Enrollment
+        }.get(section.grade_level)
         
-        for section in sections:
-            grade_level = section.grade_level
-            if grade_level not in sections_by_grade:
-                sections_by_grade[grade_level] = []
-            sections_by_grade[grade_level].append(section)
-        
-        # Get all subjects
-        subjects = Subject.objects.all().order_by('name')
-        
-        # Get all students with their grades
-        students = Student.objects.all().prefetch_related(
-            'grades',
-            'grades__subject',
-            'enrollments',
-            'enrollments__section'
-        )
-        
-        # Organize students by section
-        students_by_section = {}
-        for student in students:
-            current_enrollment = student.enrollments.filter(
-                status='Active',
-                school_year=active_school_year.display_name if active_school_year else None
-            ).first()
+        if enrollment_model:
+            # Get enrollments for current section and active school year
+            enrollments = enrollment_model.objects.filter(
+                section=section,
+                school_year=active_school_year.display_name if active_school_year else None,
+                status='Active'
+            ).select_related('student')
             
-            if current_enrollment:
-                section_id = current_enrollment.section.id
-                if section_id not in students_by_section:
-                    students_by_section[section_id] = []
-                students_by_section[section_id].append(student)
-        
-        context = {
-            'sections_by_grade': sections_by_grade,
-            'subjects': subjects,
-            'students_by_section': students_by_section,
-            'active_school_year': active_school_year,
-        }
-        
-        return render(request, 'studentgrades.html', context)
-    except Exception as e:
-        print(f"Error in student_grades_view: {str(e)}")
-        return render(request, 'studentgrades.html', {
-            'error': f'Error: {str(e)}',
-            'user': request.user
-        })
+            # Get students with their grades
+            students_data = []
+            for enrollment in enrollments:
+                student = enrollment.student
+                
+                # Fetch all grades for this student in the current school year
+                student_grades = Grade.objects.filter(
+                    student=student.student_id,
+                    school_year=active_school_year.display_name if active_school_year else None
+                )
+                
+                # Process grades into the format expected by the template
+                processed_grades = []
+                for grade in student_grades:
+                    # Find existing grade entry for this subject or create new one
+                    subject_grade = next(
+                        (g for g in processed_grades if g['subject_name'] == str(grade.course)),
+                        None
+                    )
+                    
+                    if not subject_grade:
+                        subject_grade = {
+                            'subject_name': str(grade.course),
+                            'grades': {
+                                '1': None,
+                                '2': None,
+                                '3': None,
+                                '4': None
+                            },
+                            'final_grade': None,
+                            'status': grade.status
+                        }
+                        processed_grades.append(subject_grade)
+                    
+                    # Update the grade for the specific quarter
+                    quarter = str(grade.quarter)
+                    if quarter in ['1', '2', '3', '4']:
+                        subject_grade['grades'][quarter] = float(grade.grade) if grade.grade is not None else None
+                    
+                    # Update final grade if available
+                    if hasattr(grade, 'final_grade') and grade.final_grade is not None:
+                        subject_grade['final_grade'] = float(grade.final_grade)
+                
+                # Create student data with processed grades
+                student_data = {
+                    'student_id': student.student_id,
+                    'first_name': student.first_name,
+                    'last_name': student.last_name,
+                    'processed_grades': processed_grades
+                }
+                students_data.append(student_data)
+            
+            students_by_section[section.id] = students_data
+    
+    context = {
+        'sections_by_grade': sections_by_grade,
+        'students_by_section': students_by_section,
+        'active_school_year': active_school_year,
+    }
+    
+    return render(request, 'dashboard/studentgrades.html', context)
 
 def get_current_quarter():
     """Helper function to determine current quarter based on date"""
@@ -2406,3 +2449,7 @@ def handle_school_year_transition(request):
         messages.error(request, f"Error transitioning school year: {str(e)}")
 
     return redirect('school_year_management')
+
+print(Grade.objects.all().count())  # Should show how many grades exist
+print(Grade.objects.values_list('student', flat=True).distinct())  # Should show student IDs
+print(Grade.objects.values_list('school_year', flat=True).distinct())  # Should show school years
