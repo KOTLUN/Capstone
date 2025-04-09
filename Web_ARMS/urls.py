@@ -23,7 +23,7 @@ from dashboard import views as dashboard_views
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('administrator/', include('dashboard.urls')),
+    path('administrator/', include(('dashboard.urls', 'dashboard'), namespace='administrator')),
     path('teacher/', include('TeacherPortal.urls')),
     path('', include('login.urls')),
     path('student-profile/<int:student_id>/', dashboard_views.student_profile_view, name='student_profile'),

@@ -11,7 +11,6 @@ class Migration(migrations.Migration):
     initial = True
 
     dependencies = [
-        ('dashboard', '0020_alter_schoolyear_options_and_more'),
     ]
 
     operations = [

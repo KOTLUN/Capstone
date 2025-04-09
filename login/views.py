@@ -45,7 +45,7 @@ def login_view(request):
             # Check if the user is an admin
             if user.is_superuser:
                 logger.info("User is superuser, redirecting to dashboard")
-                return redirect('dashboard')
+                return redirect('dashboard:dashboard')
 
             # Check if the user is a teacher
             try:

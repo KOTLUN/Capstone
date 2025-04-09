@@ -7,7 +7,184 @@
     <title>Admin Profile</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&family=Quicksand:wght@500;600;700&display=swap" rel="stylesheet">
+
     <style>
+         body {
+            background-color: #f8f9e3;
+            font-family: 'Poppins', sans-serif;
+        }
+        
+        .page-wrapper {
+            display: flex;
+            min-height: 100vh;
+        }
+        
+        .main-content {
+            margin-left: 250px;
+            flex: 1;
+            padding: 20px;
+            background: #f8f9e3;
+        }
+
+        .card {
+            border-radius: 0.75rem;
+            box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+            transition: all 0.3s ease;
+            border: none;
+        }
+
+        .card:hover {
+            box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+            transform: translateY(-3px);
+        }
+
+        .table-responsive {
+            border-radius: 0.5rem;
+            overflow: hidden;
+        }
+
+        .btn {
+            border-radius: 0.5rem;
+            padding: 0.5rem 1rem;
+        }
+
+        .btn-group .btn {
+            border-radius: 0.375rem;
+        }
+
+        .form-control, .form-select {
+            border-radius: 0.5rem;
+            padding: 0.5rem 1rem;
+        }
+
+        .badge {
+            padding: 0.5em 0.75em;
+            font-weight: 500;
+        }
+
+        .modal-content {
+            border-radius: 0.75rem;
+            border: none;
+        }
+
+        .modal-header {
+            border-top-left-radius: 0.75rem;
+            border-top-right-radius: 0.75rem;
+        }
+
+        .content-container {
+            background-color: white;
+            border-radius: 1rem;
+            box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+        }
+
+        .welcome-section {
+            background: linear-gradient(135deg, var(--bs-primary) 0%, var(--primary-dark) 100%);
+        }
+        
+        .bg-primary-dark {
+            background-color: var(--primary-dark);
+        }
+        
+        .bg-success-dark {
+            background-color: var(--success-dark);
+        }
+        
+        .bg-warning-dark {
+            background-color: var(--warning-dark);
+        }
+
+        .chart-container {
+            position: relative;
+            margin: auto;
+            height: 300px;
+        }
+        
+        .icon-box {
+            position: relative;
+            z-index: 1;
+        }
+
+        .icon-box i {
+            transition: transform 0.3s;
+        }
+
+        .card:hover .icon-box i {
+            transform: scale(1.1);
+        }
+
+        .dropdown-item {
+            padding: 0.5rem 1rem;
+            font-size: 0.875rem;
+        }
+
+        .dropdown-item i {
+            width: 20px;
+        }
+
+        /* Loading animation */
+        .loading {
+            position: relative;
+            opacity: 0.6;
+        }
+
+        .loading::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 40px;
+            height: 40px;
+            margin-top: -20px;
+            margin-left: -20px;
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #3498db;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Card hover effects */
+        .card .card-footer {
+            transition: padding 0.3s;
+        }
+
+        .card:hover .card-footer {
+            padding-left: 2rem;
+        }
+
+        .card-footer i {
+            transition: transform 0.3s;
+        }
+
+        .card:hover .card-footer i {
+            transform: translateX(5px);
+        }
+
+        /* Responsive adjustments */
+        @media (max-width: 768px) {
+            .main-content {
+                margin-left: 0;
+                width: 100%;
+            }
+            
+            .display-5 {
+                font-size: 2rem;
+            }
+            
+            .welcome-section .display-6 {
+                font-size: 1.5rem;
+            }
+            
+            .card-body {
+                padding: 1.5rem !important;
+            }
+        }
         .profile-header {
             background: linear-gradient(135deg, #0d6efd 0%, #0099ff 100%);
             padding: 2rem 0;
@@ -200,7 +377,7 @@
                     <h5 class="modal-title"><i class="fas fa-user-edit me-2"></i>Edit Profile</h5>
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                 </div>
-                <form method="POST" action="{% url 'admin_profile_update' %}" enctype="multipart/form-data">
+                <form method="POST" action="{% url 'administrator:admin_profile_update' %}" enctype="multipart/form-data">
                     {% csrf_token %}
                     <div class="modal-body p-4">
                         <div class="mb-4 text-center">

@@ -1,93 +1,75 @@
 {% load static %}
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Navbar Example</title>
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-</head>
-<style>
-   .navbar {
-      background: transparent !important; /* Make navbar transparent */
-      border: none;
-      box-shadow: none;
-      padding: 0.5rem 1rem;
-      position: fixed;
-      top: 10px;
-      right: 30px;
-      left: auto; /* Remove left positioning */
-      width: auto; /* Auto width */
-      z-index: 1030;
-    }
-
-    /* Dropdown button styling */
-    .dropdown-toggle {
-      background: white;
-      border: 1px solid #e0e0e0;
-      border-radius: 8px;
-      padding: 8px 15px;
-      color: #333;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-    }
-
-    .dropdown-toggle:hover {
-      background: #f8f9fa;
-    }
-
-    /* Dropdown menu styling */
-    .dropdown-menu {
-      border: none;
-      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-      border-radius: 8px;
-      margin-top: 5px;
-    }
-
-    .dropdown-item {
-      padding: 8px 15px;
-      font-size: 0.9rem;
-      transition: background-color 0.3s ease;
-    }
-
-    .dropdown-item:hover {
-      background-color: #f8f9fa;
-    }
-
-    /* Hide navbar toggler */
-    .navbar-toggler {
-      display: none;
-    }
-</style>
-<body>
-  <div class="main-content">
-    <nav class="navbar">
-      <div class="container-fluid p-0">
-        <div class="ms-auto">
-          <ul class="navbar-nav">
-            <li class="nav-item dropdown">
-              <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
-                <i class="fas fa-user-circle me-2"></i>Admin
+<nav class="navbar">
+  <div class="container-fluid p-0">
+    <div class="ms-auto">
+      <ul class="navbar-nav">
+        <li class="nav-item dropdown">
+          <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
+            <i class="fas fa-user-circle me-2"></i>Admin
+          </a>
+          <ul class="dropdown-menu dropdown-menu-end">
+            <li>
+              <a class="dropdown-item" href="{% url 'administrator:admin_profile' %}">
+                <i class="fas fa-user me-2"></i>Profile
               </a>
-              <ul class="dropdown-menu dropdown-menu-end">
-                <li>
-                  <a class="dropdown-item" href="{% url 'admin_profile' %}">
-                    <i class="fas fa-user me-2"></i>Profile
-                  </a>
-                </li>
-                <li>
-                  <a class="dropdown-item" href="{% url 'login' %}">
-                    <i class="fas fa-sign-out-alt me-2"></i>Logout
-                  </a>
-                </li>
-              </ul>
+            </li>
+            <li>
+              <a class="dropdown-item" href="{% url 'login' %}">
+                <i class="fas fa-sign-out-alt me-2"></i>Logout
+              </a>
             </li>
           </ul>
-        </div>
-      </div>
-    </nav>
+        </li>
+      </ul>
+    </div>
   </div>
-  
-  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-</body>
-</html>
+</nav>
+
+<style>
+  .navbar {
+    background: transparent !important;
+    border: none;
+    box-shadow: none;
+    padding: 0.5rem 1rem;
+    position: fixed;
+    top: 10px;
+    right: 30px;
+    left: auto;
+    width: auto;
+    z-index: 1030;
+  }
+
+  .dropdown-toggle {
+    background: white;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    padding: 8px 15px;
+    color: #333;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+  }
+
+  .dropdown-toggle:hover {
+    background: #f8f9fa;
+  }
+
+  .dropdown-menu {
+    border: none;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    border-radius: 8px;
+    margin-top: 5px;
+  }
+
+  .dropdown-item {
+    padding: 8px 15px;
+    font-size: 0.9rem;
+    transition: background-color 0.3s ease;
+  }
+
+  .dropdown-item:hover {
+    background-color: #f8f9fa;
+  }
+
+  .navbar-toggler {
+    display: none;
+  }
+</style>

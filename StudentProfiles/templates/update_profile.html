@@ -1,0 +1,186 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Update Profile - {{ student.first_name }} {{ student.last_name }}</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        body {
+            margin-top: 70px !important;
+            background: #f8f9fa;
+        }
+
+        .form-container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 2rem 1rem;
+        }
+
+        .form-card {
+            background: white;
+            border-radius: 0.5rem;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            padding: 2rem;
+        }
+
+        .form-title {
+            color: #e3125b;
+            font-size: 1.5rem;
+            font-weight: 600;
+            margin-bottom: 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .form-label {
+            display: block;
+            color: #374151;
+            font-weight: 500;
+            margin-bottom: 0.5rem;
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid #d1d5db;
+            border-radius: 0.375rem;
+            font-size: 1rem;
+            transition: border-color 0.15s ease-in-out;
+        }
+
+        .form-input:focus {
+            outline: none;
+            border-color: #e3125b;
+            box-shadow: 0 0 0 3px rgba(227, 18, 91, 0.1);
+        }
+
+        .submit-btn {
+            background-color: #e3125b;
+            color: white;
+            padding: 0.75rem 1.5rem;
+            border-radius: 0.375rem;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+
+        .submit-btn:hover {
+            background-color: #c01049;
+            transform: translateY(-1px);
+        }
+
+        .cancel-btn {
+            background-color: #6b7280;
+            color: white;
+            padding: 0.75rem 1.5rem;
+            border-radius: 0.375rem;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            margin-right: 1rem;
+        }
+
+        .cancel-btn:hover {
+            background-color: #4b5563;
+        }
+
+        @media (max-width: 640px) {
+            .form-card {
+                padding: 1.5rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    {% include 'structures/nav.html' %}
+
+    <div class="form-container">
+        <div class="form-card">
+            <h1 class="form-title">
+                <i class="fas fa-user-edit"></i>
+                Update Profile
+            </h1>
+
+            {% if messages %}
+                {% for message in messages %}
+                    <div class="mb-4 p-4 rounded-lg {% if message.tags == 'success' %}bg-green-100 text-green-700{% else %}bg-red-100 text-red-700{% endif %}">
+                        {{ message }}
+                    </div>
+                {% endfor %}
+            {% endif %}
+
+            <form method="POST" enctype="multipart/form-data" class="space-y-6">
+                {% csrf_token %}
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <!-- Profile Photo -->
+                    <div class="form-group col-span-full">
+                        <label class="form-label">Profile Photo</label>
+                        <div class="flex items-center space-x-4">
+                            <div class="w-24 h-24 relative">
+                                {% if student.student_photo %}
+                                    <img src="{{ student.student_photo.url }}" alt="Current Profile" class="w-full h-full rounded-full object-cover">
+                                {% else %}
+                                    <img src="{% static 'images/default-profile.png' %}" alt="Default Profile" class="w-full h-full rounded-full object-cover">
+                                {% endif %}
+                            </div>
+                            <input type="file" name="student_photo" accept="image/*" class="form-input">
+                        </div>
+                    </div>
+
+                    <!-- Personal Information -->
+                    <div class="form-group">
+                        <label class="form-label" for="first_name">First Name</label>
+                        <input type="text" id="first_name" name="first_name" value="{{ student.first_name }}" class="form-input" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label" for="middle_name">Middle Name</label>
+                        <input type="text" id="middle_name" name="middle_name" value="{{ student.middle_name }}" class="form-input">
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label" for="last_name">Last Name</label>
+                        <input type="text" id="last_name" name="last_name" value="{{ student.last_name }}" class="form-input" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label" for="email">Email</label>
+                        <input type="email" id="email" name="email" value="{{ student.email }}" class="form-input" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label" for="mobile_number">Mobile Number</label>
+                        <input type="tel" id="mobile_number" name="mobile_number" value="{{ student.mobile_number }}" class="form-input">
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label" for="religion">Religion</label>
+                        <input type="text" id="religion" name="religion" value="{{ student.religion }}" class="form-input">
+                    </div>
+
+                    <div class="form-group col-span-full">
+                        <label class="form-label" for="address">Address</label>
+                        <textarea id="address" name="address" class="form-input" rows="3">{{ student.address }}</textarea>
+                    </div>
+                </div>
+
+                <div class="flex justify-end space-x-4 mt-6">
+                    <a href="{% url 'student_profile' student.id %}" class="cancel-btn">
+                        Cancel
+                    </a>
+                    <button type="submit" class="submit-btn">
+                        Save Changes
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</body>
+</html> 

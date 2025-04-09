@@ -4,7 +4,7 @@
     {% load static %}
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MNHS-SMIS</title>
+    <title>SCSHS-ARMS</title>
 
     <!-- Bootstrap 5.3 CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
@@ -32,13 +32,14 @@
             left: 0;
             right: 0;
             bottom: 0;
+            /* background: #FFFFF0; */
             background: linear-gradient(hsla(330, 78%, 56%, 0.941), rgba(102, 92, 92, 0.899));
             z-index: 1;
         }
         .login-container {
             position: relative;
             z-index: 2;
-            background: #fff;
+            background:#FFFFF0;
             padding: 2.5rem;
             border-radius: 1rem;
             box-shadow: 0 0.5rem 1.5rem rgba(0, 0, 0, 0.15);
@@ -46,7 +47,7 @@
             max-width: 420px;
         }
         .btn-primary {
-            background-color: #e73990f0;
+            background-color: #e3125b;
             border-color: #e73990f0;
         }
         .btn-primary:hover {
@@ -83,7 +84,7 @@
     </style>
 </head>
 <body>
-    <div class="login-container">
+    <div class="login-container" >
         <div class="text-center mb-4">
             <img class="school-logo" src="{% static 'img/logo.jpg' %}" alt="School Logo">
             <h2 class="h4 mb-3">Santa Catalina Science High School</h2>
@@ -114,7 +115,7 @@
         </form>
         
         <div class="text-center mt-4">
-            <a href="{% url 'forgot_password' %}" class="forgot-password fw-bold mb-1 text-decoration-underline" style="color: #e73990f0; cursor: pointer;">Forgot Password?</a>
+            <a href="{% url 'forgot_password' %}" class="forgot-password fw-bold mb-1 text-decoration-underline" style="color: #e3125b; cursor: pointer;">Forgot Password?</a>
             <p class="forgot-password"></p>
         </div>
     </div>

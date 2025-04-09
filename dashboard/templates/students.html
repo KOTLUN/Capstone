@@ -8,52 +8,85 @@
     <!-- <link rel="stylesheet" href="{% static 'css/sidebar.css' %}"> -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&family=Quicksand:wght@500;600;700&display=swap" rel="stylesheet">
 
     <style>
+        body {
+            background-color: #f8f9e3;
+            font-family: 'Poppins', sans-serif;
+        }
+        
+        .page-wrapper {
+            display: flex;
+            min-height: 100vh;
+        }
+        
+        .main-content {
+            margin-left: 250px;
+            flex: 1;
+            padding: 20px;
+            background: #f8f9e3;
+        }
+
         .card {
             border-radius: 0.75rem;
             box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
             transition: all 0.3s ease;
+            border: none;
         }
+
         .card:hover {
             box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
             transform: translateY(-3px);
         }
+
         .table-responsive {
             border-radius: 0.5rem;
             overflow: hidden;
         }
+
         .btn {
             border-radius: 0.5rem;
             padding: 0.5rem 1rem;
         }
+
         .btn-group .btn {
             border-radius: 0.375rem;
         }
+
         .form-control, .form-select {
             border-radius: 0.5rem;
             padding: 0.5rem 1rem;
         }
+
         .badge {
             padding: 0.5em 0.75em;
             font-weight: 500;
         }
+
         .modal-content {
             border-radius: 0.75rem;
             border: none;
         }
+
         .modal-header {
             border-top-left-radius: 0.75rem;
             border-top-right-radius: 0.75rem;
         }
-        .main-content {
-            background-color: #f8f9fa;
-            min-height: 100vh;
-        }
+
         .content-container {
             background-color: white;
             border-radius: 1rem;
             box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+        }
+
+        @media (max-width: 768px) {
+            .main-content {
+                margin-left: 0;
+                width: 100%;
+            }
         }
     </style>
 </head>
@@ -84,7 +117,7 @@
                 </div>
                 <div class="row mb-4">
                     <div class="col-md-8">
-                        <form method="GET" action="{% url 'students' %}" class="d-flex gap-2">
+                        <form method="GET" action="{% url 'administrator:students' %}" class="d-flex gap-2">
                             <select name="school_year" class="form-select shadow-sm">
                                 {% if active_school_year %}
                                     <option value="{{ active_school_year.display_name }}" {% if selected_year == active_school_year.display_name %}selected{% endif %}>
@@ -246,7 +279,7 @@
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
-                    <form id="edit-student-form" method="POST" action="{% url 'edit_student' %}">
+                    <form id="edit-student-form" method="POST" action="{% url 'administrator:edit_student' %}">
                         {% csrf_token %}
                         <div class="mb-3">
                             <label for="edit-student-id" class="form-label">Student ID</label>
@@ -300,7 +333,7 @@
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
-                    <form id="add-student-form" method="POST" action="{% url 'add_student' %}">
+                    <form id="add-student-form" method="POST" action="{% url 'administrator:add_student' %}">
                         {% csrf_token %}
                         <div class="row g-3">
                             <div class="col-md-6">

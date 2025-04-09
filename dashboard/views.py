@@ -1214,60 +1214,60 @@ def student_profile_view(request, student_id):
     return render(request, 'StudentProfiles/templates/student_profile.html', context)
 
 @login_required
-def student_grades_view(request, student_id):
-    student = get_object_or_404(Student, id=student_id)
-    
-    # Get current enrollment
-    current_enrollment = Enrollment.objects.filter(
-        student=student,
-        status='Active'
-    ).first()
-    
-    if current_enrollment:
-        student.section = current_enrollment.section.section_id
-        student.grade_level = current_enrollment.section.grade_level
-    
-    # Get the student's schedule to know which subjects they're enrolled in
-    student_schedules = Schedules.objects.filter(
-        section=current_enrollment.section if current_enrollment else None
-    ).select_related('subject', 'teacher')
-    
-    # Create a list to store subject grades
-    subjects_with_grades = []
-    
-    for schedule in student_schedules:
-        try:
-            # Get the latest grades for this subject
-            grades = Grades.objects.filter(
-                student=student,
-                subject=schedule.subject,
-                teacher=schedule.teacher,
-                school_year=current_enrollment.school_year if current_enrollment else None
+def student_grades_view(request):
+    try:
+        # Get active school year
+        active_school_year = SchoolYear.get_active()
+        
+        # Get all sections organized by grade level
+        sections = Sections.objects.all().order_by('grade_level', 'section_id')
+        sections_by_grade = {}
+        
+        for section in sections:
+            grade_level = section.grade_level
+            if grade_level not in sections_by_grade:
+                sections_by_grade[grade_level] = []
+            sections_by_grade[grade_level].append(section)
+        
+        # Get all subjects
+        subjects = Subject.objects.all().order_by('name')
+        
+        # Get all students with their grades
+        students = Student.objects.all().prefetch_related(
+            'grades',
+            'grades__subject',
+            'enrollments',
+            'enrollments__section'
+        )
+        
+        # Organize students by section
+        students_by_section = {}
+        for student in students:
+            current_enrollment = student.enrollments.filter(
+                status='Active',
+                school_year=active_school_year.display_name if active_school_year else None
             ).first()
             
-            subject_data = {
-                'name': schedule.subject.name,
-                'teacher': f"{schedule.teacher.first_name} {schedule.teacher.last_name}",
-                'q1_grade': grades.q1_grade if grades else None,
-                'q2_grade': grades.q2_grade if grades else None,
-                'q3_grade': grades.q3_grade if grades else None,
-                'q4_grade': grades.q4_grade if grades else None,
-                'final_grade': grades.final_grade if grades and grades.final_grade else None
-            }
-            
-            subjects_with_grades.append(subject_data)
-        except Exception as e:
-            print(f"Error getting grades for subject {schedule.subject.name}: {str(e)}")
-            continue
-    
-    context = {
-        'student': student,
-        'subjects': subjects_with_grades,
-        'current_quarter': get_current_quarter(),
-        'school_year': current_enrollment.school_year if current_enrollment else None
-    }
-    
-    return render(request, 'grades.html', context)
+            if current_enrollment:
+                section_id = current_enrollment.section.id
+                if section_id not in students_by_section:
+                    students_by_section[section_id] = []
+                students_by_section[section_id].append(student)
+        
+        context = {
+            'sections_by_grade': sections_by_grade,
+            'subjects': subjects,
+            'students_by_section': students_by_section,
+            'active_school_year': active_school_year,
+        }
+        
+        return render(request, 'studentgrades.html', context)
+    except Exception as e:
+        print(f"Error in student_grades_view: {str(e)}")
+        return render(request, 'studentgrades.html', {
+            'error': f'Error: {str(e)}',
+            'user': request.user
+        })
 
 def get_current_quarter():
     """Helper function to determine current quarter based on date"""

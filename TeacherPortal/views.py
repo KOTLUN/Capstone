@@ -1456,7 +1456,7 @@ def update_grade(request):
         
         # Get all required data from the form
         student_id = request.POST.get('student_id')
-        subject_id = request.POST.get('subject')  # Changed from subject_id to subject to match form
+        subject_id = request.POST.get('subject')
         quarter = request.POST.get('quarter')
         grade_value = request.POST.get('grade')
         remarks = request.POST.get('remarks', '')
@@ -1521,7 +1521,7 @@ def update_grade(request):
                     'error': 'You are not authorized to grade this subject'
                 })
                 
-            # For debugging, let's print info about the student
+            # Get the student object
             try:
                 student_obj = Student.objects.get(student_id=student_id)
                 print(f"Found student: {student_obj.first_name} {student_obj.last_name} (ID: {student_obj.student_id})")
@@ -1531,9 +1531,9 @@ def update_grade(request):
                     'error': f'Student with ID {student_id} not found'
                 })
             
-            # Create or update the grade using only fields that exist in the model
+            # Create or update the grade in TeacherPortal
             try:
-                # Check if grade already exists
+                # Check if grade already exists in TeacherPortal
                 try:
                     grade = Grade.objects.get(
                         student=student_id,
@@ -1546,7 +1546,7 @@ def update_grade(request):
                     grade.save()
                     created = False
                 except Grade.DoesNotExist:
-                    # Create a new grade
+                    # Create a new grade in TeacherPortal
                     grade = Grade.objects.create(
                         student=student_id,
                         course=subject.subject_id,
@@ -1557,8 +1557,24 @@ def update_grade(request):
                     )
                     created = True
                 
-                # For debugging, print details about what was saved
-                print(f"Grade {'created' if created else 'updated'}: {grade.id}, value: {grade.grade}")
+                # Create or update the grade in Dashboard
+                try:
+                    dashboard_grade, dashboard_created = dashboard.models.Grades.objects.update_or_create(
+                        student=student_obj,
+                        subject=subject,
+                        quarter=quarter,
+                        school_year=school_year,
+                        defaults={
+                            'grade': Decimal(str(grade_value)),
+                            'status': 'draft',
+                            'remarks': remarks,
+                            'teacher': teacher
+                        }
+                    )
+                    print(f"Dashboard grade {'created' if dashboard_created else 'updated'}: {dashboard_grade.id}")
+                except Exception as dashboard_error:
+                    print(f"Error saving to dashboard: {str(dashboard_error)}")
+                    # Continue even if dashboard save fails, but log the error
                 
                 # Create a comment if there are remarks
                 if remarks and remarks.strip():

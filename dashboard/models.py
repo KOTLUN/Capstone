@@ -1,6 +1,8 @@
 from django.db import models
 from django.contrib.auth.models import User
 from django.utils import timezone
+from django.core.validators import MinValueValidator, MaxValueValidator
+from django.apps import apps
 
 
 # Create your models here.
@@ -36,8 +38,9 @@ class Student(models.Model):
 
     def get_grade_for_subject(self, subject):
         """Get the latest grade for this student in the given subject"""
-        from TeacherPortal.models import Grade
         try:
+            # Get TeacherPortal Grade model using apps.get_model
+            Grade = apps.get_model('TeacherPortal', 'Grade')
             # Try to get the latest grade for this student in this subject
             grade = Grade.objects.filter(
                 student=self.student_id,
@@ -354,35 +357,97 @@ class Guardian(models.Model):
     
 
 class Grades(models.Model):
+    QUARTER_CHOICES = [
+        ('1', 'First Quarter'),
+        ('2', 'Second Quarter'),
+        ('3', 'Third Quarter'),
+        ('4', 'Fourth Quarter'),
+    ]
+    
+    STATUS_CHOICES = [
+        ('draft', 'Draft'),
+        ('submitted', 'Submitted'),
+        ('approved', 'Approved'),
+        ('returned', 'Returned for Revision'),
+    ]
+    
     student = models.ForeignKey(Student, on_delete=models.CASCADE, related_name='grades')
     subject = models.ForeignKey(Subject, on_delete=models.CASCADE)
     teacher = models.ForeignKey(Teachers, on_delete=models.CASCADE)
-    school_year = models.CharField(max_length=9)  # e.g., "2023-2024"
-    q1_grade = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
-    q2_grade = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
-    q3_grade = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
-    q4_grade = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
-    final_grade = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
+    grade = models.DecimalField(max_digits=5, decimal_places=2, validators=[MinValueValidator(0), MaxValueValidator(100)], default=0)
+    quarter = models.CharField(max_length=2, choices=QUARTER_CHOICES)
+    school_year = models.CharField(max_length=20)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='draft', blank=True, null=True)
+    remarks = models.TextField(blank=True, null=True)
     date_created = models.DateTimeField(auto_now_add=True)
-    date_updated = models.DateTimeField(auto_now=True)
+    date_modified = models.DateTimeField(auto_now=True)
+    date_submitted = models.DateTimeField(null=True, blank=True)
+    date_approved = models.DateTimeField(null=True, blank=True)
+    uploaded_at = models.DateTimeField(default=timezone.now)
 
     class Meta:
         verbose_name = 'Grade'
         verbose_name_plural = 'Grades'
-        unique_together = ['student', 'subject', 'teacher', 'school_year']
+        unique_together = ['student', 'subject', 'teacher', 'quarter', 'school_year']
+        ordering = ['-date_created']
 
     def __str__(self):
-        return f"{self.student.first_name} {self.student.last_name} - {self.subject.name} ({self.school_year})"
+        return f"{self.student.first_name} {self.student.last_name} - {self.subject.name} - Q{self.quarter}"
+    
+    def save(self, *args, **kwargs):
+        # Set default status if not provided
+        if self.status is None:
+            self.status = 'draft'
+            
+        # If status changed to submitted, update the submitted timestamp
+        if self.status == 'submitted' and not self.date_submitted:
+            self.date_submitted = timezone.now()
+            
+        # If status changed to approved, update the approved timestamp
+        if self.status == 'approved' and not self.date_approved:
+            self.date_approved = timezone.now()
+            
+        super().save(*args, **kwargs)
+        
+        # Sync with TeacherPortal after saving
+        try:
+            sync_utils = apps.get_app_config('TeacherPortal').sync_utils
+            sync_utils.sync_grades_from_dashboard()
+        except Exception as e:
+            print(f"Error syncing grade to TeacherPortal: {e}")
+    
+    @property
+    def letter_grade(self):
+        """Convert numerical grade to letter grade"""
+        if self.grade >= 90:
+            return "A"
+        elif self.grade >= 80:
+            return "B"
+        elif self.grade >= 70:
+            return "C"
+        elif self.grade >= 60:
+            return "D"
+        else:
+            return "F"
+    
+    @property
+    def is_passing(self):
+        """Check if grade is passing (assumes 75 as passing)"""
+        return self.grade >= 75
 
-    def calculate_final_grade(self):
-        grades = [self.q1_grade, self.q2_grade, self.q3_grade, self.q4_grade]
-        valid_grades = [grade for grade in grades if grade is not None]
-        if valid_grades:
-            self.final_grade = sum(valid_grades) / len(valid_grades)
-        return self.final_grade
-    
-    
-    
+class GradeComment(models.Model):
+    """Model for comments on grades (teachers, coordinators, etc.)"""
+    grade = models.ForeignKey(Grades, on_delete=models.CASCADE, related_name='dashboard_comments')
+    author = models.ForeignKey(Teachers, on_delete=models.CASCADE, related_name='dashboard_grade_comments')
+    comment = models.TextField()
+    date_created = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-date_created']
+
+    def __str__(self):
+        return f"Comment on {self.grade} by {self.author}"
+
 
 class AdminProfile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE)

@@ -1,0 +1,472 @@
+{% load static %}
+{% load grade_filters %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Student Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <!-- Chart.js for analytics -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body {
+            margin-top: 70px !important;
+            background: #f8f9fa;
+        }
+
+        .dashboard-card {
+            background: white;
+            border-radius: 0.5rem;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            padding: 1rem;
+            height: 100%;
+            width: 100%;
+            overflow-x: auto;
+        }
+
+        @media (min-width: 768px) {
+            .dashboard-card {
+                padding: 1.5rem;
+            }
+        }
+
+        .card-header {
+            color: #e3125b;
+            font-size: 1.125rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        @media (min-width: 768px) {
+            .card-header {
+                font-size: 1.25rem;
+            }
+        }
+
+        .stat-card {
+            background: #fff6fa;
+            border-left: 4px solid #e3125b;
+            padding: 0.75rem;
+            border-radius: 0.5rem;
+            width: 100%;
+        }
+
+        @media (min-width: 768px) {
+            .stat-card {
+                padding: 1rem;
+            }
+        }
+
+        .schedule-item {
+            border-left: 4px solid #e3125b;
+            padding: 0.75rem;
+            margin-bottom: 0.5rem;
+            background: #fff6fa;
+            border-radius: 0.25rem;
+        }
+
+        .grade-badge {
+            background: #e3125b;
+            color: white;
+            padding: 0.25rem 0.5rem;
+            border-radius: 9999px;
+            font-weight: 600;
+            font-size: 0.875rem;
+        }
+
+        @media (min-width: 768px) {
+            .grade-badge {
+                padding: 0.25rem 0.75rem;
+            }
+        }
+
+        .dashboard-container {
+            width: 100%;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 1rem 0.5rem;
+        }
+
+        @media (min-width: 640px) {
+            .dashboard-container {
+                padding: 1.5rem 1rem;
+            }
+        }
+
+        @media (min-width: 768px) {
+            .dashboard-container {
+                padding: 2rem 1rem;
+            }
+        }
+
+        /* Enhanced table responsiveness */
+        .table-container {
+            width: 100%;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+            scrollbar-width: thin;
+            position: relative;
+            margin: 0 -1rem;
+            padding: 0 1rem;
+        }
+
+        .table-container::-webkit-scrollbar {
+            height: 6px;
+        }
+
+        .table-container::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 3px;
+        }
+
+        .table-container::-webkit-scrollbar-thumb {
+            background: #e3125b;
+            border-radius: 3px;
+        }
+
+        .table-container table {
+            min-width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
+        }
+
+        .table-container td, 
+        .table-container th {
+            white-space: nowrap;
+            padding: 0.75rem 1rem;
+            min-width: 120px;
+        }
+
+        @media (max-width: 640px) {
+            .table-container {
+                margin: 0 -0.5rem;
+                padding: 0 0.5rem;
+            }
+
+            .table-container td, 
+            .table-container th {
+                padding: 0.5rem 0.75rem;
+                min-width: 100px;
+            }
+        }
+
+        /* Add horizontal scroll indicator */
+        .scroll-indicator {
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 0.5rem;
+            color: #666;
+            font-size: 0.875rem;
+            margin-bottom: 0.5rem;
+        }
+
+        @media (max-width: 768px) {
+            .scroll-indicator {
+                display: flex;
+            }
+        }
+
+        .scroll-indicator i {
+            animation: scrollHint 1.5s infinite;
+            margin: 0 0.25rem;
+        }
+
+        @keyframes scrollHint {
+            0%, 100% { transform: translateX(0); }
+            50% { transform: translateX(10px); }
+        }
+
+        /* Chart responsiveness */
+        canvas {
+            max-width: 100%;
+            height: auto !important;
+        }
+    </style>
+</head>
+<body>
+    {% include 'structures/nav.html' %}
+
+    <div class="dashboard-container">
+        <!-- Welcome Section -->
+        <div class="text-center mb-8">
+            <h1 class="text-3xl font-bold text-gray-800">Welcome back, {{ student.first_name }}!</h1>
+            <p class="text-gray-600">Here's your academic overview</p>
+        </div>
+
+        <!-- Quick Stats -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 md:gap-6 mb-6 md:mb-8">
+            <div class="stat-card">
+                <div class="text-sm text-gray-600">School Year</div>
+                <div class="text-xl font-bold text-gray-800">{{ current_enrollment.school_year }}</div>
+                <div class="text-xs text-green-600">Active</div>
+            </div>
+            <div class="stat-card">
+                <div class="text-sm text-gray-600">Year Level</div>
+                <div class="text-xl font-bold text-gray-800">Grade {{ current_enrollment.section.grade_level }}-{{ current_enrollment.section.section_id }}</div>
+                <!-- <div class="text-xs text-gray-500">{{ current_enrollment.section.section_id }}</div> -->
+            </div>
+            <div class="stat-card">
+                <div class="text-sm text-gray-600">Subjects</div>
+                <div class="text-xl font-bold text-gray-800">{{ subjects|length }}</div>
+                <div class="text-xs text-gray-500">Currently Enrolled</div>
+            </div>
+            <div class="stat-card">
+                <div class="text-sm text-gray-600">Overall Average</div>
+                <div class="text-xl font-bold text-gray-800">{{ overall_average }}%</div>
+                <div class="text-xs {% if overall_average >= 85 %}text-green-600{% else %}text-yellow-600{% endif %}">
+                    {% if overall_average >= 85 %}Above Average{% else %}Average{% endif %}
+                </div>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6 mb-6 md:mb-8">
+            <!-- Grade Analytics -->
+            <div class="dashboard-card">
+                <div class="card-header">
+                    <i class="fas fa-chart-line"></i>
+                    Grade Analytics
+                </div>
+                
+                <!-- Debug Info (only visible during development) -->
+                <!-- {% if debug %}
+                <div class="bg-gray-100 p-4 mb-4 rounded text-sm">
+                    <p>Debug Info:</p>
+                    <p>Student ID: {{ debug_student_id }}</p>
+                    <p>School Year: {{ debug_school_year }}</p>
+                    <p>Number of subjects: {{ subjects|length }}</p>
+                    <p>Number of detailed grades: {{ detailed_grades|length }}</p>
+                </div>
+                {% endif %}
+                 -->
+                <canvas id="gradeChart" width="400" height="200" class="mb-6"></canvas>
+                
+                <!-- Detailed Grades Table -->
+                <div class="overflow-x-auto mt-6">
+                    <div class="scroll-indicator">
+                        <i class="fas fa-arrow-left"></i>
+                        Swipe to see more
+                        <i class="fas fa-arrow-right"></i>
+                    </div>
+                    <div class="table-container">
+                        <table class="min-w-full">
+                            <thead>
+                                <tr class="text-left border-b border-gray-200">
+                                    <th class="py-3 px-4 text-sm font-semibold text-gray-600">Subject</th>
+                                    <th class="py-3 px-4 text-sm font-semibold text-gray-600">1st Quarter</th>
+                                    <th class="py-3 px-4 text-sm font-semibold text-gray-600">2nd Quarter</th>
+                                    <th class="py-3 px-4 text-sm font-semibold text-gray-600">3rd Quarter</th>
+                                    <th class="py-3 px-4 text-sm font-semibold text-gray-600">4th Quarter</th>
+                                    <th class="py-3 px-4 text-sm font-semibold text-gray-600">Average</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for grade in detailed_grades %}
+                                <tr class="hover:bg-gray-50 {% cycle 'bg-white' 'bg-gray-50' %}">
+                                    <td class="py-3 px-4">
+                                        <div class="font-medium text-gray-800">{{ grade.subject }}</div>
+                                    </td>
+                                    {% for quarter_grade in grade.quarterly_grades %}
+                                    <td class="py-3 px-4">
+                                        {% if quarter_grade > 0 %}
+                                        <span class="inline-flex items-center justify-center px-2.5 py-0.5 rounded-full text-sm
+                                            {% if quarter_grade >= 75 %}
+                                                bg-green-100 text-green-800
+                                            {% else %}
+                                                bg-red-100 text-red-800
+                                            {% endif %}
+                                        ">
+                                            {{ quarter_grade|floatformat:2 }}
+                                        </span>
+                                        {% else %}
+                                        <span class="text-gray-400">--</span>
+                                        {% endif %}
+                                    </td>
+                                    {% endfor %}
+                                    <td class="py-3 px-4">
+                                        {% if grade.average > 0 %}
+                                        <span class="inline-flex items-center justify-center px-2.5 py-0.5 rounded-full text-sm font-medium
+                                            {% if grade.average >= 75 %}
+                                                bg-blue-100 text-blue-800
+                                            {% else %}
+                                                bg-yellow-100 text-yellow-800
+                                            {% endif %}
+                                        ">
+                                            {{ grade.average|floatformat:2 }}
+                                        </span>
+                                        {% else %}
+                                        <span class="text-gray-400">--</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="6" class="py-4 px-4 text-center text-gray-500">
+                                        No grades available
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Current Subjects and Grades -->
+            <div class="dashboard-card">
+                <div class="card-header">
+                    <i class="fas fa-book"></i>
+                    Current Subjects
+                </div>
+                <div class="space-y-4">
+                    {% for subject in subjects %}
+                    <div class="flex justify-between items-center p-3 bg-gray-50 rounded hover:bg-gray-100 transition-colors">
+                        <div>
+                            <div class="font-medium text-gray-800">{{ subject.name }}</div>
+                            <div class="text-sm text-gray-500">{{ subject.teacher.full_name }}</div>
+                        </div>
+                        <div class="text-right">
+                            <span class="grade-badge">
+                                {{ subject.current_grade }}
+                            </span>
+                            <div class="text-xs text-gray-500 mt-1">Current Grade</div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Schedule -->
+        <div class="dashboard-card">
+            <div class="card-header">
+                <i class="fas fa-calendar"></i>
+                Class Schedule
+            </div>
+            <div class="scroll-indicator">
+                <i class="fas fa-arrow-left"></i>
+                Swipe to see more
+                <i class="fas fa-arrow-right"></i>
+            </div>
+            <div class="table-container">
+                <table class="min-w-full">
+                    <thead>
+                        <tr class="text-left border-b border-gray-200">
+                            <th class="py-3 px-4 text-sm font-semibold text-gray-600">Time</th>
+                            <th class="py-3 px-4 text-sm font-semibold text-gray-600">Subject</th>
+                            <th class="py-3 px-4 text-sm font-semibold text-gray-600">Room</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for slot in schedule %}
+                        <tr class="hover:bg-gray-50 {% cycle 'bg-white' 'bg-gray-50' %}">
+                            <td class="py-3 px-4 text-sm text-gray-500">
+                                {{ slot.start_time|time:"g:i A" }} - {{ slot.end_time|time:"g:i A" }}
+                            </td>
+                            <td class="py-3 px-4">
+                                <div class="font-medium text-gray-800">{{ slot.subject.name }}</div>
+                            </td>
+                            <td class="py-3 px-4 text-sm text-gray-600">Room {{ slot.room }}</td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="3" class="py-4 px-4 text-center text-gray-500">
+                                No schedule available
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Grade Analytics Chart with dynamic data
+        const ctx = document.getElementById('gradeChart').getContext('2d');
+        const quarters = JSON.parse('{{ quarters|safe|escapejs }}');
+        const subjectGradesData = JSON.parse('{{ subject_grades_data|safe|escapejs }}');
+        
+        console.log('Quarters:', quarters);
+        console.log('Subject Grades Data:', subjectGradesData);
+        
+        // Generate colors for each subject
+        function generateColor(index) {
+            const colors = [
+                '#e3125b', // Pink (primary)
+                '#2563eb', // Blue
+                '#16a34a', // Green
+                '#ca8a04', // Yellow
+                '#9333ea', // Purple
+                '#0891b2', // Cyan
+                '#ea580c', // Orange
+                '#be185d'  // Dark Pink
+            ];
+            return colors[index % colors.length];
+        }
+        
+        // Prepare datasets for each subject
+        const datasets = Object.entries(subjectGradesData).map(([subject, grades], index) => {
+            const color = generateColor(index);
+            return {
+                label: subject,
+                data: grades,
+                borderColor: color,
+                backgroundColor: `${color}20`,
+                tension: 0.4,
+                fill: true
+            };
+        });
+        
+        console.log('Chart Datasets:', datasets);
+        
+        new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: quarters,
+                datasets: datasets
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: {
+                        display: true,
+                        position: 'bottom',
+                        labels: {
+                            usePointStyle: true,
+                            padding: 20,
+                            font: {
+                                size: 12
+                            }
+                        }
+                    },
+                    tooltip: {
+                        mode: 'index',
+                        intersect: false
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: false,
+                        min: 70,
+                        max: 100,
+                        ticks: {
+                            stepSize: 5
+                        }
+                    }
+                },
+                interaction: {
+                    mode: 'nearest',
+                    axis: 'x',
+                    intersect: false
+                }
+            }
+        });
+    </script>
+</body>
+</html>

@@ -1,7 +1,7 @@
 from django.db import models
 from django.utils import timezone
 from django.core.validators import MinValueValidator, MaxValueValidator
-from dashboard.models import Student, Subject, Teachers, Sections
+from .sync_utils import sync_grades_to_dashboard
 
 class Grade(models.Model):
     QUARTER_CHOICES = [
@@ -53,6 +53,12 @@ class Grade(models.Model):
             self.date_approved = timezone.now()
             
         super().save(*args, **kwargs)
+        
+        # Sync with dashboard after saving
+        try:
+            sync_grades_to_dashboard()
+        except Exception as e:
+            print(f"Error syncing grade to dashboard: {e}")
     
     @property
     def letter_grade(self):
@@ -77,7 +83,7 @@ class Grade(models.Model):
 class GradeComment(models.Model):
     """Model for comments on grades (teachers, coordinators, etc.)"""
     grade = models.ForeignKey(Grade, on_delete=models.CASCADE, related_name='comments')
-    author = models.ForeignKey(Teachers, on_delete=models.CASCADE)
+    author = models.CharField(max_length=100)  # Teacher ID
     comment = models.TextField()
     date_created = models.DateTimeField(auto_now_add=True)
 

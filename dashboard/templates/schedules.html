@@ -6,318 +6,321 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Teacher Scheduling - Web ARMS</title>
+    <link rel="stylesheet" href="{% static 'css/sidebar.css' %}">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.datatables.net/1.11.5/css/dataTables.bootstrap5.min.css" rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&family=Quicksand:wght@500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body>
-    <div class="container-fluid">
+    <div class="page-wrapper">
         {% include 'structures/sidebar.html' %}
-        <div class="row">
-            <div class="col main-content">
-          
-            
-            <div class="d-flex justify-content-between align-items-center mb-4">
-                <h1 class="h3">Teacher Scheduling</h1>
-                <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addScheduleModal">
-                    Add New Schedule
-                </button>
-            </div>
-
-            <div class="row mt-4" style="margin-bottom: 20px;">
-                <div class="col-12">
-                    <div class="card">
-                        <div class="card-header bg-primary text-white">
-                            <h5 class="mb-0">Available Sections</h5>
-                        </div>
-                        <div class="card-body">
-                            <!-- Search and Filter -->
-                            <div class="row mb-4">
-                                <div class="col-md-6">
-                                    <div class="input-group">
-                                        <span class="input-group-text"><i class="fas fa-search"></i></span>
-                                        <input type="text" class="form-control" id="searchSection" placeholder="Search sections...">
-                                    </div>
-                                </div>
-                                <div class="col-md-6">
-                                    <div class="input-group">
-                                        <span class="input-group-text">Filter by Grade</span>
-                                        <select class="form-select" id="filterGradeLevel">
-                                            <option value="all" selected>All Grade Levels</option>
-                                            {% for grade in grade_levels %}
-                                            <option value="{{ grade }}">Grade {{ grade }}</option>
-                                            {% endfor %}
-                                        </select>
-                                    </div>
-                                </div>
-                            </div>
-                           
-
-                            <!-- Sections Card View -->
-                            <div class="row" id="sectionsContainer">
-                                {% for section in sections %}
-                                <div class="col-md-4 section-item mb-4" data-grade="{{ section.grade_level }}">
-                                    <div class="card section-card h-100">
-                                        <div class="card-header {% cycle 'bg-primary' 'bg-success' 'bg-info' 'bg-warning' 'bg-danger' 'bg-secondary' %} text-white d-flex justify-content-between align-items-center">
-                                            <h5 class="card-title mb-0">Grade {{ section.grade_level }}</h5>
-                                            <button class="btn btn-light btn-sm view-schedule-btn" 
-                                                    data-section-id="{{ section.id }}"
-                                                    data-bs-toggle="tooltip" 
-                                                    title="View Weekly Schedule">
-                                                <i class="fas fa-calendar-week"></i>
-                                            </button>
-                                        </div>
-                                        <div class="card-body">
-                                            <h6 class="card-subtitle mb-2">Section: {{ section.section_id }}</h6>
-                                            <p class="card-text">
-                                                <strong>Adviser:</strong> {{ section.adviser.first_name }} {{ section.adviser.last_name }}
-                                            </p>
-                                        </div>
-                                    </div>
-                                </div>
-                                {% empty %}
-                                <div class="col-12 text-center py-4">
-                                    <i class="fas fa-folder-open fa-3x text-muted mb-3"></i>
-                                    <h5>No Sections Available</h5>
-                                    <p class="text-muted">No sections have been created yet.</p>
-                                </div>
-                                {% endfor %}
-                            </div>
-                        </div>
-                    </div>
+        <div class="main-content">
+            <div class="content-container p-4">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h1 class="h3">Teacher Scheduling</h1>
+                    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addScheduleModal">
+                        Add New Schedule
+                    </button>
                 </div>
-            </div>
 
-            <!-- Add this after the sections card and before the Add Schedule Modal -->
-
-            <div class="row mt-4" style="margin-bottom: 20px;">
-                <div class="col-12">
-                    <div class="card">
-                        <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
-                            <h5 class="mb-0">Teacher Schedules</h5>
-                        </div>
-                        <div class="card-body">
-                            <!-- Search and Filter -->
-                            <div class="row mb-4">
-                                <div class="col-md-6">
-                                    <div class="input-group">
-                                        <span class="input-group-text"><i class="fas fa-search"></i></span>
-                                        <input type="text" class="form-control" id="searchTeacher" placeholder="Search teachers...">
-                                    </div>
-                                </div>
-                                <div class="col-md-6">
-                                    <div class="input-group">
-                                        <span class="input-group-text">Filter by Role</span>
-                                        <select class="form-select" id="filterTeacherRole">
-                                            <option value="all" selected>All Teachers</option>
-                                            <option value="adviser">Advisers</option>
-                                            <option value="subject">Subject Teachers</option>
-                                        </select>
-                                    </div>
-                                </div>
+                <div class="row mt-4" style="margin-bottom: 20px;">
+                    <div class="col-12">
+                        <div class="card">
+                            <div class="card-header bg-primary text-white">
+                                <h5 class="mb-0">Available Sections</h5>
                             </div>
-
-                            <!-- Teachers Card View -->
-                            <div class="row" id="teachersContainer">
-                                {% for teacher in teachers %}
-                                <div class="col-md-4 teacher-item mb-4" 
-                                     data-role="{% if teacher.sections.exists %}adviser{% else %}subject{% endif %}">
-                                    <div class="card teacher-card h-100">
-                                        <div class="card-header {% cycle 'bg-primary' 'bg-success' 'bg-info' 'bg-warning' 'bg-danger' 'bg-secondary' %} text-white d-flex justify-content-between align-items-center">
-                                            <h5 class="card-title mb-0">{{ teacher.first_name }} {{ teacher.last_name }}</h5>
-                                            <div>
-                                                <button class="btn btn-light btn-sm view-teacher-schedule-btn" 
-                                                        data-teacher-id="{{ teacher.id }}"
-                                                        data-bs-toggle="tooltip" 
-                                                        title="View Weekly Schedule">
-                                                    <i class="fas fa-calendar-week"></i>
-                                                </button>
-                                            </div>
-                                        </div>
-                                        <div class="card-body">
-                                            <h6 class="card-subtitle mb-2">ID: {{ teacher.teacher_id }}</h6>
-                                            <p class="card-text">
-                                                <strong>Role:</strong> 
-                                                {% with role_info=teacher_roles|get_item:teacher.id %}
-                                                    {% if role_info.role == 'adviser' %}
-                                                        Adviser ({{ role_info.section }})
-                                                    {% else %}
-                                                        Subject Teacher
-                                                    {% endif %}
-                                                {% endwith %}
-                                            </p>
-                                            <p class="card-text">
-                                                <strong>Subjects:</strong><br>
-                                                {% with teacher_subject_list=teacher_subjects|get_item:teacher.id %}
-                                                    {% if teacher_subject_list %}
-                                                        {% for subject in teacher_subject_list %}
-                                                            <span class="badge bg-secondary me-1">{{ subject.name }}</span>
-                                                        {% endfor %}
-                                                    {% else %}
-                                                        <span class="text-muted">No subjects assigned</span>
-                                                    {% endif %}
-                                                {% endwith %}
-                                            </p>
-                                        </div>
-                                    </div>
-                                </div>
-                                {% empty %}
-                                <div class="col-12 text-center py-4">
-                                    <i class="fas fa-user-tie fa-3x text-muted mb-3"></i>
-                                    <h5>No Teachers Available</h5>
-                                    <p class="text-muted">No teachers have been added yet.</p>
-                                </div>
-                                {% endfor %}
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Schedule Table
-            <div class="card">
-                <div class="card-body">
-                    <table class="table table-striped" id="scheduleTable">
-                        <thead>
-                            <tr>
-                                <th>Teacher</th>
-                                <th>Subject</th>
-                                <th>Grade Level</th>
-                                <th>Section</th>
-                                <th>Day</th>
-                                <th>Time</th>
-                                <th>Room</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for schedule in schedules %}
-                            <tr>
-                                <td>{{ schedule.teacher_id.first_name }} {{ schedule.teacher_id.last_name }}</td>
-                                <td>{{ schedule.subject.name }}</td>
-                                <td>{{ schedule.grade_level }}</td>
-                                <td>{{ schedule.section.section_id }}</td>
-                                <td>{{ schedule.day }}</td>
-                                <td>{{ schedule.start_time|time:"H:i" }} - {{ schedule.end_time|time:"H:i" }}</td>
-                                <td>{{ schedule.room }}</td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
-            </div> -->
-
-            <!-- Add Schedule Modal -->
-            <div class="modal fade" id="addScheduleModal" tabindex="-1">
-                <div class="modal-dialog modal-lg">
-                    <div class="modal-content">
-                        <div class="modal-header bg-primary text-white">
-                            <h5 class="modal-title">Add New Schedule</h5>
-                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-                        </div>
-                        <form id="addScheduleForm" method="POST" action="{% url 'add_schedule' %}">
-                            {% csrf_token %}
-                            <div class="modal-body p-4">
-                                <div class="row g-4">
+                            <div class="card-body">
+                                <!-- Search and Filter -->
+                                <div class="row mb-4">
                                     <div class="col-md-6">
-                                        <div class="mb-3">
-                                            <label for="teacher" class="form-label fw-bold">Teacher</label>
-                                            <select class="form-select shadow-sm" id="teacher" name="teacher_id" required>
-                                                <option value="">Select Teacher</option>
-                                                {% for teacher in teachers %}
-                                                <option value="{{ teacher.id }}">{{ teacher.first_name }} {{ teacher.last_name }}</option>
-                                                {% endfor %}
-                                            </select>
+                                        <div class="input-group">
+                                            <span class="input-group-text"><i class="fas fa-search"></i></span>
+                                            <input type="text" class="form-control" id="searchSection" placeholder="Search sections...">
                                         </div>
                                     </div>
                                     <div class="col-md-6">
-                                        <div class="mb-3">
-                                            <label for="subject" class="form-label fw-bold">Subject</label>
-                                            <select class="form-select shadow-sm" id="subject" name="subject" required>
-                                                <option value="">Select Subject</option>
-                                                {% for subject in subjects %}
-                                                <option value="{{ subject.id }}">{{ subject.name }}</option>
-                                                {% endfor %}
-                                            </select>
-                                        </div>
-                                    </div>
-                                    <div class="col-md-6">
-                                        <div class="mb-3">
-                                            <label for="gradeLevel" class="form-label fw-bold">Grade Level</label>
-                                            <select class="form-select shadow-sm" id="gradeLevel" name="grade_level" required>
-                                                <option value="">Select Grade Level</option>
+                                        <div class="input-group">
+                                            <span class="input-group-text">Filter by Grade</span>
+                                            <select class="form-select" id="filterGradeLevel">
+                                                <option value="all" selected>All Grade Levels</option>
                                                 {% for grade in grade_levels %}
                                                 <option value="{{ grade }}">Grade {{ grade }}</option>
                                                 {% endfor %}
                                             </select>
                                         </div>
                                     </div>
-                                    <div class="col-md-6">
-                                        <div class="mb-3">
-                                            <label for="section" class="form-label fw-bold">Section</label>
-                                            <select class="form-select shadow-sm" id="section" name="section" required>
-                                                <option value="">Select Section</option>
-                                            </select>
-                                        </div>
-                                    </div>
-                                    <div class="col-md-12">
-                                        <div class="mb-3">
-                                            <label class="form-label fw-bold">Days</label>
-                                            <div class="d-flex flex-wrap gap-3">
-                                                <div class="form-check">
-                                                    <input class="form-check-input" type="checkbox" name="days[]" value="Monday" id="dayMonday">
-                                                    <label class="form-check-label" for="dayMonday">Monday</label>
-                                                </div>
-                                                <div class="form-check">
-                                                    <input class="form-check-input" type="checkbox" name="days[]" value="Tuesday" id="dayTuesday">
-                                                    <label class="form-check-label" for="dayTuesday">Tuesday</label>
-                                                </div>
-                                                <div class="form-check">
-                                                    <input class="form-check-input" type="checkbox" name="days[]" value="Wednesday" id="dayWednesday">
-                                                    <label class="form-check-label" for="dayWednesday">Wednesday</label>
-                                                </div>
-                                                <div class="form-check">
-                                                    <input class="form-check-input" type="checkbox" name="days[]" value="Thursday" id="dayThursday">
-                                                    <label class="form-check-label" for="dayThursday">Thursday</label>
-                                                </div>
-                                                <div class="form-check">
-                                                    <input class="form-check-input" type="checkbox" name="days[]" value="Friday" id="dayFriday">
-                                                    <label class="form-check-label" for="dayFriday">Friday</label>
-                                                </div>
+                                </div>
+                               
+
+                                <!-- Sections Card View -->
+                                <div class="row" id="sectionsContainer">
+                                    {% for section in sections %}
+                                    <div class="col-md-4 section-item mb-4" data-grade="{{ section.grade_level }}">
+                                        <div class="card section-card h-100">
+                                            <div class="card-header {% cycle 'bg-primary' 'bg-success' 'bg-info' 'bg-warning' 'bg-danger' 'bg-secondary' %} text-white d-flex justify-content-between align-items-center">
+                                                <h5 class="card-title mb-0">Grade {{ section.grade_level }}</h5>
+                                                <button class="btn btn-light btn-sm view-schedule-btn" 
+                                                        data-section-id="{{ section.id }}"
+                                                        data-bs-toggle="tooltip" 
+                                                        title="View Weekly Schedule">
+                                                    <i class="fas fa-calendar-week"></i>
+                                                </button>
+                                            </div>
+                                            <div class="card-body">
+                                                <h6 class="card-subtitle mb-2">Section: {{ section.section_id }}</h6>
+                                                <p class="card-text">
+                                                    <strong>Adviser:</strong> {{ section.adviser.first_name }} {{ section.adviser.last_name }}
+                                                </p>
                                             </div>
                                         </div>
                                     </div>
-                                    <div class="col-md-12">
-                                        <div class="mb-3">
-                                            <label for="timeSlot" class="form-label fw-bold">Time Slot</label>
-                                            <select class="form-select shadow-sm" id="timeSlot" required>
-                                                <option value="">Select Time Slot</option>
-                                            </select>
-                                            <small class="text-muted">
-                                                <i class="fas fa-info-circle"></i> Available time slots are shown based on teacher's schedule
-                                            </small>
+                                    {% empty %}
+                                    <div class="col-12 text-center py-4">
+                                        <i class="fas fa-folder-open fa-3x text-muted mb-3"></i>
+                                        <h5>No Sections Available</h5>
+                                        <p class="text-muted">No sections have been created yet.</p>
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Add this after the sections card and before the Add Schedule Modal -->
+
+                <div class="row mt-4" style="margin-bottom: 20px;">
+                    <div class="col-12">
+                        <div class="card">
+                            <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                                <h5 class="mb-0">Teacher Schedules</h5>
+                            </div>
+                            <div class="card-body">
+                                <!-- Search and Filter -->
+                                <div class="row mb-4">
+                                    <div class="col-md-6">
+                                        <div class="input-group">
+                                            <span class="input-group-text"><i class="fas fa-search"></i></span>
+                                            <input type="text" class="form-control" id="searchTeacher" placeholder="Search teachers...">
                                         </div>
                                     </div>
-                                    <input type="hidden" id="startTime" name="start_time">
-                                    <input type="hidden" id="endTime" name="end_time">
-                                    <div class="col-md-4">
-                                        <div class="mb-3">
-                                            <label for="room" class="form-label fw-bold">Room</label>
-                                            <input type="text" class="form-control shadow-sm" id="room" name="room" required>
+                                    <div class="col-md-6">
+                                        <div class="input-group">
+                                            <span class="input-group-text">Filter by Role</span>
+                                            <select class="form-select" id="filterTeacherRole">
+                                                <option value="all" selected>All Teachers</option>
+                                                <option value="adviser">Advisers</option>
+                                                <option value="subject">Subject Teachers</option>
+                                            </select>
                                         </div>
                                     </div>
                                 </div>
+
+                                <!-- Teachers Card View -->
+                                <div class="row" id="teachersContainer">
+                                    {% for teacher in teachers %}
+                                    <div class="col-md-4 teacher-item mb-4" 
+                                         data-role="{% if teacher.sections.exists %}adviser{% else %}subject{% endif %}">
+                                        <div class="card teacher-card h-100">
+                                            <div class="card-header {% cycle 'bg-primary' 'bg-success' 'bg-info' 'bg-warning' 'bg-danger' 'bg-secondary' %} text-white d-flex justify-content-between align-items-center">
+                                                <h5 class="card-title mb-0">{{ teacher.first_name }} {{ teacher.last_name }}</h5>
+                                                <div>
+                                                    <button class="btn btn-light btn-sm view-teacher-schedule-btn" 
+                                                            data-teacher-id="{{ teacher.id }}"
+                                                            data-bs-toggle="tooltip" 
+                                                            title="View Weekly Schedule">
+                                                        <i class="fas fa-calendar-week"></i>
+                                                    </button>
+                                                </div>
+                                            </div>
+                                            <div class="card-body">
+                                                <h6 class="card-subtitle mb-2">ID: {{ teacher.teacher_id }}</h6>
+                                                <p class="card-text">
+                                                    <strong>Role:</strong> 
+                                                    {% with role_info=teacher_roles|get_item:teacher.id %}
+                                                        {% if role_info.role == 'adviser' %}
+                                                            Adviser ({{ role_info.section }})
+                                                        {% else %}
+                                                            Subject Teacher
+                                                        {% endif %}
+                                                    {% endwith %}
+                                                </p>
+                                                <p class="card-text">
+                                                    <strong>Subjects:</strong><br>
+                                                    {% with teacher_subject_list=teacher_subjects|get_item:teacher.id %}
+                                                        {% if teacher_subject_list %}
+                                                            {% for subject in teacher_subject_list %}
+                                                                <span class="badge bg-secondary me-1">{{ subject.name }}</span>
+                                                            {% endfor %}
+                                                        {% else %}
+                                                            <span class="text-muted">No subjects assigned</span>
+                                                        {% endif %}
+                                                    {% endwith %}
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    {% empty %}
+                                    <div class="col-12 text-center py-4">
+                                        <i class="fas fa-user-tie fa-3x text-muted mb-3"></i>
+                                        <h5>No Teachers Available</h5>
+                                        <p class="text-muted">No teachers have been added yet.</p>
+                                    </div>
+                                    {% endfor %}
+                                </div>
                             </div>
-                            <div class="modal-footer bg-light">
-                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                                <button type="submit" class="btn btn-primary">Add Schedule</button>
-                            </div>
-                        </form>
+                        </div>
                     </div>
                 </div>
-            </div>
 
-            <!-- Add this after the schedule table card -->
-            
-        </div>
+                <!-- Schedule Table
+                <div class="card">
+                    <div class="card-body">
+                        <table class="table table-striped" id="scheduleTable">
+                            <thead>
+                                <tr>
+                                    <th>Teacher</th>
+                                    <th>Subject</th>
+                                    <th>Grade Level</th>
+                                    <th>Section</th>
+                                    <th>Day</th>
+                                    <th>Time</th>
+                                    <th>Room</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for schedule in schedules %}
+                                <tr>
+                                    <td>{{ schedule.teacher_id.first_name }} {{ schedule.teacher_id.last_name }}</td>
+                                    <td>{{ schedule.subject.name }}</td>
+                                    <td>{{ schedule.grade_level }}</td>
+                                    <td>{{ schedule.section.section_id }}</td>
+                                    <td>{{ schedule.day }}</td>
+                                    <td>{{ schedule.start_time|time:"H:i" }} - {{ schedule.end_time|time:"H:i" }}</td>
+                                    <td>{{ schedule.room }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div> -->
+
+                <!-- Add Schedule Modal -->
+                <div class="modal fade" id="addScheduleModal" tabindex="-1">
+                    <div class="modal-dialog modal-lg">
+                        <div class="modal-content">
+                            <div class="modal-header bg-primary text-white">
+                                <h5 class="modal-title">Add New Schedule</h5>
+                                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                            </div>
+                            <form id="addScheduleForm" method="POST" action="{% url 'administrator:add_schedule' %}">
+                                {% csrf_token %}
+                                <div class="modal-body p-4">
+                                    <div class="row g-4">
+                                        <div class="col-md-6">
+                                            <div class="mb-3">
+                                                <label for="teacher" class="form-label fw-bold">Teacher</label>
+                                                <select class="form-select shadow-sm" id="teacher" name="teacher_id" required>
+                                                    <option value="">Select Teacher</option>
+                                                    {% for teacher in teachers %}
+                                                    <option value="{{ teacher.id }}">{{ teacher.first_name }} {{ teacher.last_name }}</option>
+                                                    {% endfor %}
+                                                </select>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <div class="mb-3">
+                                                <label for="subject" class="form-label fw-bold">Subject</label>
+                                                <select class="form-select shadow-sm" id="subject" name="subject" required>
+                                                    <option value="">Select Subject</option>
+                                                    {% for subject in subjects %}
+                                                    <option value="{{ subject.id }}">{{ subject.name }}</option>
+                                                    {% endfor %}
+                                                </select>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <div class="mb-3">
+                                                <label for="gradeLevel" class="form-label fw-bold">Grade Level</label>
+                                                <select class="form-select shadow-sm" id="gradeLevel" name="grade_level" required>
+                                                    <option value="">Select Grade Level</option>
+                                                    {% for grade in grade_levels %}
+                                                    <option value="{{ grade }}">Grade {{ grade }}</option>
+                                                    {% endfor %}
+                                                </select>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <div class="mb-3">
+                                                <label for="section" class="form-label fw-bold">Section</label>
+                                                <select class="form-select shadow-sm" id="section" name="section" required>
+                                                    <option value="">Select Section</option>
+                                                </select>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-12">
+                                            <div class="mb-3">
+                                                <label class="form-label fw-bold">Days</label>
+                                                <div class="d-flex flex-wrap gap-3">
+                                                    <div class="form-check">
+                                                        <input class="form-check-input" type="checkbox" name="days[]" value="Monday" id="dayMonday">
+                                                        <label class="form-check-label" for="dayMonday">Monday</label>
+                                                    </div>
+                                                    <div class="form-check">
+                                                        <input class="form-check-input" type="checkbox" name="days[]" value="Tuesday" id="dayTuesday">
+                                                        <label class="form-check-label" for="dayTuesday">Tuesday</label>
+                                                    </div>
+                                                    <div class="form-check">
+                                                        <input class="form-check-input" type="checkbox" name="days[]" value="Wednesday" id="dayWednesday">
+                                                        <label class="form-check-label" for="dayWednesday">Wednesday</label>
+                                                    </div>
+                                                    <div class="form-check">
+                                                        <input class="form-check-input" type="checkbox" name="days[]" value="Thursday" id="dayThursday">
+                                                        <label class="form-check-label" for="dayThursday">Thursday</label>
+                                                    </div>
+                                                    <div class="form-check">
+                                                        <input class="form-check-input" type="checkbox" name="days[]" value="Friday" id="dayFriday">
+                                                        <label class="form-check-label" for="dayFriday">Friday</label>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-12">
+                                            <div class="mb-3">
+                                                <label for="timeSlot" class="form-label fw-bold">Time Slot</label>
+                                                <select class="form-select shadow-sm" id="timeSlot" required>
+                                                    <option value="">Select Time Slot</option>
+                                                </select>
+                                                <small class="text-muted">
+                                                    <i class="fas fa-info-circle"></i> Available time slots are shown based on teacher's schedule
+                                                </small>
+                                            </div>
+                                        </div>
+                                        <input type="hidden" id="startTime" name="start_time">
+                                        <input type="hidden" id="endTime" name="end_time">
+                                        <div class="col-md-4">
+                                            <div class="mb-3">
+                                                <label for="room" class="form-label fw-bold">Room</label>
+                                                <input type="text" class="form-control shadow-sm" id="room" name="room" required>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="modal-footer bg-light">
+                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                    <button type="submit" class="btn btn-primary">Add Schedule</button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Add this after the schedule table card -->
+                
+            </div>
         </div>
     </div>
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
@@ -340,7 +343,7 @@
                 
                 if (gradeLevel) {
                     $.ajax({
-                        url: "{% url 'get_sections_by_grade' %}",
+                        url: "{% url 'administrator:get_sections_by_grade' %}",
                         data: { grade_level: gradeLevel },
                         success: function(data) {
                             data.sections.forEach(function(section) {
@@ -363,7 +366,7 @@
                 if (!teacherId || !subjectId || !gradeLevel || !sectionId) return;
 
                 $.ajax({
-                    url: "{% url 'get_available_time_slots' %}",
+                    url: "{% url 'administrator:get_available_time_slots' %}",
                     data: {
                         teacher_id: teacherId,
                         subject: subjectId,
@@ -449,7 +452,7 @@
 
                 // Get available time slots for each selected day
                 const promises = selectedDays.map(day => 
-                    $.get("{% url 'get_available_time_slots' %}", {
+                    $.get("{% url 'administrator:get_available_time_slots' %}", {
                         teacher_id: teacherId,
                         day: day,
                         section_id: sectionId,
@@ -536,7 +539,7 @@
                     formData.append('csrfmiddlewaretoken', $('[name=csrfmiddlewaretoken]').val());
                     
                     $.ajax({
-                        url: "{% url 'add_schedule' %}",
+                        url: "{% url 'administrator:add_schedule' %}",
                         method: 'POST',
                         data: formData,
                         processData: false,
@@ -617,7 +620,7 @@
 
                 // Fetch schedule data
                 $.ajax({
-                    url: "{% url 'get_section_schedule' %}",
+                    url: "{% url 'administrator:get_section_schedule' %}",
                     data: { section_id: sectionId },
                     success: function(response) {
                         $('#weeklyScheduleContent').html(response.html);
@@ -668,7 +671,7 @@
 
                 // Fetch teacher schedule data
                 $.ajax({
-                    url: "{% url 'get_teacher_schedule' %}",
+                    url: "{% url 'administrator:get_teacher_schedule' %}",
                     data: { teacher_id: teacherId },
                     success: function(response) {
                         $('#weeklyScheduleContent').html(response.html);
@@ -684,6 +687,75 @@
 
     <!-- Add these styles -->
     <style>
+        body {
+            background-color: #f8f9e3;
+            font-family: 'Poppins', sans-serif;
+        }
+        
+        .page-wrapper {
+            display: flex;
+            min-height: 100vh;
+        }
+        
+        .main-content {
+            margin-left: 250px;
+            flex: 1;
+            padding: 20px;
+            background: #f8f9e3;
+        }
+
+        .card {
+            border-radius: 0.75rem;
+            box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+            transition: all 0.3s ease;
+            border: none;
+        }
+
+        .card:hover {
+            box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+            transform: translateY(-3px);
+        }
+
+        .table-responsive {
+            border-radius: 0.5rem;
+            overflow: hidden;
+        }
+
+        .btn {
+            border-radius: 0.5rem;
+            padding: 0.5rem 1rem;
+        }
+
+        .btn-group .btn {
+            border-radius: 0.375rem;
+        }
+
+        .form-control, .form-select {
+            border-radius: 0.5rem;
+            padding: 0.5rem 1rem;
+        }
+
+        .badge {
+            padding: 0.5em 0.75em;
+            font-weight: 500;
+        }
+
+        .modal-content {
+            border-radius: 0.75rem;
+            border: none;
+        }
+
+        .modal-header {
+            border-top-left-radius: 0.75rem;
+            border-top-right-radius: 0.75rem;
+        }
+
+        .content-container {
+            background-color: white;
+            border-radius: 1rem;
+            box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+        }
+
         .section-card {
             transition: transform 0.3s, box-shadow 0.3s;
         }
@@ -736,6 +808,13 @@
         
         .view-teacher-schedule-btn:hover {
             background-color: rgba(255, 255, 255, 0.9);
+        }
+
+        @media (max-width: 768px) {
+            .main-content {
+                margin-left: 0;
+                width: 100%;
+            }
         }
     </style>
 
