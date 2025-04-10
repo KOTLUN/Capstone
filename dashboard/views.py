@@ -25,6 +25,7 @@ from collections import defaultdict
 from django.urls import reverse
 from django.db.models import Prefetch
 from TeacherPortal.models import Grade
+from decimal import Decimal
 
 
 # Create your views here.
@@ -1255,43 +1256,56 @@ def student_grades_view(request):
             for enrollment in enrollments:
                 student = enrollment.student
                 
-                # Fetch all grades for this student in the current school year
+                # Get all grades for this student from Grade model
                 student_grades = Grade.objects.filter(
                     student=student.student_id,
                     school_year=active_school_year.display_name if active_school_year else None
-                )
+                ).order_by('course', 'quarter')
                 
-                # Process grades into the format expected by the template
+                print(f"Found {student_grades.count()} grades for student {student.student_id}")
+                
+                # Process grades by course
                 processed_grades = []
+                current_course = None
+                course_grades = {}
+                
                 for grade in student_grades:
-                    # Find existing grade entry for this subject or create new one
-                    subject_grade = next(
-                        (g for g in processed_grades if g['subject_name'] == str(grade.course)),
-                        None
-                    )
+                    print(f"Processing grade: Course={grade.course}, Quarter={grade.quarter}, Grade={grade.grade}")
                     
-                    if not subject_grade:
-                        subject_grade = {
-                            'subject_name': str(grade.course),
-                            'grades': {
-                                '1': None,
-                                '2': None,
-                                '3': None,
-                                '4': None
-                            },
-                            'final_grade': None,
-                            'status': grade.status
-                        }
-                        processed_grades.append(subject_grade)
+                    if current_course != grade.course:
+                        if current_course is not None:
+                            # Calculate final grade for the previous course
+                            grades_list = [float(v) for v in course_grades.values() if v is not None]
+                            final_grade = sum(grades_list) / len(grades_list) if grades_list else None
+                            
+                            # Add the previous course's grades
+                            processed_grades.append({
+                                'subject_name': current_course,
+                                'grades': course_grades.copy(),
+                                'final_grade': round(final_grade, 2) if final_grade is not None else None,
+                                'status': 'draft'  # Default status
+                            })
+                            print(f"Added grades for course {current_course}: {course_grades}")
+                        
+                        current_course = grade.course
+                        course_grades = {'1': None, '2': None, '3': None, '4': None}
                     
-                    # Update the grade for the specific quarter
-                    quarter = str(grade.quarter)
-                    if quarter in ['1', '2', '3', '4']:
-                        subject_grade['grades'][quarter] = float(grade.grade) if grade.grade is not None else None
+                    # Store the grade for the quarter
+                    course_grades[str(grade.quarter)] = float(grade.grade) if grade.grade is not None else None
+                
+                # Add the last course's grades
+                if current_course is not None:
+                    # Calculate final grade for the last course
+                    grades_list = [float(v) for v in course_grades.values() if v is not None]
+                    final_grade = sum(grades_list) / len(grades_list) if grades_list else None
                     
-                    # Update final grade if available
-                    if hasattr(grade, 'final_grade') and grade.final_grade is not None:
-                        subject_grade['final_grade'] = float(grade.final_grade)
+                    processed_grades.append({
+                        'subject_name': current_course,
+                        'grades': course_grades,
+                        'final_grade': round(final_grade, 2) if final_grade is not None else None,
+                        'status': 'draft'  # Default status
+                    })
+                    print(f"Added grades for last course {current_course}: {course_grades}")
                 
                 # Create student data with processed grades
                 student_data = {
@@ -1301,6 +1315,10 @@ def student_grades_view(request):
                     'processed_grades': processed_grades
                 }
                 students_data.append(student_data)
+                
+                # Debug print
+                print(f"Processed {len(processed_grades)} subjects for student {student.student_id}")
+                print(f"Final processed grades: {processed_grades}")
             
             students_by_section[section.id] = students_data
     
@@ -1310,7 +1328,14 @@ def student_grades_view(request):
         'active_school_year': active_school_year,
     }
     
-    return render(request, 'dashboard/studentgrades.html', context)
+    return render(request, 'studentgrades.html', context)
+
+def calculate_final_grade(course_grades):
+    """Helper function to calculate final grade from quarterly grades"""
+    valid_grades = [g for g in course_grades.values() if g is not None]
+    if valid_grades:
+        return round(sum(valid_grades) / len(valid_grades), 2)
+    return None
 
 def get_current_quarter():
     """Helper function to determine current quarter based on date"""
@@ -2453,3 +2478,226 @@ def handle_school_year_transition(request):
 print(Grade.objects.all().count())  # Should show how many grades exist
 print(Grade.objects.values_list('student', flat=True).distinct())  # Should show student IDs
 print(Grade.objects.values_list('school_year', flat=True).distinct())  # Should show school years
+
+@login_required
+def fetch_student_grades(request):
+    try:
+        print("=== FETCH_STUDENT_GRADES CALLED ===")
+        section_id = request.GET.get('section_id')
+        school_year = request.GET.get('school_year')
+        
+        print(f"Parameters: section_id={section_id}, school_year={school_year}")
+        
+        if not section_id or not school_year:
+            print("Missing required parameters")
+            return JsonResponse({
+                'success': False,
+                'message': 'Section ID and school year are required'
+            })
+
+        # Extract base school year format (2029-2030) from display format (2029-2030 (Active))
+        base_school_year = school_year.split(" ")[0] if " " in school_year else school_year
+        
+        # Get the section
+        section = Sections.objects.get(id=section_id)
+        print(f"Found section: {section.section_id}, grade level: {section.grade_level}")
+        
+        # Get enrollment model based on grade level
+        enrollment_model = {
+            7: Enrollment,
+            8: Grade8Enrollment,
+            9: Grade9Enrollment,
+            10: Grade10Enrollment,
+            11: Grade11Enrollment,
+            12: Grade12Enrollment
+        }.get(section.grade_level)
+
+        if not enrollment_model:
+            print(f"Invalid grade level: {section.grade_level}")
+            return JsonResponse({
+                'success': False,
+                'message': f'Invalid grade level: {section.grade_level}'
+            })
+
+        # Get enrollments for current section and school year
+        print(f"Querying enrollments for section={section.id}, school_year={school_year}, using model: {enrollment_model.__name__}")
+        enrollments = enrollment_model.objects.filter(
+            section=section,
+            school_year=school_year,
+            status='Active'
+        ).select_related('student')
+        
+        print(f"Found {enrollments.count()} enrollments")
+        
+        # Get all subjects for this grade level
+        subjects = Subject.objects.filter(grade_level=section.grade_level)
+        print(f"Found {subjects.count()} subjects for grade level {section.grade_level}")
+
+        student_grades = []
+        for enrollment in enrollments:
+            student = enrollment.student
+            print(f"Processing student: {student.student_id} - {student.first_name} {student.last_name}")
+            print(f"Student primary key (id): {student.id}")
+            
+            processed_grades = []
+            
+            # Process each subject
+            for subject in subjects:
+                print(f"Processing subject: {subject.id} - {subject.name}")
+                
+                # Initialize grades dict for quarters 1-4
+                grades_dict = {str(q): None for q in range(1, 5)}
+                
+                # Get all grades for this student and subject using the student's ID (primary key)
+                # This is important because student_id in dashboard_grades is actually a foreign key 
+                # that references Student.id, not Student.student_id
+                from django.db import connection
+                with connection.cursor() as cursor:
+                    cursor.execute("""
+                        SELECT id, quarter, grade, status 
+                        FROM dashboard_grades 
+                        WHERE student_id = %s
+                        AND subject_id = %s 
+                        AND (school_year = %s OR school_year LIKE %s)
+                    """, [
+                        student.id,  # Use primary key, not student_id field
+                        subject.id, 
+                        school_year,
+                        f"{base_school_year}%"  # Match with or without the (Active) part
+                    ])
+                    
+                    subject_grades = []
+                    for row in cursor.fetchall():
+                        subject_grades.append({
+                            'id': row[0],
+                            'quarter': row[1],
+                            'grade': row[2],
+                            'status': row[3]
+                        })
+                
+                print(f"Found {len(subject_grades)} grades for subject {subject.name}")
+                if subject_grades:
+                    print(f"  Sample: {subject_grades[0]}")
+                
+                # Fill in available grades
+                final_grade = None
+                status = 'Pending'
+                
+                for grade in subject_grades:
+                    quarter = str(grade['quarter'])
+                    grades_dict[quarter] = float(grade['grade']) if grade['grade'] is not None else None
+                    print(f"Quarter {quarter}: Grade = {grades_dict[quarter]}")
+                    
+                    # Update status if any grade is approved
+                    if grade['status'] == 'approved':
+                        status = 'Approved'
+                
+                # Calculate final grade if any quarters are present
+                valid_grades = [g for g in grades_dict.values() if g is not None]
+                if valid_grades:
+                    final_grade = sum(valid_grades) / len(valid_grades)
+                    print(f"Calculated final grade: {final_grade}")
+
+                processed_grades.append({
+                    'subject_name': subject.name,
+                    'grades': grades_dict,
+                    'final_grade': round(final_grade, 2) if final_grade else None,
+                    'status': status
+                })
+
+            student_grades.append({
+                'student_id': student.student_id,
+                'first_name': student.first_name,
+                'last_name': student.last_name,
+                'processed_grades': processed_grades
+            })
+            
+            print(f"Added student with {len(processed_grades)} processed grades")
+
+        print(f"Returning {len(student_grades)} students with grades")
+        return JsonResponse({
+            'success': True,
+            'students': student_grades
+        })
+
+    except Exception as e:
+        import traceback
+        print(f"Error in fetch_student_grades: {str(e)}")
+        print(traceback.format_exc())
+        return JsonResponse({
+            'success': False,
+            'message': str(e)
+        })
+
+def debug_grades(request):
+    """A simple debug view to check the grades in the database"""
+    try:
+        # Get all grades, just the basic fields
+        from django.db import connection
+        
+        # Use direct SQL to avoid any model field mismatches
+        with connection.cursor() as cursor:
+            cursor.execute("""
+                SELECT DISTINCT school_year 
+                FROM dashboard_grades
+            """)
+            school_years = [row[0] for row in cursor.fetchall()]
+            
+            cursor.execute("""
+                SELECT DISTINCT student_id 
+                FROM dashboard_grades
+            """)
+            student_ids = [row[0] for row in cursor.fetchall()]
+            
+            cursor.execute("""
+                SELECT id, student_id, subject_id, quarter, grade, status, school_year 
+                FROM dashboard_grades
+            """)
+            columns = [col[0] for col in cursor.description]
+            
+            grades = []
+            for row in cursor.fetchall():
+                grade_dict = dict(zip(columns, row))
+                # Convert Decimal to float for JSON serialization
+                if isinstance(grade_dict.get('grade'), Decimal):
+                    grade_dict['grade'] = float(grade_dict['grade'])
+                grades.append(grade_dict)
+        
+        # Get subject names for reference
+        subjects = {s.id: s.name for s in Subject.objects.all()}
+        
+        # Format the grades for display
+        formatted_grades = []
+        for g in grades:
+            formatted_grades.append({
+                'id': g['id'],
+                'student_id': g['student_id'],
+                'subject_id': g['subject_id'],
+                'subject_name': subjects.get(g['subject_id'], 'Unknown'),
+                'grade': g['grade'],
+                'quarter': g['quarter'],
+                'status': g['status'],
+                'school_year': g['school_year']
+            })
+            
+        # From enrollments, get student IDs and school years for comparison
+        from django.db.models import F
+        enrollments = list(Enrollment.objects.values(
+            'student__student_id', 
+            'school_year'
+        ).distinct())
+            
+        return JsonResponse({
+            'count': len(formatted_grades),
+            'unique_school_years_in_grades': school_years,
+            'unique_student_ids_in_grades': student_ids,
+            'enrollment_student_ids': list(set(e['student__student_id'] for e in enrollments)),
+            'enrollment_school_years': list(set(e['school_year'] for e in enrollments)),
+            'grades': formatted_grades
+        })
+    except Exception as e:
+        import traceback
+        return JsonResponse({
+            'error': str(e),
+            'traceback': traceback.format_exc()
+        })

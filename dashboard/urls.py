@@ -61,6 +61,8 @@ urlpatterns = [
     path('get-teacher-schedule/', views.get_teacher_schedule, name='get_teacher_schedule'),
     path('api/dashboard-data/', views.get_dashboard_data, name='dashboard_data'),
     path('get-data/', views.get_dashboard_data, name='get_dashboard_data'),
+    path('fetch-student-grades/', views.fetch_student_grades, name='fetch_student_grades'),
+    path('debug-grades/', views.debug_grades, name='debug_grades'),
 ]
 
 if settings.DEBUG:

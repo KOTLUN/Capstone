@@ -376,7 +376,7 @@ class Grades(models.Model):
     teacher = models.ForeignKey(Teachers, on_delete=models.CASCADE)
     grade = models.DecimalField(max_digits=5, decimal_places=2, validators=[MinValueValidator(0), MaxValueValidator(100)], default=0)
     quarter = models.CharField(max_length=2, choices=QUARTER_CHOICES)
-    school_year = models.CharField(max_length=20)
+    school_year = models.CharField(max_length=50)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='draft', blank=True, null=True)
     remarks = models.TextField(blank=True, null=True)
     date_created = models.DateTimeField(auto_now_add=True)
@@ -411,8 +411,25 @@ class Grades(models.Model):
         
         # Sync with TeacherPortal after saving
         try:
-            sync_utils = apps.get_app_config('TeacherPortal').sync_utils
-            sync_utils.sync_grades_from_dashboard()
+            # Get TeacherPortal Grade model using apps.get_model
+            TeacherGrade = apps.get_model('TeacherPortal', 'Grade')
+            
+            # Create or update the grade in TeacherPortal
+            TeacherGrade.objects.update_or_create(
+                student=self.student.student_id,
+                course=self.subject.subject_id,
+                quarter=self.quarter,
+                school_year=self.school_year,
+                defaults={
+                    'grade': self.grade,
+                    'teacher': self.teacher.teacher_id,
+                    'status': self.status,
+                    'remarks': self.remarks,
+                    'date_submitted': self.date_submitted,
+                    'date_approved': self.date_approved,
+                    'uploaded_at': timezone.now()
+                }
+            )
         except Exception as e:
             print(f"Error syncing grade to TeacherPortal: {e}")
     

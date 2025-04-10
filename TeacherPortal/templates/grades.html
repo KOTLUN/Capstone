@@ -7,74 +7,22 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="https://cdn.datatables.net/1.11.5/css/dataTables.bootstrap5.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     {% load static %}
     <style>
-        /* Common Styles */
-        html, body {
-            height: 100%;
+        body {
             margin: 0;
             padding: 0;
             overflow-x: hidden;
+            background-color: #f8f9e3;
+            font-family: 'Poppins', sans-serif;
         }
-
-        /* Layout Structure */
-        .layout-wrapper {
-            display: flex;
-            min-height: 100vh;
+        
+        .container-wrapper {
+            padding-left: 250px; /* match sidebar width */
+            transition: padding-left 0.3s ease;
         }
-
-        /* Sidebar Styles */
-        .sidebar {
-            position: fixed;
-            top: 0;
-            left: 0;
-            background: linear-gradient(180deg, rgb(255, 17, 166) 0%, #9a9ca8 100%);
-            width: 250px;
-            height: 100vh;
-            overflow-y: auto;
-            z-index: 1050;
-            transition: all 0.3s ease;
-        }
-
-        .sidebar .nav-link {
-            color: #fff;
-            padding: 15px 20px;
-            transition: all 0.3s ease;
-            display: block;
-            border: 2px solid transparent;
-            border-radius: 8px;
-            margin: 4px 8px;
-            position: relative;
-            top: 0;
-        }
-
-        .sidebar .nav-link:hover,
-        .sidebar .nav-link.active {
-            background-color: rgba(240, 98, 146, 0.8);
-            color: #fff;
-            border: 2px solid #fff;
-            top: -3px;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-        }
-
-        .sidebar .nav-link i {
-            margin-right: 10px;
-            transition: transform 0.3s ease;
-        }
-
-        .sidebar .nav-link:hover i {
-            transform: translateY(-2px);
-        }
-
-        /* Main Content Styles */
-        .main-content {
-            margin-left: 250px;
-            flex: 1;
-            padding: 20px;
-            background: #f8f9fa;
-            transition: margin-left 0.3s ease;
-        }
-
+        
         /* Grades Specific Styles */
         .nav-tabs .nav-link {
             color: #555;
@@ -86,8 +34,8 @@
         }
 
         .nav-tabs .nav-link.active {
-            color: #ff11a6;
-            border-bottom: 3px solid #ff11a6;
+            color: #e73159;
+            border-bottom: 3px solid #e73159;
             background-color: transparent;
         }
 
@@ -104,6 +52,7 @@
 
         .form-control, .form-select {
             border-radius: 6px;
+            font-family: 'Poppins', sans-serif;
         }
 
         .table {
@@ -111,12 +60,12 @@
         }
 
         .btn-primary {
-            background: linear-gradient(90deg, #ff11a6 0%, #c226ad 100%);
+            background: #e73159;
             border: none;
         }
 
         .btn-primary:hover {
-            background: linear-gradient(90deg, #e60c93 0%, #a71f95 100%);
+            background: #c62a4a;
         }
 
         .btn-info {
@@ -133,18 +82,8 @@
 
         /* Mobile Styles */
         @media (max-width: 768px) {
-            .sidebar {
-                transform: translateX(-100%);
-                width: 80%;
-            }
-            
-            .sidebar.show {
-                transform: translateX(0);
-            }
-            
-            .main-content {
-                margin-left: 0;
-                padding: 15px;
+            .container-wrapper {
+                padding-left: 0;
             }
             
             .mobile-toggle {
@@ -153,7 +92,7 @@
                 top: 1rem;
                 left: 1rem;
                 z-index: 1060;
-                background: #ff11a6;
+                background: #e73159;
                 color: white;
                 width: 40px;
                 height: 40px;
@@ -165,315 +104,286 @@
         }
     </style>
 </head>
-<body>
-    <div class="layout-wrapper">
-        <!-- Sidebar -->
-        <div class="sidebar">
-            <div class="d-flex flex-column">
-                <div class="p-3 text-white text-center">
-                    <img class="logo-img" style="height:50%; width:50%; margin: 10px 0;" src="{% static 'img/logo1.png' %}" alt="School Logo">
-                    <h3 class="school-name">Sta. Catalina Science High School</h3>
-                </div>
-                <nav class="nav flex-column">
-                    <a href="{% url 'profile' %}" class="nav-link {% if request.path == '/profile/' %}active{% endif %}">
-                        <i class="fas fa-user"></i> <span>Profile</span>
-                    </a>
-                    <a href="{% url 'teacher_subjects' %}" class="nav-link {% if request.path == '/teacher_subjects/' %}active{% endif %}">
-                        <i class="fas fa-book"></i> <span>Subjects & Advisory</span>
-                    </a>  
-                    <a href="{% url 'teacher_schedule' %}" class="nav-link {% if request.path == '/teacher_schedule/' %}active{% endif %}">
-                        <i class="fas fa-calendar-alt"></i> <span>Schedule</span>
-                    </a>
-                    <a href="{% url 'grades' %}" class="nav-link {% if request.path == '/grades/' %}active{% endif %}">
-                        <i class="fas fa-graduation-cap"></i> <span>Grades</span>
-                    </a>
-                    <a href="{% url 'advisory_enrollment' %}" class="nav-link {% if request.path == '/advisory_enrollment/' %}active{% endif %}">
-                        <i class="fas fa-user-plus"></i> <span>Advisory Enrollment</span>
-                    </a>
-                    <a href="#" class="nav-link" data-bs-toggle="modal" data-bs-target="#logoutModal">
-                        <i class="fas fa-sign-out-alt"></i> <span>Logout</span>
-                    </a>
-                </nav>
-            </div>
-        </div>
+<body style="background-color: #f8f9e3;">
+    <!-- Include Sidebar -->
+    {% include 'structures/sidebars.html' %}
+    
+    <!-- Mobile Sidebar Toggle Button -->
+    <button class="mobile-toggle d-md-none" id="sidebarToggle">
+        <i class="fas fa-bars"></i>
+    </button>
+    
+    <!-- Main Content Container -->
+    <div class="container-wrapper">
+        <div class="container-fluid py-4">
+            <div class="row">
+                <div class="col-12">
+                    <div class="card shadow">
+                        <div class="card-header bg-white py-3">
+                            <h3 class="card-title m-0 fw-bold">Grades Management</h3>
+                        </div>
+                        <div class="card-body">
+                            <!-- Navigation Tabs -->
+                            <ul class="nav nav-tabs mb-4" id="gradesTab" role="tablist">
+                                <li class="nav-item" role="presentation">
+                                    <button class="nav-link active" id="subject-tab" data-bs-toggle="tab" data-bs-target="#subject-grades" type="button" role="tab">
+                                        <i class="fas fa-book me-2"></i>Subject Grades
+                                    </button>
+                                </li>
+                                <li class="nav-item" role="presentation">
+                                    <button class="nav-link" id="advisory-tab" data-bs-toggle="tab" data-bs-target="#advisory-grades" type="button" role="tab">
+                                        <i class="fas fa-users me-2"></i>Advisory Class Grades
+                                    </button>
+                                </li>
+                            </ul>
 
-        <!-- Mobile menu toggle (shows on small screens) -->
-        <button class="mobile-toggle d-md-none" id="sidebarToggle">
-            <i class="fas fa-bars"></i>
-        </button>
-
-        <!-- Main Content -->
-        <div class="main-content">
-            <div class="container-fluid px-4">
-                <div class="row mt-4">
-                    <div class="col-12">
-                        <div class="card shadow">
-                            <div class="card-header bg-white py-3">
-                                <h3 class="card-title m-0 fw-bold">Grades Management</h3>
-                            </div>
-                            <div class="card-body">
-                                <!-- Navigation Tabs -->
-                                <ul class="nav nav-tabs mb-4" id="gradesTab" role="tablist">
-                                    <li class="nav-item" role="presentation">
-                                        <button class="nav-link active" id="subject-tab" data-bs-toggle="tab" data-bs-target="#subject-grades" type="button" role="tab">
-                                            <i class="fas fa-book me-2"></i>Subject Grades
-                                        </button>
-                                    </li>
-                                    <li class="nav-item" role="presentation">
-                                        <button class="nav-link" id="advisory-tab" data-bs-toggle="tab" data-bs-target="#advisory-grades" type="button" role="tab">
-                                            <i class="fas fa-users me-2"></i>Advisory Class Grades
-                                        </button>
-                                    </li>
-                                </ul>
-
-                                <!-- Tab Content -->
-                                <div class="tab-content" id="gradesTabContent">
-                                    <!-- Subject Grades Tab -->
-                                    <div class="tab-pane fade show active" id="subject-grades" role="tabpanel">
-                                        <!-- Filter Form -->
-                                        <form method="GET" class="mb-4">
-                                            <div class="row g-3">
-                                                <div class="col-md-3">
-                                                    <div class="form-group">
-                                                        <label for="school_year" class="form-label">School Year</label>
-                                                        <select name="school_year" id="school_year" class="form-select">
-                                                            <option value="">Select School Year</option>
-                                                            {% for year in school_years %}
-                                                                <option value="{{ year.display_name }}" {% if selected_year == year.display_name %}selected{% endif %}>
-                                                                    {{ year.display_name }}
-                                                                </option>
-                                                            {% endfor %}
-                                                        </select>
-                                                    </div>
-                                                </div>
-                                                <div class="col-md-3">
-                                                    <div class="form-group">
-                                                        <label for="quarter" class="form-label">Quarter</label>
-                                                        <select name="quarter" id="quarter" class="form-select">
-                                                            <option value="">Select Quarter</option>
-                                                            {% for value, label in quarter_choices %}
-                                                                <option value="{{ value }}" {% if selected_quarter == value %}selected{% endif %}>
-                                                                    {{ label }}
-                                                                </option>
-                                                            {% endfor %}
-                                                        </select>
-                                                    </div>
-                                                </div>
-                                                <div class="col-md-3">
-                                                    <div class="form-group">
-                                                        <label for="subject" class="form-label">Subject</label>
-                                                        <select name="subject" id="subject" class="form-select">
-                                                            <option value="">Select Subject</option>
-                                                            {% for subject in subjects %}
-                                                                <option value="{{ subject.id }}" {% if selected_subject == subject.id|stringformat:"s" %}selected{% endif %}>
-                                                                    {{ subject.name }}
-                                                                </option>
-                                                            {% endfor %}
-                                                        </select>
-                                                    </div>
-                                                </div>
-                                                <div class="col-md-3">
-                                                    <div class="form-group">
-                                                        <label for="section" class="form-label">Section</label>
-                                                        <select name="section" id="section" class="form-select">
-                                                            <option value="">Select Section</option>
-                                                            {% for section in sections %}
-                                                                <option value="{{ section.id }}" {% if selected_section == section.id|stringformat:"s" %}selected{% endif %}>
-                                                                    Grade {{ section.grade_level }} - {{ section.section_id }}
-                                                                </option>
-                                                            {% endfor %}
-                                                        </select>
-                                                    </div>
-                                                </div>
-                                                <div class="col-md-3">
-                                                    <div class="form-group">
-                                                        <label class="form-label">&nbsp;</label>
-                                                        <button type="submit" class="btn btn-primary w-100">Filter</button>
-                                                    </div>
+                            <!-- Tab Content -->
+                            <div class="tab-content" id="gradesTabContent">
+                                <!-- Subject Grades Tab -->
+                                <div class="tab-pane fade show active" id="subject-grades" role="tabpanel">
+                                    <!-- Filter Form -->
+                                    <form method="GET" class="mb-4">
+                                        <div class="row g-3">
+                                            <div class="col-md-3">
+                                                <div class="form-group">
+                                                    <label for="school_year" class="form-label">School Year</label>
+                                                    <select name="school_year" id="school_year" class="form-select">
+                                                        <option value="">Select School Year</option>
+                                                        {% for year in school_years %}
+                                                            <option value="{{ year.display_name }}" {% if selected_year == year.display_name %}selected{% endif %}>
+                                                                {{ year.display_name }}
+                                                            </option>
+                                                        {% endfor %}
+                                                    </select>
                                                 </div>
                                             </div>
-                                        </form>
-
-                                        <!-- Import Grades Form -->
-                                        <div class="row mb-4">
-                                            <div class="col-md-8 mx-auto">
-                                                <div class="card">
-                                                    <div class="card-header">
-                                                        <h5 class="card-title mb-0">Import Grades from Excel</h5>
-                                                    </div>
-                                                    <div class="card-body">
-                                                        <form id="importForm" method="POST" enctype="multipart/form-data">
-                                                            {% csrf_token %}
-                                                            <div class="mb-3">
-                                                                <label for="section" class="form-label">Section</label>
-                                                                <select name="section" id="import_section" class="form-select" required>
-                                                                    <option value="">Select Section</option>
-                                                                    {% for section in sections %}
-                                                                        <option value="{{ section.id }}" {% if section.id == selected_section %}selected{% endif %}>
-                                                                            Grade {{ section.grade_level }} - {{ section.section_id }}
-                                                                        </option>
-                                                                    {% endfor %}
-                                                                </select>
-                                                            </div>
-                                                            <div class="mb-3">
-                                                                <label for="subject" class="form-label">Subject</label>
-                                                                <select name="subject" id="import_subject" class="form-select" required>
-                                                                    <option value="">Select Subject</option>
-                                                                    {% for subject in subjects %}
-                                                                        <option value="{{ subject.id }}" {% if subject.id == selected_subject %}selected{% endif %}>
-                                                                            {{ subject.name }}
-                                                                        </option>
-                                                                    {% endfor %}
-                                                                </select>
-                                                            </div>
-                                                            <div class="mb-3">
-                                                                <label for="quarter" class="form-label">Quarter</label>
-                                                                <select name="quarter" id="import_quarter" class="form-select" required>
-                                                                    <option value="">Select Quarter</option>
-                                                                    {% for value, label in quarter_choices %}
-                                                                        <option value="{{ value }}" {% if value == selected_quarter %}selected{% endif %}>
-                                                                            {{ label }}
-                                                                        </option>
-                                                                    {% endfor %}
-                                                                </select>
-                                                            </div>
-                                                            <div class="mb-3">
-                                                                <label for="school_year" class="form-label">School Year</label>
-                                                                <select name="school_year" id="import_school_year" class="form-select" required>
-                                                                    <option value="">Select School Year</option>
-                                                                    {% for year in school_years %}
-                                                                        <option value="{{ year }}" {% if year == selected_year %}selected{% endif %}>
-                                                                            {{ year }}
-                                                                        </option>
-                                                                    {% endfor %}
-                                                                </select>
-                                                            </div>
-                                                            <div class="mb-3">
-                                                                <label for="file" class="form-label">Excel File</label>
-                                                                <input type="file" name="file" id="file" class="form-control" accept=".xlsx,.xls" required>
-                                                                <div class="form-text">
-                                                                    <a href="{% url 'generate_grade_template' %}?subject={{ selected_subject }}&quarter={{ selected_quarter }}&school_year={{ selected_year }}&section={{ selected_section }}"
-                                                                       class="btn btn-sm btn-outline-primary mt-2"
-                                                                       id="download_template">
-                                                                        <i class="fas fa-download me-1"></i> Download Template
-                                                                    </a>
-                                                                </div>
-                                                            </div>
-                                                            <div id="import-feedback" class="mb-3" style="display: none;">
-                                                                <div class="alert"></div>
-                                                            </div>
-                                                            <button type="submit" class="btn btn-primary">Import Grades</button>
-                                                        </form>
-                                                    </div>
+                                            <div class="col-md-3">
+                                                <div class="form-group">
+                                                    <label for="quarter" class="form-label">Quarter</label>
+                                                    <select name="quarter" id="quarter" class="form-select">
+                                                        <option value="">Select Quarter</option>
+                                                        {% for value, label in quarter_choices %}
+                                                            <option value="{{ value }}" {% if selected_quarter == value %}selected{% endif %}>
+                                                                {{ label }}
+                                                            </option>
+                                                        {% endfor %}
+                                                    </select>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-3">
+                                                <div class="form-group">
+                                                    <label for="subject" class="form-label">Subject</label>
+                                                    <select name="subject" id="subject" class="form-select">
+                                                        <option value="">Select Subject</option>
+                                                        {% for subject in subjects %}
+                                                            <option value="{{ subject.id }}" {% if selected_subject == subject.id|stringformat:"s" %}selected{% endif %}>
+                                                                {{ subject.name }}
+                                                            </option>
+                                                        {% endfor %}
+                                                    </select>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-3">
+                                                <div class="form-group">
+                                                    <label for="section" class="form-label">Section</label>
+                                                    <select name="section" id="section" class="form-select">
+                                                        <option value="">Select Section</option>
+                                                        {% for section in sections %}
+                                                            <option value="{{ section.id }}" {% if selected_section == section.id|stringformat:"s" %}selected{% endif %}>
+                                                                Grade {{ section.grade_level }} - {{ section.section_id }}
+                                                            </option>
+                                                        {% endfor %}
+                                                    </select>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-3">
+                                                <div class="form-group">
+                                                    <label class="form-label">&nbsp;</label>
+                                                    <button type="submit" class="btn btn-primary w-100">Filter</button>
                                                 </div>
                                             </div>
                                         </div>
+                                    </form>
 
-                                        <div class="table-responsive mt-3">
-                                            <table class="table table-bordered table-striped table-hover" id="subjectGradesTable">
-                                                <thead class="table-light">
-                                                    <tr>
-                                                        <th>Student ID</th>
-                                                        <th>Student Name</th>
-                                                        <th>Grade</th>
-                                                        <th>Components</th>
-                                                        <th>Remarks</th>
-                                                        <th>Actions</th>
-                                                    </tr>
-                                                </thead>
-                                                <tbody>
-                                                    {% for grade in subject_grades %}
-                                                    <tr>
-                                                        <td>{{ grade.student }}</td>
-                                                        <td>{{ grade.student }}</td>
-                                                        <td>{{ grade.grade }}</td>
-                                                        <td>
-                                                            <button class="btn btn-sm btn-info view-components" data-grade-id="{{ grade.id }}">
-                                                                <i class="fas fa-list-ul me-1"></i> View
-                                                            </button>
-                                                        </td>
-                                                        <td>{{ grade.remarks }}</td>
-                                                        <td>
-                                                            <button class="btn btn-sm btn-primary edit-grade" data-grade-id="{{ grade.id }}">
-                                                                <i class="fas fa-edit me-1"></i> Edit
-                                                            </button>
-                                                        </td>
-                                                    </tr>
-                                                    {% endfor %}
-                                                </tbody>
-                                            </table>
+                                    <!-- Import Grades Form -->
+                                    <div class="row mb-4">
+                                        <div class="col-md-8 mx-auto">
+                                            <div class="card">
+                                                <div class="card-header">
+                                                    <h5 class="card-title mb-0">Import Grades from Excel</h5>
+                                                </div>
+                                                <div class="card-body">
+                                                    <form id="importForm" method="POST" enctype="multipart/form-data">
+                                                        {% csrf_token %}
+                                                        <div class="mb-3">
+                                                            <label for="section" class="form-label">Section</label>
+                                                            <select name="section" id="import_section" class="form-select" required>
+                                                                <option value="">Select Section</option>
+                                                                {% for section in sections %}
+                                                                    <option value="{{ section.id }}" {% if section.id == selected_section %}selected{% endif %}>
+                                                                        Grade {{ section.grade_level }} - {{ section.section_id }}
+                                                                    </option>
+                                                                {% endfor %}
+                                                            </select>
+                                                        </div>
+                                                        <div class="mb-3">
+                                                            <label for="subject" class="form-label">Subject</label>
+                                                            <select name="subject" id="import_subject" class="form-select" required>
+                                                                <option value="">Select Subject</option>
+                                                                {% for subject in subjects %}
+                                                                    <option value="{{ subject.id }}" {% if subject.id == selected_subject %}selected{% endif %}>
+                                                                        {{ subject.name }}
+                                                                    </option>
+                                                                {% endfor %}
+                                                            </select>
+                                                        </div>
+                                                        <div class="mb-3">
+                                                            <label for="quarter" class="form-label">Quarter</label>
+                                                            <select name="quarter" id="import_quarter" class="form-select" required>
+                                                                <option value="">Select Quarter</option>
+                                                                {% for value, label in quarter_choices %}
+                                                                    <option value="{{ value }}" {% if value == selected_quarter %}selected{% endif %}>
+                                                                        {{ label }}
+                                                                    </option>
+                                                                {% endfor %}
+                                                            </select>
+                                                        </div>
+                                                        <div class="mb-3">
+                                                            <label for="school_year" class="form-label">School Year</label>
+                                                            <select name="school_year" id="import_school_year" class="form-select" required>
+                                                                <option value="">Select School Year</option>
+                                                                {% for year in school_years %}
+                                                                    <option value="{{ year }}" {% if year == selected_year %}selected{% endif %}>
+                                                                        {{ year }}
+                                                                    </option>
+                                                                {% endfor %}
+                                                            </select>
+                                                        </div>
+                                                        <div class="mb-3">
+                                                            <label for="file" class="form-label">Excel File</label>
+                                                            <input type="file" name="file" id="file" class="form-control" accept=".xlsx,.xls" required>
+                                                            <div class="form-text">
+                                                                <a href="{% url 'generate_grade_template' %}?subject={{ selected_subject }}&quarter={{ selected_quarter }}&school_year={{ selected_year }}&section={{ selected_section }}"
+                                                                    class="btn btn-sm btn-outline-primary mt-2"
+                                                                    id="download_template">
+                                                                    <i class="fas fa-download me-1"></i> Download Template
+                                                                </a>
+                                                            </div>
+                                                        </div>
+                                                        <div id="import-feedback" class="mb-3" style="display: none;">
+                                                            <div class="alert"></div>
+                                                        </div>
+                                                        <button type="submit" class="btn btn-primary">Import Grades</button>
+                                                    </form>
+                                                </div>
+                                            </div>
                                         </div>
                                     </div>
 
-                                    <!-- Advisory Grades Tab -->
-                                    <div class="tab-pane fade" id="advisory-grades" role="tabpanel">
-                                        <form method="GET" class="mb-4">
-                                            <div class="row g-3">
-                                                <div class="col-md-4">
-                                                    <div class="form-group">
-                                                        <label for="advisory_school_year" class="form-label">School Year</label>
-                                                        <select name="school_year" id="advisory_school_year" class="form-select">
-                                                            <option value="">Select School Year</option>
-                                                            {% for year in school_years %}
-                                                                <option value="{{ year.display_name }}" {% if selected_year == year.display_name %}selected{% endif %}>
-                                                                    {{ year.display_name }}
-                                                                </option>
-                                                            {% endfor %}
-                                                        </select>
-                                                    </div>
-                                                </div>
-                                                <div class="col-md-4">
-                                                    <div class="form-group">
-                                                        <label for="advisory_quarter" class="form-label">Quarter</label>
-                                                        <select name="quarter" id="advisory_quarter" class="form-select">
-                                                            <option value="">Select Quarter</option>
-                                                            {% for value, label in Grade.QUARTER_CHOICES %}
-                                                                <option value="{{ value }}" {% if selected_quarter == value %}selected{% endif %}>
-                                                                    {{ label }}
-                                                                </option>
-                                                            {% endfor %}
-                                                        </select>
-                                                    </div>
-                                                </div>
-                                                <div class="col-md-4">
-                                                    <div class="form-group">
-                                                        <label class="form-label">&nbsp;</label>
-                                                        <button type="submit" class="btn btn-primary w-100">Filter</button>
-                                                    </div>
+                                    <!-- <div class="table-responsive mt-3">
+                                        <table class="table table-bordered table-striped table-hover" id="subjectGradesTable">
+                                            <thead class="table-light">
+                                                <tr>
+                                                    <th>Student ID</th>
+                                                    <th>Student Name</th>
+                                                    <th>Grade</th>
+                                                    <th>Components</th>
+                                                    <th>Remarks</th>
+                                                    <th>Actions</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {% for grade in subject_grades %}
+                                                <tr>
+                                                    <td>{{ grade.student }}</td>
+                                                    <td>{{ grade.student }}</td>
+                                                    <td>{{ grade.grade }}</td>
+                                                    <td>
+                                                        <button class="btn btn-sm btn-info view-components" data-grade-id="{{ grade.id }}">
+                                                            <i class="fas fa-list-ul me-1"></i> View
+                                                        </button>
+                                                    </td>
+                                                    <td>{{ grade.remarks }}</td>
+                                                    <td>
+                                                        <button class="btn btn-sm btn-primary edit-grade" data-grade-id="{{ grade.id }}">
+                                                            <i class="fas fa-edit me-1"></i> Edit
+                                                        </button>
+                                                    </td>
+                                                </tr>
+                                                {% endfor %}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div> -->
+
+                                <!-- Advisory Grades Tab -->
+                                <div class="tab-pane fade" id="advisory-grades" role="tabpanel">
+                                    <form method="GET" class="mb-4">
+                                        <div class="row g-3">
+                                            <div class="col-md-4">
+                                                <div class="form-group">
+                                                    <label for="advisory_school_year" class="form-label">School Year</label>
+                                                    <select name="school_year" id="advisory_school_year" class="form-select">
+                                                        <option value="">Select School Year</option>
+                                                        {% for year in school_years %}
+                                                            <option value="{{ year.display_name }}" {% if selected_year == year.display_name %}selected{% endif %}>
+                                                                {{ year.display_name }}
+                                                            </option>
+                                                        {% endfor %}
+                                                    </select>
                                                 </div>
                                             </div>
-                                        </form>
-
-                                        <div class="table-responsive mt-3">
-                                            <table class="table table-bordered table-striped table-hover" id="advisoryGradesTable">
-                                                <thead class="table-light">
-                                                    <tr>
-                                                        <th>Student ID</th>
-                                                        <th>Student Name</th>
-                                                        <th>Subject</th>
-                                                        <th>Grade</th>
-                                                        <th>Status</th>
-                                                        <th>Actions</th>
-                                                    </tr>
-                                                </thead>
-                                                <tbody>
-                                                    {% for grade in advisory_grades %}
-                                                    <tr>
-                                                        <td>{{ grade.student }}</td>
-                                                        <td>{{ grade.student }}</td>
-                                                        <td>{{ grade.course }}</td>
-                                                        <td>{{ grade.grade }}</td>
-                                                        <td>{{ grade.status }}</td>
-                                                        <td>
-                                                            <button class="btn btn-sm btn-info view-details" data-grade-id="{{ grade.id }}">
-                                                                <i class="fas fa-info-circle me-1"></i> Details
-                                                            </button>
-                                                        </td>
-                                                    </tr>
-                                                    {% endfor %}
-                                                </tbody>
-                                            </table>
+                                            <div class="col-md-4">
+                                                <div class="form-group">
+                                                    <label for="advisory_quarter" class="form-label">Quarter</label>
+                                                    <select name="quarter" id="advisory_quarter" class="form-select">
+                                                        <option value="">Select Quarter</option>
+                                                        {% for value, label in Grade.QUARTER_CHOICES %}
+                                                            <option value="{{ value }}" {% if selected_quarter == value %}selected{% endif %}>
+                                                                {{ label }}
+                                                            </option>
+                                                        {% endfor %}
+                                                    </select>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-4">
+                                                <div class="form-group">
+                                                    <label class="form-label">&nbsp;</label>
+                                                    <button type="submit" class="btn btn-primary w-100">Filter</button>
+                                                </div>
+                                            </div>
                                         </div>
+                                    </form>
+
+                                    <div class="table-responsive mt-3">
+                                        <table class="table table-bordered table-striped table-hover" id="advisoryGradesTable">
+                                            <thead class="table-light">
+                                                <tr>
+                                                    <th>Student ID</th>
+                                                    <th>Student Name</th>
+                                                    <th>Subject</th>
+                                                    <th>Grade</th>
+                                                    <th>Status</th>
+                                                    <th>Actions</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {% for grade in advisory_grades %}
+                                                <tr>
+                                                    <td>{{ grade.student }}</td>
+                                                    <td>{{ grade.student }}</td>
+                                                    <td>{{ grade.course }}</td>
+                                                    <td>{{ grade.grade }}</td>
+                                                    <td>{{ grade.status }}</td>
+                                                    <td>
+                                                        <button class="btn btn-sm btn-info view-details" data-grade-id="{{ grade.id }}">
+                                                            <i class="fas fa-info-circle me-1"></i> Details
+                                                        </button>
+                                                    </td>
+                                                </tr>
+                                                {% endfor %}
+                                            </tbody>
+                                        </table>
                                     </div>
                                 </div>
                             </div>
@@ -488,7 +398,7 @@
     <div class="modal fade" id="logoutModal" tabindex="-1" aria-labelledby="logoutModalLabel" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content">
-                <div class="modal-header" style="background: linear-gradient(90deg, rgb(255, 17, 166) 0%, #c226ad 100%); color: white;">
+                <div class="modal-header" style="background: #e73159; color: white;">
                     <h5 class="modal-title" id="logoutModalLabel"><i class="fas fa-sign-out-alt me-2"></i>Logout Confirmation</h5>
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
@@ -497,7 +407,7 @@
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <a href="{% url 'logout' %}" class="btn" style="background: linear-gradient(90deg, rgb(255, 17, 166) 0%, #c226ad 100%); color: white;">Yes, Logout</a>
+                    <a href="{% url 'logout' %}" class="btn" style="background: #e73159; color: white;">Yes, Logout</a>
                 </div>
             </div>
         </div>
@@ -530,6 +440,33 @@
                     "search": "Search:"
                 }
             });
+
+            // Mobile sidebar toggle functionality
+            const sidebarToggle = document.getElementById('sidebarToggle');
+            const sidebar = document.querySelector('.sidebar');
+            const containerWrapper = document.querySelector('.container-wrapper');
+            
+            if (sidebarToggle && sidebar) {
+                sidebarToggle.addEventListener('click', function() {
+                    sidebar.classList.toggle('show');
+                    if (sidebar.classList.contains('show')) {
+                        containerWrapper.style.paddingLeft = "0";
+                    } else {
+                        containerWrapper.style.paddingLeft = "";
+                    }
+                });
+                
+                // Close sidebar when clicking outside
+                document.addEventListener('click', function(event) {
+                    if (window.innerWidth < 768 && 
+                        sidebar.classList.contains('show') && 
+                        !sidebar.contains(event.target) && 
+                        event.target !== sidebarToggle) {
+                        sidebar.classList.remove('show');
+                        containerWrapper.style.paddingLeft = "";
+                    }
+                });
+            }
 
             // Handle form submissions for grade entry
             $('#gradeEntryForm').on('submit', function(e) {

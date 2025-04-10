@@ -15,8 +15,18 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&family=Quicksand:wght@500;600;700&display=swap" rel="stylesheet">
     <style>
+        :root {
+            --primary-color: #0d6efd;
+            --success-color: #198754;
+            --danger-color: #dc3545;
+            --warning-color: #ffc107;
+            --info-color: #0dcaf0;
+            --light-bg: #f8f9e3;
+            --white: #ffffff;
+        }
+
         body {
-            background-color: #f8f9e3;
+            background-color: var(--light-bg);
             font-family: 'Poppins', sans-serif;
         }
         
@@ -29,11 +39,11 @@
             margin-left: 250px;
             flex: 1;
             padding: 20px;
-            background: #f8f9e3;
+            background: var(--light-bg);
         }
 
         .search-box {
-            background: white;
+            background: var(--white);
             padding: 20px;
             border-radius: 10px;
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
@@ -52,16 +62,17 @@
             padding: 10px 20px;
             border-radius: 0;
             margin-right: 5px;
+            transition: all 0.3s ease;
         }
 
         .nav-tabs .nav-link.active {
-            color: #0d6efd;
-            border-bottom: 3px solid #0d6efd;
+            color: var(--primary-color);
+            border-bottom: 3px solid var(--primary-color);
             background: transparent;
         }
 
         .grade-table {
-            background: white;
+            background: var(--white);
             border-radius: 10px;
             overflow: hidden;
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
@@ -71,71 +82,85 @@
             background: #f8f9fa;
             font-weight: 600;
             white-space: nowrap;
+            padding: 1rem;
         }
 
         .grade-value {
             font-weight: 500;
             text-align: center;
+            padding: 0.5rem;
         }
 
         .grade-value.passing {
-            color: #198754;
+            color: var(--success-color);
         }
 
         .grade-value.failing {
-            color: #dc3545;
-        }
-
-        .school-year {
-            font-size: 1.1rem;
-            color: #6c757d;
-            font-weight: 500;
-        }
-
-        .search-input {
-            border-radius: 50px;
-            padding-left: 20px;
-            padding-right: 20px;
-        }
-
-        .search-button {
-            border-radius: 50px;
-            padding-left: 25px;
-            padding-right: 25px;
+            color: var(--danger-color);
         }
 
         .status-badge {
             font-size: 0.8rem;
             padding: 0.25rem 0.5rem;
             border-radius: 50px;
+            font-weight: 500;
         }
 
         .status-draft {
-            background-color: #ffc107;
+            background-color: var(--warning-color);
             color: #000;
         }
 
         .status-submitted {
-            background-color: #0dcaf0;
+            background-color: var(--info-color);
             color: #fff;
         }
 
         .status-approved {
-            background-color: #198754;
+            background-color: var(--success-color);
             color: #fff;
         }
 
         .status-returned {
-            background-color: #dc3545;
+            background-color: var(--danger-color);
             color: #fff;
         }
 
-        .debug-info {
-            background: #f8f9fa;
-            padding: 15px;
-            margin: 10px 0;
-            border-radius: 5px;
-            border: 1px solid #dee2e6;
+        .table-responsive {
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        .dataTables_wrapper .dataTables_filter {
+            margin-bottom: 1rem;
+        }
+
+        .dataTables_wrapper .dataTables_length {
+            margin-bottom: 1rem;
+        }
+
+        .dataTables_wrapper .dataTables_info {
+            padding-top: 1rem;
+        }
+
+        .dataTables_wrapper .dataTables_paginate {
+            padding-top: 1rem;
+        }
+
+        @media (max-width: 768px) {
+            .main-content {
+                margin-left: 0;
+                padding: 15px;
+            }
+            
+            .search-box {
+                padding: 15px;
+            }
+            
+            .grade-table th,
+            .grade-table td {
+                padding: 0.75rem;
+            }
         }
     </style>
 </head>
@@ -156,11 +181,18 @@
                 </div>
 
                 <!-- Debug Info -->
-                <div class="debug-info">
+                <div class="debug-info mb-4">
                     <h5>Debug Information:</h5>
                     <p>Number of Grade Levels: {{ sections_by_grade|length }}</p>
                     <p>Grade Levels Available: {{ sections_by_grade.keys|join:", "|default:"None" }}</p>
                     <p>Active School Year: {{ active_school_year|default:"None" }}</p>
+                    <p>Total Sections with Students: {{ students_by_section|length }}</p>
+                    {% for section_id, students in students_by_section.items %}
+                        <p>Section {{ section_id }} - Students: {{ students|length }}</p>
+                        {% for student in students %}
+                            <p>Student {{ student.student_id }} - Grades: {{ student.processed_grades|length }}</p>
+                        {% endfor %}
+                    {% endfor %}
                 </div>
 
                 <!-- Search Box -->
@@ -250,7 +282,7 @@
                                                                     <tr>
                                                                         <th>Student Name</th>
                                                                         <th>ID</th>
-                                                                        <th>Course</th>
+                                                                        <th>Subject</th>
                                                                         <th class="text-center">1st Quarter</th>
                                                                         <th class="text-center">2nd Quarter</th>
                                                                         <th class="text-center">3rd Quarter</th>
@@ -264,26 +296,27 @@
                                                                         {% for student_data in section_students %}
                                                                             {% for grade in student_data.processed_grades %}
                                                                                 <tr>
-                                                                                    <td>{{ student_data.last_name }}, {{ student_data.first_name }}</td>
-                                                                                    <td>{{ student_data.student_id }}</td>
+                                                                                    <td>
+                                                                                        <div class="fw-medium">
+                                                                                            {{ student_data.last_name }}, {{ student_data.first_name }}
+                                                                                        </div>
+                                                                                    </td>
+                                                                                    <td>
+                                                                                        <div class="text-muted">
+                                                                                            {{ student_data.student_id }}
+                                                                                        </div>
+                                                                                    </td>
                                                                                     <td>{{ grade.subject_name }}</td>
-                                                                                    <td class="grade-value {% if grade.grades.1 >= 75 %}passing{% elif grade.grades.1 %}failing{% endif %}">
-                                                                                        {{ grade.grades.1|default:"-" }}
-                                                                                    </td>
-                                                                                    <td class="grade-value {% if grade.grades.2 >= 75 %}passing{% elif grade.grades.2 %}failing{% endif %}">
-                                                                                        {{ grade.grades.2|default:"-" }}
-                                                                                    </td>
-                                                                                    <td class="grade-value {% if grade.grades.3 >= 75 %}passing{% elif grade.grades.3 %}failing{% endif %}">
-                                                                                        {{ grade.grades.3|default:"-" }}
-                                                                                    </td>
-                                                                                    <td class="grade-value {% if grade.grades.4 >= 75 %}passing{% elif grade.grades.4 %}failing{% endif %}">
-                                                                                        {{ grade.grades.4|default:"-" }}
-                                                                                    </td>
+                                                                                    {% for quarter in '1234'|make_list %}
+                                                                                        <td class="grade-value {% if grade.grades|get_item:quarter >= 75 %}passing{% elif grade.grades|get_item:quarter %}failing{% endif %}">
+                                                                                            {{ grade.grades|get_item:quarter|default:"-" }}
+                                                                                        </td>
+                                                                                    {% endfor %}
                                                                                     <td class="grade-value {% if grade.final_grade >= 75 %}passing{% elif grade.final_grade %}failing{% endif %}">
                                                                                         {{ grade.final_grade|default:"-" }}
                                                                                     </td>
                                                                                     <td class="text-center">
-                                                                                        <span class="badge {% if grade.status == 'draft' %}bg-warning{% elif grade.status == 'submitted' %}bg-info{% elif grade.status == 'approved' %}bg-success{% else %}bg-danger{% endif %}">
+                                                                                        <span class="status-badge status-{{ grade.status|lower }}">
                                                                                             {{ grade.status|title }}
                                                                                         </span>
                                                                                     </td>
@@ -330,41 +363,150 @@
 
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            // Initialize Bootstrap tabs manually
+            // Initialize Bootstrap tabs
             const triggerTabList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tab"]'));
             triggerTabList.forEach(function(triggerEl) {
                 new bootstrap.Tab(triggerEl);
-            });
-
-            // Initialize DataTables
-            document.querySelectorAll('[id^="gradeTable"]').forEach(table => {
-                $(table).DataTable({
-                    pageLength: 10,
-                    order: [[0, 'asc']],
-                    language: {
-                        emptyTable: "No grades available",
-                        zeroRecords: "No matching records found"
+                
+                // Add click event to load grades when tab is clicked
+                triggerEl.addEventListener('shown.bs.tab', function(event) {
+                    const targetId = event.target.getAttribute('data-bs-target');
+                    if (targetId.startsWith('#section')) {
+                        const sectionId = targetId.replace('#section', '');
+                        loadGrades(sectionId);
                     }
                 });
             });
 
-            // Search functionality
-            const searchInput = document.getElementById('studentSearch');
-            const searchBtn = document.getElementById('searchBtn');
+            // Function to load grades for a section
+            function loadGrades(sectionId) {
+                const tableBody = document.querySelector(`#section${sectionId} .table tbody`);
+                if (!tableBody) return;
 
-            function searchStudent() {
-                const searchTerm = searchInput.value.toLowerCase();
-                document.querySelectorAll('.dataTable').forEach(table => {
-                    $(table).DataTable().search(searchTerm).draw();
-                });
+                // Show loading indicator
+                tableBody.innerHTML = '<tr><td colspan="9" class="text-center"><i class="fas fa-spinner fa-spin me-2"></i>Loading grades...</td></tr>';
+
+                // Get the active school year
+                const activeSchoolYear = '{{ active_school_year.display_name }}';
+
+                // For debugging - check if grades are available in the system
+                fetch(`/administrator/debug-grades/`)
+                    .then(response => response.json())
+                    .then(debugData => {
+                        console.log("Debug grades data:", debugData);
+                    });
+
+                // Fetch grades using the new endpoint
+                fetch(`/administrator/fetch-student-grades/?section_id=${sectionId}&school_year=${activeSchoolYear}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        console.log("Fetch student grades response:", data);
+                        if (data.success) {
+                            // Clear loading indicator
+                            tableBody.innerHTML = '';
+
+                            // Process each student's grades
+                            data.students.forEach(student => {
+                                if (student.processed_grades.length > 0) {
+                                    student.processed_grades.forEach(grade => {
+                                        const row = document.createElement('tr');
+                                        row.innerHTML = `
+                                            <td>
+                                                <div class="fw-medium">
+                                                    ${student.last_name}, ${student.first_name}
+                                                </div>
+                                            </td>
+                                            <td>
+                                                <div class="text-muted">
+                                                    ${student.student_id}
+                                                </div>
+                                            </td>
+                                            <td>${grade.subject_name}</td>
+                                            <td class="grade-value ${grade.grades['1'] >= 75 ? 'passing' : grade.grades['1'] ? 'failing' : ''}">
+                                                ${grade.grades['1'] !== null ? grade.grades['1'] : '-'}
+                                            </td>
+                                            <td class="grade-value ${grade.grades['2'] >= 75 ? 'passing' : grade.grades['2'] ? 'failing' : ''}">
+                                                ${grade.grades['2'] !== null ? grade.grades['2'] : '-'}
+                                            </td>
+                                            <td class="grade-value ${grade.grades['3'] >= 75 ? 'passing' : grade.grades['3'] ? 'failing' : ''}">
+                                                ${grade.grades['3'] !== null ? grade.grades['3'] : '-'}
+                                            </td>
+                                            <td class="grade-value ${grade.grades['4'] >= 75 ? 'passing' : grade.grades['4'] ? 'failing' : ''}">
+                                                ${grade.grades['4'] !== null ? grade.grades['4'] : '-'}
+                                            </td>
+                                            <td class="grade-value ${grade.final_grade >= 75 ? 'passing' : grade.final_grade ? 'failing' : ''}">
+                                                ${grade.final_grade !== null ? grade.final_grade : '-'}
+                                            </td>
+                                            <td class="text-center">
+                                                <span class="status-badge status-${grade.status}">
+                                                    ${grade.status.charAt(0).toUpperCase() + grade.status.slice(1)}
+                                                </span>
+                                            </td>
+                                        `;
+                                        tableBody.appendChild(row);
+                                    });
+                                } else {
+                                    const row = document.createElement('tr');
+                                    row.innerHTML = `
+                                        <td colspan="9" class="text-center py-4">
+                                            <i class="fas fa-info-circle me-2"></i>
+                                            No grades recorded for ${student.first_name} ${student.last_name}
+                                        </td>
+                                    `;
+                                    tableBody.appendChild(row);
+                                }
+                            });
+
+                            if (data.students.length === 0) {
+                                tableBody.innerHTML = `
+                                    <tr>
+                                        <td colspan="9" class="text-center py-4">
+                                            <i class="fas fa-info-circle me-2"></i>
+                                            No students found in this section
+                                        </td>
+                                    </tr>
+                                `;
+                            }
+
+                            // Initialize DataTable
+                            if ($.fn.DataTable.isDataTable(`#gradeTable${sectionId}`)) {
+                                $(`#gradeTable${sectionId}`).DataTable().destroy();
+                            }
+                            $(`#gradeTable${sectionId}`).DataTable({
+                                pageLength: 10,
+                                order: [[0, 'asc']],
+                                responsive: true
+                            });
+                        } else {
+                            tableBody.innerHTML = `
+                                <tr>
+                                    <td colspan="9" class="text-center py-4">
+                                        <i class="fas fa-exclamation-circle me-2"></i>
+                                        Error loading grades: ${data.error}
+                                    </td>
+                                </tr>
+                            `;
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        tableBody.innerHTML = `
+                            <tr>
+                                <td colspan="9" class="text-center py-4">
+                                    <i class="fas fa-exclamation-circle me-2"></i>
+                                    Error loading grades. Please try again.
+                                </td>
+                            </tr>
+                        `;
+                    });
             }
 
-            searchBtn.addEventListener('click', searchStudent);
-            searchInput.addEventListener('keyup', function(e) {
-                if (e.key === 'Enter') {
-                    searchStudent();
-                }
-            });
+            // Load grades for the first active tab on page load
+            const firstTab = document.querySelector('[data-bs-toggle="tab"].active');
+            if (firstTab) {
+                const sectionId = firstTab.getAttribute('data-bs-target').replace('#section', '');
+                loadGrades(sectionId);
+            }
         });
     </script>
 </body>

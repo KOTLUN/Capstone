@@ -11,6 +11,7 @@ class Migration(migrations.Migration):
     initial = True
 
     dependencies = [
+        ('dashboard', '0001_initial'),
     ]
 
     operations = [
