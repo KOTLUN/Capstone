@@ -452,20 +452,6 @@ class Grades(models.Model):
         """Check if grade is passing (assumes 75 as passing)"""
         return self.grade >= 75
 
-class GradeComment(models.Model):
-    """Model for comments on grades (teachers, coordinators, etc.)"""
-    grade = models.ForeignKey(Grades, on_delete=models.CASCADE, related_name='dashboard_comments')
-    author = models.ForeignKey(Teachers, on_delete=models.CASCADE, related_name='dashboard_grade_comments')
-    comment = models.TextField()
-    date_created = models.DateTimeField(auto_now_add=True)
-
-    class Meta:
-        ordering = ['-date_created']
-
-    def __str__(self):
-        return f"Comment on {self.grade} by {self.author}"
-
-
 class AdminProfile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE)
     profile_photo = models.ImageField(upload_to='admin_photos/', null=True, blank=True)

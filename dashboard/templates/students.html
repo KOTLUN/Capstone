@@ -509,7 +509,7 @@
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
-                    <form id="create-account-form" method="POST" action="/administrator/create-student-account/" enctype="multipart/form-data">
+                    <form id="create-account-form" method="POST" action="{% url 'administrator:create_student_account' %}" enctype="multipart/form-data">
                         {% csrf_token %}
                         <input type="hidden" id="account-student-id" name="student_id">
                         

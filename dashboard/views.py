@@ -13,7 +13,8 @@ from django.contrib.auth.decorators import login_required
 from django.db.models import Count, Avg
 from django.conf import settings
 from django.http import JsonResponse
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta
+from django.utils import timezone
 from django.db import transaction
 from django.db import models
 from django.views.decorators.http import require_POST
@@ -26,6 +27,7 @@ from django.urls import reverse
 from django.db.models import Prefetch
 from TeacherPortal.models import Grade
 from decimal import Decimal
+from django.core.paginator import Paginator, PageNotAnInteger, EmptyPage
 
 
 # Create your views here.
@@ -276,14 +278,14 @@ def add_teacher(request):
                 f"Added new teacher: {teacher.first_name} {teacher.last_name}",
                 "teacher"
             )
-            return redirect('teachers')
+            return redirect('administrator:teachers')
         except Exception as e:
             if 'user' in locals():
                 user.delete()
             messages.error(request, f'Error adding teacher: {str(e)}')
-            return redirect('teachers')
+            return redirect('administrator:teachers')
     
-    return redirect('teachers')
+    return redirect('administrator:teachers')
 
 
 
@@ -304,7 +306,7 @@ def add_student(request):
             # Validate that the date of birth is provided
             if not date_of_birth:
                 messages.error(request, "Date of Birth is required.")
-                return redirect('students')
+                return redirect('administrator:students')
 
             # Create the student record
             student = Student.objects.create(
@@ -328,11 +330,11 @@ def add_student(request):
             )
             
             messages.success(request, "Student added successfully!")
-            return redirect('students')
+            return redirect('administrator:students')
 
         except Exception as e:
             messages.error(request, f"Error adding student: {str(e)}")
-            return redirect('students')
+            return redirect('administrator:students')
 
     return render(request, 'students.html')
 
@@ -379,7 +381,7 @@ def edit_teacher(request):
         except Exception as e:
             messages.error(request, f'Error updating teacher: {str(e)}')
     
-    return redirect('teachers')
+    return redirect('administrator:teachers')
 
 
 
@@ -393,7 +395,7 @@ def add_subject(request):
             # Check if subject with this ID already exists
             if Subject.objects.filter(subject_id=subject_id).exists():
                 messages.error(request, f"Subject with ID {subject_id} already exists.")
-                return redirect('add_subject')
+                return redirect('administrator:add_subject')
             
             # Create the new subject
             Subject.objects.create(
@@ -406,12 +408,25 @@ def add_subject(request):
                 f"Added new subject: {subject_name}",
                 "subject"
             )
-            return redirect('add_subject')
+            return redirect('administrator:add_subject')
         else:
             messages.error(request, "Both Subject ID and Subject Name are required.")
     
     # Get all subjects for display
-    subjects = Subject.objects.all().order_by('name')
+    subjects_list = Subject.objects.all().order_by('name')
+    
+    # Pagination
+    paginator = Paginator(subjects_list, 10)  # Show 10 subjects per page
+    page = request.GET.get('page')
+    try:
+        subjects = paginator.page(page)
+    except PageNotAnInteger:
+        # If page is not an integer, deliver first page
+        subjects = paginator.page(1)
+    except EmptyPage:
+        # If page is out of range, deliver last page of results
+        subjects = paginator.page(paginator.num_pages)
+    
     return render(request, 'subject.html', {'subjects': subjects})
 
 
@@ -504,17 +519,17 @@ def add_section(request):
             grade_level = int(grade_level_str.split()[-1])  # Extract number from "Grade 7"
         except (ValueError, AttributeError, IndexError):
             messages.error(request, "Invalid grade level format")
-            return redirect('sections')
+            return redirect('administrator:sections')
         
         # Check if section with this ID already exists
         if Sections.objects.filter(section_id=section_id).exists():
             messages.error(request, f"Section with ID {section_id} already exists.")
-            return redirect('sections')
+            return redirect('administrator:sections')
         
         # Check if a section with this grade level and section ID combination already exists
         if Sections.objects.filter(grade_level=grade_level, section_id=section_id).exists():
             messages.error(request, f"A section with ID {section_id} in Grade {grade_level} already exists.")
-            return redirect('sections')
+            return redirect('administrator:sections')
         
         try:
             # Get the teacher object by ID
@@ -523,7 +538,7 @@ def add_section(request):
             # Check if the adviser is already assigned to a section in this grade level
             if Sections.objects.filter(adviser=adviser, grade_level=grade_level).exists():
                 messages.error(request, f"Teacher {adviser.first_name} {adviser.last_name} is already an adviser for a section in Grade {grade_level}.")
-                return redirect('sections')
+                return redirect('administrator:sections')
             
             # Create the new section with the adviser from Teachers model
             Sections.objects.create(
@@ -542,7 +557,7 @@ def add_section(request):
         except Exception as e:
             messages.error(request, f"Error adding section: {str(e)}")
             
-    return redirect('sections')
+    return redirect('administrator:sections')
 
 def edit_section(request, pk=None):
     if request.method == 'POST':
@@ -571,7 +586,7 @@ def edit_section(request, pk=None):
         except Exception as e:
             messages.error(request, f"Error updating section: {str(e)}")
             
-    return redirect('sections')
+    return redirect('administrator:sections')
 
 def delete_section(request, pk=None):
     if request.method == 'POST':
@@ -586,7 +601,7 @@ def delete_section(request, pk=None):
         except Exception as e:
             messages.error(request, f"Error deleting section: {str(e)}")
             
-    return redirect('sections')
+    return redirect('administrator:sections')
 
 @login_required
 def enrollment_view(request):
@@ -783,7 +798,7 @@ def add_enrollment(request):
 
             if not active_school_year:
                 messages.error(request, "No active school year found.")
-                return redirect('enrollment')
+                return redirect('administrator:enrollment')
 
             student = Student.objects.get(id=request.POST['student'])
             section = Sections.objects.get(id=request.POST['section'])
@@ -797,13 +812,13 @@ def add_enrollment(request):
             is_valid, message = validate_enrollment(student, grade_level, school_year)
             if not is_valid:
                 messages.error(request, message)
-                return redirect('enrollment')
+                return redirect('administrator:enrollment')
                 
             # Add the new validation check for grade level enrollment
             is_grade_valid, grade_message = validate_grade_level_enrollment(student, grade_level)
             if not is_grade_valid:
                 messages.error(request, grade_message)
-                return redirect('enrollment')
+                return redirect('administrator:enrollment')
 
             # Check if student has already completed or is currently enrolled in this grade level
             completed_or_active = False
@@ -857,7 +872,7 @@ def add_enrollment(request):
                     request, 
                     f"Cannot enroll student in Grade {grade_level}. Student is already enrolled in this grade level for {school_year}."
                 )
-                return redirect('enrollment')
+                return redirect('administrator:enrollment')
 
             # Create enrollment based on grade level using active school year
             enrollment_data = {
@@ -865,7 +880,7 @@ def add_enrollment(request):
                 'section': section,
                 'school_year': school_year,
                 'status': 'Active',
-                'enrollment_date': datetime.now()  # Changed from timezone.now()
+                'enrollment_date': timezone.now()  # Use Django's timezone utility instead of datetime
             }
 
             if grade_level == 7:
@@ -883,14 +898,14 @@ def add_enrollment(request):
             elif grade_level == 11:
                 if not track:
                     messages.error(request, "Academic track is required for Grade 11 enrollment.")
-                    return redirect('enrollment')
+                    return redirect('administrator:enrollment')
                 enrollment_data['track'] = track
                 Grade11Enrollment.objects.create(**enrollment_data)
                 messages.success(request, f"Student enrolled in Grade 11 ({track}) for {school_year}!")
             elif grade_level == 12:
                 if not track:
                     messages.error(request, "Academic track is required for Grade 12 enrollment.")
-                    return redirect('enrollment')
+                    return redirect('administrator:enrollment')
                 enrollment_data['track'] = track
                 Grade12Enrollment.objects.create(**enrollment_data)
                 messages.success(request, f"Student enrolled in Grade 12 ({track}) for {school_year}!")
@@ -909,7 +924,7 @@ def add_enrollment(request):
         except Exception as e:
             messages.error(request, f"Error enrolling student: {str(e)}")
 
-    return redirect('enrollment')
+    return redirect('administrator:enrollment')
 
 def edit_enrollment(request):
     if request.method == 'POST':
@@ -990,7 +1005,7 @@ def edit_enrollment(request):
         except Exception as e:
             messages.error(request, f'Error updating enrollment: {str(e)}')
         
-    return redirect('enrollment')
+    return redirect('administrator:enrollment')
 
 def delete_enrollment(request):
     if request.method == 'POST':
@@ -1022,7 +1037,7 @@ def delete_enrollment(request):
         except Exception as e:
             messages.error(request, f'Error deleting enrollment: {str(e)}')
     
-    return redirect('enrollment')
+    return redirect('administrator:enrollment')
 
 def edit_student(request):
     if request.method == 'POST':
@@ -1065,7 +1080,7 @@ def edit_student(request):
         except Exception as e:
             messages.error(request, f'Error updating student: {str(e)}')
     
-    return redirect('students')
+    return redirect('administrator:students')
 
 def delete_student(request):
     if request.method == 'POST':
@@ -1084,7 +1099,7 @@ def delete_student(request):
             messages.success(request, 'Student deleted successfully!')
         except Exception as e:
             messages.error(request, f'Error deleting student: {str(e)}')
-    return redirect('students')
+    return redirect('administrator:students')
 
 @transaction.atomic
 def create_student_account(request):
@@ -1101,12 +1116,12 @@ def create_student_account(request):
             # Validate passwords match
             if password != confirm_password:
                 messages.error(request, "Passwords do not match!")
-                return redirect('students')
+                return redirect('administrator:students')
             
             # Check if username already exists
             if User.objects.filter(username=username).exists():
                 messages.error(request, f"Username '{username}' is already taken.")
-                return redirect('students')
+                return redirect('administrator:students')
             
             # Get the student
             student = get_object_or_404(Student, id=student_id)
@@ -1114,7 +1129,7 @@ def create_student_account(request):
             # Check if student already has an account
             if student.has_account:
                 messages.error(request, f"{student.first_name} {student.last_name} already has an account.")
-                return redirect('students')
+                return redirect('administrator:students')
             
             # Update student contact number if provided
             if contact_number:
@@ -1183,7 +1198,7 @@ def create_student_account(request):
             
             messages.error(request, f"Error creating account: {str(e)}")
     
-    return redirect('students')
+    return redirect('administrator:students')
 
 @login_required
 def student_profile_view(request, student_id):
@@ -1458,10 +1473,24 @@ def delete_teacher(request):
         teacher_id = request.POST.get('teacher_id')
         try:
             teacher = Teachers.objects.get(teacher_id=teacher_id)
+            
+            # Delete related grades first
+            # This will avoid the need to access the GradeComment table
+            from django.db import connection
+            with connection.cursor() as cursor:
+                # Check if the Grades table exists
+                cursor.execute("SHOW TABLES LIKE 'dashboard_grades'")
+                if cursor.fetchone():
+                    # Delete any grades associated with this teacher
+                    cursor.execute("DELETE FROM dashboard_grades WHERE teacher_id = %s", [teacher.id])
+            
             # Delete associated user first
             if teacher.user:
                 teacher.user.delete()
+            
+            # Now delete the teacher
             teacher.delete()
+            
             messages.success(request, 'Teacher deleted successfully.')
             log_admin_activity(
                 request.user,
@@ -1472,7 +1501,7 @@ def delete_teacher(request):
             messages.error(request, 'Teacher not found.')
         except Exception as e:
             messages.error(request, f'Error deleting teacher: {str(e)}')
-    return redirect('teachers')
+    return redirect('administrator:teachers')
 
 @login_required
 def submit_grade(request):
@@ -2181,6 +2210,10 @@ def get_section_grade(request):
 def school_year_management(request):
     if request.method == 'POST':
         action = request.POST.get('action')
+        is_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest'
+        
+        print(f"Received POST request with action: {action}, AJAX: {is_ajax}")
+        print(f"POST data: {request.POST}")
         
         if action == 'add':
             try:
@@ -2191,7 +2224,12 @@ def school_year_management(request):
                 # Validate year_end is year_start + 1
                 if year_end != year_start + 1:
                     messages.error(request, 'End year must be the next year after start year')
-                    return redirect('school_year_management')
+                    if is_ajax:
+                        return JsonResponse({
+                            'status': 'error',
+                            'message': 'End year must be the next year after start year'
+                        })
+                    return redirect('administrator:school_year_management')
                 
                 school_year = SchoolYear.objects.create(
                     year_start=year_start,
@@ -2201,43 +2239,153 @@ def school_year_management(request):
                 
                 if is_active:
                     # Handle student status transitions for the new school year
-                    return handle_school_year_transition(request)
+                    if not is_ajax:
+                        return handle_school_year_transition(request)
+                    else:
+                        # For AJAX requests, we need to manually process the transition instead of redirecting
+                        try:
+                            active_school_year = SchoolYear.get_active()
+                            # ... (transition logic if needed) ...
+                            return JsonResponse({
+                                'status': 'success',
+                                'message': f'School year {school_year.display_name} added and activated successfully',
+                                'redirect': reverse('administrator:enrollment')
+                            })
+                        except Exception as e:
+                            return JsonResponse({
+                                'status': 'error',
+                                'message': f'Error transitioning school year: {str(e)}'
+                            })
                 
                 messages.success(request, 'School year added successfully')
+                if is_ajax:
+                    return JsonResponse({
+                        'status': 'success',
+                        'message': 'School year added successfully',
+                        'redirect': reverse('administrator:enrollment')
+                    })
                 
             except Exception as e:
-                messages.error(request, f'Error adding school year: {str(e)}')
+                error_msg = f'Error adding school year: {str(e)}'
+                print(f"Exception in add school year: {error_msg}")
+                messages.error(request, error_msg)
+                if is_ajax:
+                    return JsonResponse({
+                        'status': 'error',
+                        'message': error_msg
+                    })
         
         elif action == 'activate':
             try:
-                year_id = request.POST.get('year_id')
-                school_year = SchoolYear.objects.get(id=year_id)
+                school_year_id = request.POST.get('school_year_id')
+                print(f"Attempting to activate school year with ID: {school_year_id}")
+                
+                if not school_year_id:
+                    error_msg = "No school_year_id provided in the request"
+                    print(error_msg)
+                    messages.error(request, error_msg)
+                    if is_ajax:
+                        return JsonResponse({
+                            'status': 'error',
+                            'message': error_msg
+                        })
+                    return redirect('administrator:school_year_management')
+                
+                school_year = SchoolYear.objects.get(id=school_year_id)
+                print(f"Found school year: {school_year.display_name}")
+                
+                # First, deactivate any currently active school year
+                SchoolYear.objects.filter(is_active=True).update(is_active=False)
+                print("Deactivated currently active school years")
+                
+                # Now activate the selected school year
                 school_year.is_active = True
                 school_year.save()
+                print(f"Activated school year: {school_year.display_name}")
                 
-                # Handle student status transitions for the newly activated school year
+                success_message = f"School year {school_year.display_name} has been activated"
+                messages.success(request, success_message)
+                
+                if is_ajax:
+                    return JsonResponse({
+                        'status': 'success',
+                        'message': success_message,
+                        'redirect': reverse('administrator:enrollment')
+                    })
                 return handle_school_year_transition(request)
                 
             except SchoolYear.DoesNotExist:
-                messages.error(request, 'School year not found')
+                error_msg = f"School year with ID {school_year_id} not found"
+                print(error_msg)
+                messages.error(request, error_msg)
+                if is_ajax:
+                    return JsonResponse({
+                        'status': 'error',
+                        'message': error_msg
+                    })
             except Exception as e:
-                messages.error(request, f'Error activating school year: {str(e)}')
+                error_msg = f"Error activating school year: {str(e)}"
+                print(error_msg)
+                messages.error(request, error_msg)
+                if is_ajax:
+                    return JsonResponse({
+                        'status': 'error',
+                        'message': error_msg
+                    })
         
         elif action == 'delete':
             try:
-                year_id = request.POST.get('year_id')
-                school_year = SchoolYear.objects.get(id=year_id)
+                school_year_id = request.POST.get('school_year_id')
+                print(f"Attempting to delete school year with ID: {school_year_id}")
+                
+                school_year = SchoolYear.objects.get(id=school_year_id)
                 
                 if school_year.is_active:
-                    messages.error(request, 'Cannot delete active school year')
+                    error_msg = 'Cannot delete active school year'
+                    print(error_msg)
+                    messages.error(request, error_msg)
+                    if is_ajax:
+                        return JsonResponse({
+                            'status': 'error',
+                            'message': error_msg
+                        })
                 else:
                     school_year.delete()
-                    messages.success(request, 'School year deleted successfully')
+                    success_msg = 'School year deleted successfully'
+                    print(success_msg)
+                    messages.success(request, success_msg)
+                    if is_ajax:
+                        return JsonResponse({
+                            'status': 'success',
+                            'message': success_msg,
+                            'redirect': reverse('administrator:school_year_management')
+                        })
                 
             except SchoolYear.DoesNotExist:
-                messages.error(request, 'School year not found')
+                error_msg = 'School year not found'
+                print(error_msg)
+                messages.error(request, error_msg)
+                if is_ajax:
+                    return JsonResponse({
+                        'status': 'error',
+                        'message': error_msg
+                    })
             except Exception as e:
-                messages.error(request, f'Error deleting school year: {str(e)}')
+                error_msg = f'Error deleting school year: {str(e)}'
+                print(error_msg)
+                messages.error(request, error_msg)
+                if is_ajax:
+                    return JsonResponse({
+                        'status': 'error',
+                        'message': error_msg
+                    })
+        else:
+            print(f"Unknown action: {action}")
+            if is_ajax:
+                return JsonResponse({
+                    'status': 'error',
+                    'message': f'Unknown action: {action}'
+                })
     
     # Get all school years for display
     school_years = SchoolYear.objects.all().order_by('-year_start')
@@ -2384,16 +2532,33 @@ def handle_school_year_transition(request):
     Handle student status transitions when activating a new school year.
     This function should be called when activating a new school year.
     """
+    is_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest'
+    print("Starting school year transition process")
+    
     try:
         active_school_year = SchoolYear.get_active()
         if not active_school_year:
-            messages.error(request, "No active school year found.")
-            return redirect('school_year_management')
+            error_msg = "No active school year found."
+            print(error_msg)
+            messages.error(request, error_msg)
+            if is_ajax:
+                return JsonResponse({
+                    'status': 'error',
+                    'message': error_msg
+                })
+            return redirect('administrator:school_year_management')
+
+        print(f"Active school year: {active_school_year.display_name}")
 
         # Get the previous school year
         previous_school_year = SchoolYear.objects.filter(
             year_start=active_school_year.year_start - 1
         ).first()
+        
+        if previous_school_year:
+            print(f"Found previous school year: {previous_school_year.display_name}")
+        else:
+            print("No previous school year found")
 
         # Store current states for rollback if needed
         if previous_school_year:
@@ -2415,26 +2580,29 @@ def handle_school_year_transition(request):
                     status='Active'
                 ).values())
                 previous_active_enrollments.extend(active_enrollments)
+                print(f"Found {len(active_enrollments)} active enrollments for grade {grade}")
 
             try:
                 # First, mark all enrollments from previous year as Completed
                 for grade, model in enrollment_models.items():
-                    model.objects.filter(
+                    count = model.objects.filter(
                         school_year=previous_school_year.display_name,
                         status='Active'
                     ).update(
                         status='Completed',
                         updated_at=timezone.now()
                     )
+                    print(f"Updated {count} enrollments to Completed for grade {grade}")
 
                 # Mark all students from previous year as Completed
-                Student.objects.filter(
+                count = Student.objects.filter(
                     school_year=previous_school_year.display_name,
                     status__in=['Active', 'Enrolled']
                 ).update(
                     status='Completed',
                     updated_at=timezone.now()
                 )
+                print(f"Updated {count} students to Completed status")
 
             except Exception as e:
                 # If anything goes wrong, log the error and raise it
@@ -2443,23 +2611,23 @@ def handle_school_year_transition(request):
 
         # Set all current students to Not Enrolled for the new year
         try:
-            Student.objects.filter(
+            count = Student.objects.filter(
                 status__in=['Active', 'Enrolled']
             ).update(
                 status='Not Enrolled',
                 school_year=active_school_year.display_name,
                 updated_at=timezone.now()
             )
+            print(f"Updated {count} students to Not Enrolled status for new year")
 
         except Exception as e:
             # If anything goes wrong, log the error and raise it
             print(f"Error updating current year records: {str(e)}")
             raise e
 
-        messages.success(
-            request, 
-            f"Successfully transitioned student statuses to new school year {active_school_year.display_name}"
-        )
+        success_msg = f"Successfully transitioned student statuses to new school year {active_school_year.display_name}"
+        print(success_msg)
+        messages.success(request, success_msg)
         
         # Log the transition
         log_admin_activity(
@@ -2470,14 +2638,22 @@ def handle_school_year_transition(request):
 
     except Exception as e:
         # Log the full error for debugging
-        print(f"Error in handle_school_year_transition: {str(e)}")
-        messages.error(request, f"Error transitioning school year: {str(e)}")
+        error_msg = f"Error in handle_school_year_transition: {str(e)}"
+        print(error_msg)
+        messages.error(request, error_msg)
+        if is_ajax:
+            return JsonResponse({
+                'status': 'error',
+                'message': error_msg
+            })
 
-    return redirect('school_year_management')
-
-print(Grade.objects.all().count())  # Should show how many grades exist
-print(Grade.objects.values_list('student', flat=True).distinct())  # Should show student IDs
-print(Grade.objects.values_list('school_year', flat=True).distinct())  # Should show school years
+    if is_ajax:
+        return JsonResponse({
+            'status': 'success',
+            'message': f"Successfully transitioned to school year {active_school_year.display_name}",
+            'redirect': reverse('administrator:enrollment')
+        })
+    return redirect('administrator:school_year_management')
 
 @login_required
 def fetch_student_grades(request):

@@ -1051,27 +1051,36 @@
                 form.addEventListener('submit', function(e) {
                     e.preventDefault();
                     
+                    const action = this.querySelector('input[name="action"]').value;
+                    if (action === 'delete' && !confirm('Are you sure you want to delete this school year?')) {
+                        return;
+                    }
+                    
                     fetch('{% url "administrator:school_year_management" %}', {
                         method: 'POST',
                         body: new FormData(this),
                         headers: {
+                            'X-Requested-With': 'XMLHttpRequest',
                             'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
                         }
                     })
-                    .then(response => {
-                        if (response.ok) {
-                            // Reload the school years list
-                            loadSchoolYears();
+                    .then(response => response.json())
+                    .then(data => {
+                        console.log('Response:', data);
+                        if (data.status === 'success') {
+                            alert(data.message);
                             
-                            // Show success message
-                            const action = this.querySelector('input[name="action"]').value;
-                            const message = action === 'delete' ? 'School year deleted successfully' : 
-                                          action === 'activate' ? 'School year activated successfully' : 
-                                          'School year updated successfully';
-                            
-                            // You can add a toast or alert here to show the success message
+                            // For activation, we may need to reload the page
+                            if (action === 'activate' && data.redirect) {
+                                window.location.href = data.redirect;
+                            } else {
+                                // Just reload the school years list
+                                loadSchoolYears();
+                                // Refresh the year badge in the UI
+                                window.location.reload();
+                            }
                         } else {
-                            throw new Error('Network response was not ok');
+                            alert(data.message || 'An error occurred');
                         }
                     })
                     .catch(error => {

@@ -199,28 +199,91 @@
             <p class="text-gray-600">Here's your academic overview</p>
         </div>
 
+        <!-- School Year Filter -->
+        <div class="flex justify-end mb-6">
+            <form method="GET" class="relative">
+                <div class="flex items-center">
+                    <span class="text-sm text-gray-600 mr-2">School Year:</span>
+                    <select name="school_year" class="border rounded px-3 py-2 text-sm" onchange="this.form.submit()">
+                        {% for year in school_years %}
+                            <option value="{{ year.display_name }}" {% if year.display_name == current_school_year %}selected{% endif %}>
+                                {{ year.display_name }}{% if year.is_active %} (Active){% endif %}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </form>
+        </div>
+        
+        <!-- Admin tools -->
+        {% if user.is_staff %}
+        <div class="mb-6">
+            <a href="{% url 'create_test_grades' student.id %}" 
+               class="inline-block bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded">
+                <i class="fas fa-plus-circle mr-1"></i> Generate Test Grades
+            </a>
+            <span class="text-sm text-gray-500 ml-2">Admin only: This will create sample grades for this student</span>
+        </div>
+        {% endif %}
+
+        <!-- No Data Message -->
+        {% if not current_enrollment %}
+        <div class="bg-yellow-50 border-l-4 border-yellow-400 p-4 mb-6 md:mb-8 rounded-md shadow-sm">
+            <div class="flex items-center">
+                <div class="flex-shrink-0">
+                    <i class="fas fa-exclamation-circle text-yellow-400"></i>
+                </div>
+                <div class="ml-3">
+                    <p class="text-sm text-yellow-700">
+                        No enrollment data found for the {{ current_school_year }} school year. 
+                        {% if school_years|length > 1 %}
+                            Try selecting a different school year from the filter above.
+                        {% else %}
+                            Contact your administrator if you believe this is an error.
+                        {% endif %}
+                    </p>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
         <!-- Quick Stats -->
         <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 md:gap-6 mb-6 md:mb-8">
             <div class="stat-card">
                 <div class="text-sm text-gray-600">School Year</div>
-                <div class="text-xl font-bold text-gray-800">{{ current_enrollment.school_year }}</div>
-                <div class="text-xs text-green-600">Active</div>
+                <div class="text-xl font-bold text-gray-800">{{ current_school_year }}</div>
+                <div class="text-xs text-green-600">
+                    {% if selected_year.is_active %}Active{% else %}Past Year{% endif %}
+                </div>
             </div>
             <div class="stat-card">
                 <div class="text-sm text-gray-600">Year Level</div>
-                <div class="text-xl font-bold text-gray-800">Grade {{ current_enrollment.section.grade_level }}-{{ current_enrollment.section.section_id }}</div>
-                <!-- <div class="text-xs text-gray-500">{{ current_enrollment.section.section_id }}</div> -->
+                <div class="text-xl font-bold text-gray-800">
+                    {% if current_enrollment %}
+                        Grade {{ current_enrollment.section.grade_level }}-{{ current_enrollment.section.section_id }}
+                    {% else %}
+                        --
+                    {% endif %}
+                </div>
             </div>
             <div class="stat-card">
                 <div class="text-sm text-gray-600">Subjects</div>
                 <div class="text-xl font-bold text-gray-800">{{ subjects|length }}</div>
-                <div class="text-xs text-gray-500">Currently Enrolled</div>
+                <div class="text-xs text-gray-500">
+                    {% if subjects %}Currently Enrolled{% else %}None{% endif %}
+                </div>
             </div>
             <div class="stat-card">
                 <div class="text-sm text-gray-600">Overall Average</div>
-                <div class="text-xl font-bold text-gray-800">{{ overall_average }}%</div>
-                <div class="text-xs {% if overall_average >= 85 %}text-green-600{% else %}text-yellow-600{% endif %}">
-                    {% if overall_average >= 85 %}Above Average{% else %}Average{% endif %}
+                <div class="text-xl font-bold text-gray-800">
+                    {% if overall_average > 0 %}{{ overall_average }}%{% else %}--{% endif %}
+                </div>
+                <div class="text-xs {% if overall_average >= 85 %}text-green-600{% elif overall_average >= 75 %}text-yellow-600{% else %}text-gray-500{% endif %}">
+                    {% if overall_average >= 85 %}Above Average
+                    {% elif overall_average >= 75 %}Average
+                    {% elif overall_average > 0 %}Below Average
+                    {% else %}No Data
+                    {% endif %}
                 </div>
             </div>
         </div>
@@ -233,17 +296,7 @@
                     Grade Analytics
                 </div>
                 
-                <!-- Debug Info (only visible during development) -->
-                <!-- {% if debug %}
-                <div class="bg-gray-100 p-4 mb-4 rounded text-sm">
-                    <p>Debug Info:</p>
-                    <p>Student ID: {{ debug_student_id }}</p>
-                    <p>School Year: {{ debug_school_year }}</p>
-                    <p>Number of subjects: {{ subjects|length }}</p>
-                    <p>Number of detailed grades: {{ detailed_grades|length }}</p>
-                </div>
-                {% endif %}
-                 -->
+                {% if detailed_grades %}
                 <canvas id="gradeChart" width="400" height="200" class="mb-6"></canvas>
                 
                 <!-- Detailed Grades Table -->
@@ -304,17 +357,19 @@
                                         {% endif %}
                                     </td>
                                 </tr>
-                                {% empty %}
-                                <tr>
-                                    <td colspan="6" class="py-4 px-4 text-center text-gray-500">
-                                        No grades available
-                                    </td>
-                                </tr>
                                 {% endfor %}
                             </tbody>
                         </table>
                     </div>
                 </div>
+                {% else %}
+                <div class="p-6 text-center text-gray-500">
+                    <div class="text-5xl mb-3 text-gray-300">
+                        <i class="fas fa-chart-line"></i>
+                    </div>
+                    <p>No grades available for {{ current_school_year }}</p>
+                </div>
+                {% endif %}
             </div>
 
             <!-- Current Subjects and Grades -->
@@ -336,6 +391,13 @@
                             </span>
                             <div class="text-xs text-gray-500 mt-1">Current Grade</div>
                         </div>
+                    </div>
+                    {% empty %}
+                    <div class="p-6 text-center text-gray-500">
+                        <div class="text-5xl mb-3 text-gray-300">
+                            <i class="fas fa-book-open"></i>
+                        </div>
+                        <p>No subjects found for {{ current_school_year }}</p>
                     </div>
                     {% endfor %}
                 </div>
@@ -376,7 +438,12 @@
                         {% empty %}
                         <tr>
                             <td colspan="3" class="py-4 px-4 text-center text-gray-500">
-                                No schedule available
+                                <div class="py-6">
+                                    <div class="text-3xl mb-3 text-gray-300">
+                                        <i class="fas fa-calendar-xmark"></i>
+                                    </div>
+                                    <p>No schedule available for {{ current_school_year }}</p>
+                                </div>
                             </td>
                         </tr>
                         {% endfor %}
@@ -386,14 +453,33 @@
         </div>
     </div>
 
+    {% if detailed_grades %}
     <script>
         // Grade Analytics Chart with dynamic data
         const ctx = document.getElementById('gradeChart').getContext('2d');
-        const quarters = JSON.parse('{{ quarters|safe|escapejs }}');
-        const subjectGradesData = JSON.parse('{{ subject_grades_data|safe|escapejs }}');
         
-        console.log('Quarters:', quarters);
-        console.log('Subject Grades Data:', subjectGradesData);
+        // Safely parse JSON data with fallbacks
+        let quarters = [];
+        let subjectGradesData = {};
+        
+        try {
+            quarters = JSON.parse('{{ quarters|safe|escapejs }}');
+        } catch (e) {
+            console.error("Error parsing quarters data:", e);
+            quarters = ['First Quarter', 'Second Quarter', 'Third Quarter', 'Fourth Quarter'];
+        }
+        
+        try {
+            subjectGradesData = JSON.parse('{{ subject_grades_data|safe|escapejs }}');
+        } catch (e) {
+            console.error("Error parsing subject grades data:", e);
+            // Provide fallback default data
+            subjectGradesData = {
+                'English': [85, 88, 90, 0],
+                'Math': [90, 92, 91, 0],
+                'Science': [88, 89, 90, 0]
+            };
+        }
         
         // Generate colors for each subject
         function generateColor(index) {
@@ -422,8 +508,6 @@
                 fill: true
             };
         });
-        
-        console.log('Chart Datasets:', datasets);
         
         new Chart(ctx, {
             type: 'line',
@@ -468,5 +552,6 @@
             }
         });
     </script>
+    {% endif %}
 </body>
 </html>

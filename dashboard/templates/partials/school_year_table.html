@@ -15,7 +15,7 @@
             <form method="POST" class="d-inline">
                 {% csrf_token %}
                 <input type="hidden" name="action" value="activate">
-                <input type="hidden" name="year_id" value="{{ year.id }}">
+                <input type="hidden" name="school_year_id" value="{{ year.id }}">
                 <button type="submit" class="btn btn-sm btn-success">
                     <i class="fas fa-check-circle"></i> Set Active
                 </button>
@@ -23,7 +23,7 @@
             <form method="POST" class="d-inline ms-2">
                 {% csrf_token %}
                 <input type="hidden" name="action" value="delete">
-                <input type="hidden" name="year_id" value="{{ year.id }}">
+                <input type="hidden" name="school_year_id" value="{{ year.id }}">
                 <button type="submit" class="btn btn-sm btn-danger" 
                         onclick="return confirm('Are you sure you want to delete {{ year.display_name }}?')">
                     <i class="fas fa-trash"></i> Delete
