@@ -219,10 +219,18 @@
         {% if user.is_staff %}
         <div class="mb-6">
             <a href="{% url 'create_test_grades' student.id %}" 
-               class="inline-block bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded">
+               class="inline-block bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded mr-2">
                 <i class="fas fa-plus-circle mr-1"></i> Generate Test Grades
             </a>
-            <span class="text-sm text-gray-500 ml-2">Admin only: This will create sample grades for this student</span>
+            <a href="{% url 'diagnostics' student.id %}" 
+               class="inline-block bg-green-600 hover:bg-green-700 text-white font-medium py-2 px-4 rounded mr-2">
+                <i class="fas fa-bug mr-1"></i> Student Diagnostics
+            </a>
+            <a href="{% url 'all_grades' %}" 
+               class="inline-block bg-purple-600 hover:bg-purple-700 text-white font-medium py-2 px-4 rounded">
+                <i class="fas fa-database mr-1"></i> All Grades
+            </a>
+            <span class="text-sm text-gray-500 ml-2 block mt-1">Admin only: Tools for troubleshooting</span>
         </div>
         {% endif %}
 
@@ -473,12 +481,8 @@
             subjectGradesData = JSON.parse('{{ subject_grades_data|safe|escapejs }}');
         } catch (e) {
             console.error("Error parsing subject grades data:", e);
-            // Provide fallback default data
-            subjectGradesData = {
-                'English': [85, 88, 90, 0],
-                'Math': [90, 92, 91, 0],
-                'Science': [88, 89, 90, 0]
-            };
+            // Empty data when no grades are available
+            subjectGradesData = {};
         }
         
         // Generate colors for each subject

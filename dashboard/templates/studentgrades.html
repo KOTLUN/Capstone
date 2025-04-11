@@ -179,21 +179,62 @@
                         School Year: {{ active_school_year.display_name|default:"No active school year" }}
                     </div>
                 </div>
-
+<!-- 
                 <!-- Debug Info -->
-                <div class="debug-info mb-4">
-                    <h5>Debug Information:</h5>
+                <!-- <div class="debug-info mb-4"> -->
+                    <!-- <h5>Debug Information:</h5>
                     <p>Number of Grade Levels: {{ sections_by_grade|length }}</p>
                     <p>Grade Levels Available: {{ sections_by_grade.keys|join:", "|default:"None" }}</p>
                     <p>Active School Year: {{ active_school_year|default:"None" }}</p>
-                    <p>Total Sections with Students: {{ students_by_section|length }}</p>
+                    <p>Total Sections with Students: {{ students_by_section|length }}</p> -->
+<!--                     
+                    Add test grade button
+                    <div class="mb-3">
+                        <button id="addTestGradeBtn" class="btn btn-sm btn-primary">
+                            Add Test Grade
+                        </button>
+                        <span id="addGradeResult" class="ms-2"></span>
+                    </div>
+                    
+                    <!-- Debug Teacher Portal Grades -->
+                    <!-- <h6>TeacherPortal Grades:</h6>
+                    <div id="teacherPortalGrades" class="mb-3">
+                        <table class="table table-sm table-bordered">
+                            <thead>
+                                <tr>
+                                    <th>Student ID</th>
+                                    <th>Course</th>
+                                    <th>Quarter</th>
+                                    <th>Grade</th>
+                                    <th>Status</th>
+                                    <th>School Year</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <!-- Will be populated via JS -->
+                            <!-- </tbody>
+                        </table>
+                    </div>  -->
+                    
+                    <!-- Student ID to Section Mapping for Debug -->
+                    <!-- <h6>Student-Section Mapping:</h6>
+                    <div class="mb-3 small">
+                        {% for section_id, students in students_by_section.items %}
+                            <p><strong>Section {{ section_id }}:</strong> 
+                                {% for student in students %}
+                                    {{ student.student_id }}{% if not forloop.last %}, {% endif %}
+                                {% endfor %}
+                            </p>
+                        {% endfor %}
+                    </div>
+                    
                     {% for section_id, students in students_by_section.items %}
                         <p>Section {{ section_id }} - Students: {{ students|length }}</p>
                         {% for student in students %}
                             <p>Student {{ student.student_id }} - Grades: {{ student.processed_grades|length }}</p>
                         {% endfor %}
-                    {% endfor %}
-                </div>
+                    {% endfor %} -->
+                <!-- </div> --> 
 
                 <!-- Search Box -->
                 <div class="search-box mb-4">
@@ -288,7 +329,7 @@
                                                                         <th class="text-center">3rd Quarter</th>
                                                                         <th class="text-center">4th Quarter</th>
                                                                         <th class="text-center">Final Grade</th>
-                                                                        <th class="text-center">Status</th>
+                                                                        <!-- <th class="text-center">Status</th> -->
                                                                     </tr>
                                                                 </thead>
                                                                 <tbody>
@@ -315,11 +356,11 @@
                                                                                     <td class="grade-value {% if grade.final_grade >= 75 %}passing{% elif grade.final_grade %}failing{% endif %}">
                                                                                         {{ grade.final_grade|default:"-" }}
                                                                                     </td>
-                                                                                    <td class="text-center">
+                                                                                    <!-- <td class="text-center">
                                                                                         <span class="status-badge status-{{ grade.status|lower }}">
                                                                                             {{ grade.status|title }}
                                                                                         </span>
-                                                                                    </td>
+                                                                                    </td> -->
                                                                                 </tr>
                                                                             {% empty %}
                                                                                 <tr>
@@ -378,6 +419,85 @@
                 });
             });
 
+            // Add test grade button handler
+            const addTestGradeBtn = document.getElementById('addTestGradeBtn');
+            const addGradeResult = document.getElementById('addGradeResult');
+            
+            if (addTestGradeBtn) {
+                // Collect available student IDs from the debug section
+                const studentIds = [];
+                document.querySelectorAll('.mb-3.small strong').forEach(section => {
+                    const sectionText = section.closest('p').textContent;
+                    const studentMatches = sectionText.match(/\d{7}/g); // Match 7-digit student IDs
+                    if (studentMatches) {
+                        studentIds.push(...studentMatches);
+                    }
+                });
+                
+                console.log('Available student IDs for test grades:', studentIds);
+                
+                addTestGradeBtn.addEventListener('click', function() {
+                    // Use an available student ID or default to 2025001
+                    const studentId = studentIds.length > 0 ? 
+                        studentIds[Math.floor(Math.random() * studentIds.length)] : '2025001';
+                    
+                    // Generate random values
+                    const courseId = ['0001', '0002', '0003'][Math.floor(Math.random() * 3)];
+                    const quarter = Math.floor(Math.random() * 4) + 1;
+                    const grade = Math.floor(Math.random() * 30) + 70; // 70-99
+                    const status = ['draft', 'submitted', 'approved'][Math.floor(Math.random() * 3)];
+                    
+                    // Show loading
+                    addGradeResult.textContent = 'Adding grade...';
+                    
+                    // Call the endpoint
+                    fetch(`/administrator/add-test-grade/?student_id=${studentId}&course_id=${courseId}&quarter=${quarter}&grade=${grade}&status=${status}`)
+                        .then(response => response.json())
+                        .then(data => {
+                            if (data.success) {
+                                addGradeResult.textContent = `Added grade: ${data.grade.grade} for subject ${data.grade.course}, Q${data.grade.quarter}`;
+                                // Refresh debug table
+                                fetch(`/administrator/debug-grades/`)
+                                    .then(response => response.json())
+                                    .then(debugData => {
+                                        console.log("Debug grades data:", debugData);
+                                        
+                                        // Populate TeacherPortal grades debug table
+                                        const tpGradesTable = document.querySelector('#teacherPortalGrades tbody');
+                                        if (tpGradesTable && debugData.teacher_portal_grades_sample) {
+                                            tpGradesTable.innerHTML = '';
+                                            debugData.teacher_portal_grades_sample.forEach(grade => {
+                                                const row = document.createElement('tr');
+                                                row.innerHTML = `
+                                                    <td>${grade.student}</td>
+                                                    <td>${grade.course}</td>
+                                                    <td>${grade.quarter}</td>
+                                                    <td>${grade.grade}</td>
+                                                    <td>${grade.status}</td>
+                                                    <td>${grade.school_year}</td>
+                                                `;
+                                                tpGradesTable.appendChild(row);
+                                            });
+                                        }
+                                    });
+                                
+                                // Reload active section
+                                const activeTab = document.querySelector('[data-bs-toggle="tab"].active');
+                                if (activeTab && activeTab.getAttribute('data-bs-target').startsWith('#section')) {
+                                    const sectionId = activeTab.getAttribute('data-bs-target').replace('#section', '');
+                                    loadGrades(sectionId);
+                                }
+                            } else {
+                                addGradeResult.textContent = `Error: ${data.error}`;
+                            }
+                        })
+                        .catch(error => {
+                            console.error('Error:', error);
+                            addGradeResult.textContent = 'Error adding grade';
+                        });
+                });
+            }
+
             // Function to load grades for a section
             function loadGrades(sectionId) {
                 const tableBody = document.querySelector(`#section${sectionId} .table tbody`);
@@ -394,6 +514,24 @@
                     .then(response => response.json())
                     .then(debugData => {
                         console.log("Debug grades data:", debugData);
+                        
+                        // Populate TeacherPortal grades debug table
+                        const tpGradesTable = document.querySelector('#teacherPortalGrades tbody');
+                        if (tpGradesTable && debugData.teacher_portal_grades_sample) {
+                            tpGradesTable.innerHTML = '';
+                            debugData.teacher_portal_grades_sample.forEach(grade => {
+                                const row = document.createElement('tr');
+                                row.innerHTML = `
+                                    <td>${grade.student}</td>
+                                    <td>${grade.course}</td>
+                                    <td>${grade.quarter}</td>
+                                    <td>${grade.grade}</td>
+                                    <td>${grade.status}</td>
+                                    <td>${grade.school_year}</td>
+                                `;
+                                tpGradesTable.appendChild(row);
+                            });
+                        }
                     });
 
                 // Fetch grades using the new endpoint
@@ -438,7 +576,7 @@
                                                 ${grade.final_grade !== null ? grade.final_grade : '-'}
                                             </td>
                                             <td class="text-center">
-                                                <span class="status-badge status-${grade.status}">
+                                                <span class="status-badge status-${grade.status.toLowerCase()}">
                                                     ${grade.status.charAt(0).toUpperCase() + grade.status.slice(1)}
                                                 </span>
                                             </td>
