@@ -13,6 +13,7 @@ from decimal import Decimal
 from django.utils import timezone
 from django.http import HttpResponse
 from random import randint
+from django.db import connection
 
 @login_required
 def student_profile(request, student_id):
@@ -25,9 +26,9 @@ def student_profile(request, student_id):
         messages.error(request, "You don't have permission to view this profile.")
         return redirect('login')
     
-    # Get the student's current enrollment
+    # Get the student's current enrollment - using direct ID lookup
     current_enrollment = Enrollment.objects.filter(
-        student=student,
+        student_id=student.id,  # Use direct field name
         status='Active'
     ).first()
     
@@ -38,7 +39,7 @@ def student_profile(request, student_id):
         student.school_year = current_enrollment.school_year
     
     # Get the student's guardian information
-    guardians = Guardian.objects.filter(student=student)
+    guardians = Guardian.objects.filter(student_id=student.id)
     
     context = {
         'student': student,
@@ -89,8 +90,9 @@ def student_dashboard(request, student_id):
     # Extract base year format for better matching
     year_base = current_school_year.split(' ')[0] if ' ' in current_school_year else current_school_year
     
+    # Use direct ID lookup for enrollment
     current_enrollment = Enrollment.objects.filter(
-        student=student,
+        student_id=student.id,  # Use direct field name
         school_year__contains=year_base
     ).first()
     
@@ -104,12 +106,28 @@ def student_dashboard(request, student_id):
     year_base = current_school_year.split(' ')[0] if ' ' in current_school_year else current_school_year
     print(f"Using base year format for matching: {year_base}")
     
-    # Use Q objects to search for both string and numeric versions of student ID
-    # and use contains for school_year to handle different formats
-    all_grades = Grade.objects.filter(
-        (Q(student=student.student_id) | Q(student=str(student.student_id))),
-        school_year__contains=year_base
-    )
+    # Use raw SQL instead of ORM since there's a mismatch in the model definition
+    with connection.cursor() as cursor:
+        cursor.execute(
+            """
+            SELECT * FROM teacherportal_grade 
+            WHERE (student = %s OR student = %s) 
+            AND school_year LIKE %s
+            """,
+            [student.student_id, str(student.student_id), f"%{year_base}%"]
+        )
+        # Convert the results to a list of dictionaries
+        columns = [col[0] for col in cursor.description]
+        all_grades_raw = [dict(zip(columns, row)) for row in cursor.fetchall()]
+    
+    # Create a custom Grade class to mimic Django model behavior
+    class GradeObject:
+        def __init__(self, data):
+            for key, value in data.items():
+                setattr(self, key, value)
+    
+    # Convert raw results to GradeObject instances
+    all_grades = [GradeObject(grade_data) for grade_data in all_grades_raw]
     
     # Debug student ID information
     print(f"Student ID info: {student.student_id} (type: {type(student.student_id).__name__})")
@@ -117,10 +135,9 @@ def student_dashboard(request, student_id):
     print(f"Looking for grades in school year: {current_school_year}")
     
     # Debug query results
-    print(f"Found {all_grades.count()} grades for student {student.student_id} in {current_school_year}")
+    print(f"Found {len(all_grades)} grades for student {student.student_id} in {current_school_year}")
     
-    # Print the actual SQL query being executed
-    print(f"SQL Query: {all_grades.query}")
+    # No need to print the SQL query since we used raw SQL
     
     # Create a map of subject courses to actual subjects
     subject_map = {}
@@ -136,7 +153,8 @@ def student_dashboard(request, student_id):
             subject_map[subject.subject_id] = subject
         
         # Add subjects that might have grades but aren't in schedules
-        course_ids = list(set(all_grades.values_list('course', flat=True)))
+        # Extract course IDs from our custom grade objects
+        course_ids = list(set([g.course for g in all_grades if hasattr(g, 'course')]))
         
         for course_id in course_ids:
             if course_id not in subject_map:
@@ -156,7 +174,8 @@ def student_dashboard(request, student_id):
     }
     
     # Process grades by course/subject
-    unique_courses = list(set(all_grades.values_list('course', flat=True)))
+    # Extract unique course IDs directly from our custom grade objects
+    unique_courses = list(set([g.course for g in all_grades if hasattr(g, 'course')]))
     
     for course_id in unique_courses:
         # Get subject object if available, otherwise create dummy
@@ -178,7 +197,7 @@ def student_dashboard(request, student_id):
             subjects.append(subject)
         
         # Get all grades for this course
-        course_grades = all_grades.filter(course=course_id)
+        course_grades = [g for g in all_grades if g.course == course_id]
         
         # Initialize quarterly grades
         quarterly_grades = [0, 0, 0, 0]  # Quarters 1-4
@@ -195,7 +214,7 @@ def student_dashboard(request, student_id):
                 continue
         
         # Set current grade for the subject (most recent value)
-        latest_grade = course_grades.order_by('-uploaded_at').first()
+        latest_grade = course_grades[-1]
         if latest_grade:
             subject.current_grade = str(latest_grade.grade)
         
@@ -322,10 +341,10 @@ def create_test_grades(request, student_id):
     active_school_year = SchoolYear.get_active()
     current_school_year = active_school_year.display_name if active_school_year else "2029-2030 (Active)"
     
-    # Get current enrollment
+    # Get current enrollment - Using direct ID lookup
     current_enrollment = Enrollment.objects.filter(
-        student=student,
-        school_year=current_school_year
+        student_id=student.id,  # Use direct field name
+        school_year__contains=current_school_year.split(' ')[0]
     ).first()
     
     if not current_enrollment:
@@ -340,33 +359,47 @@ def create_test_grades(request, student_id):
     # Create test grades for each subject
     grades_created = 0
     
-    for subject in subjects:
-        # Create grades for the first three quarters
-        for quarter in ['1', '2', '3']:
-            # Check if grade already exists
-            existing_grade = Grade.objects.filter(
-                student=student.student_id,
-                course=subject.subject_id,
-                quarter=quarter,
-                school_year=current_school_year
-            ).first()
-            
-            if not existing_grade:
-                # Generate a random grade between 75 and 98
-                grade_value = randint(75, 98)
-                
-                # Create the grade
-                Grade.objects.create(
-                    student=student.student_id,
-                    course=subject.subject_id,
-                    grade=Decimal(str(grade_value)),
-                    quarter=quarter,
-                    school_year=current_school_year,
-                    teacher="TESTUSER",
-                    status="approved",
-                    uploaded_at=timezone.now()
+    # Use raw SQL for checking and creating grades
+    with connection.cursor() as cursor:
+        for subject in subjects:
+            # Create grades for the first three quarters
+            for quarter in ['1', '2', '3']:
+                # Check if grade already exists with raw SQL
+                cursor.execute(
+                    """
+                    SELECT id FROM teacherportal_grade 
+                    WHERE student = %s AND course = %s AND quarter = %s AND school_year = %s
+                    """,
+                    [student.student_id, subject.subject_id, quarter, current_school_year]
                 )
-                grades_created += 1
+                existing_grade = cursor.fetchone()
+                
+                if not existing_grade:
+                    # Generate a random grade between 75 and 98
+                    grade_value = randint(75, 98)
+                    
+                    # Create the grade with raw SQL
+                    now = timezone.now()
+                    cursor.execute(
+                        """
+                        INSERT INTO teacherportal_grade 
+                        (student, course, grade, quarter, school_year, teacher, status, uploaded_at, date_created, date_modified) 
+                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                        """,
+                        [
+                            student.student_id, 
+                            subject.subject_id, 
+                            grade_value, 
+                            quarter, 
+                            current_school_year, 
+                            "TESTUSER", 
+                            "approved", 
+                            now,
+                            now,
+                            now
+                        ]
+                    )
+                    grades_created += 1
     
     messages.success(request, f"Created {grades_created} test grades for {student.first_name}")
     return redirect('student_dashboard', student_id=student_id)
@@ -388,10 +421,10 @@ def diagnostics(request, student_id):
     active_school_year = SchoolYear.get_active()
     current_school_year = active_school_year.display_name if active_school_year else "2029-2030 (Active)"
     
-    # Get current enrollment
+    # Get current enrollment - Using direct ID lookup
     current_enrollment = Enrollment.objects.filter(
-        student=student,
-        school_year=current_school_year
+        student_id=student.id,  # Use direct field name
+        school_year__contains=current_school_year.split(' ')[0]
     ).first()
     
     # Collect diagnostic info
@@ -426,96 +459,35 @@ def diagnostics(request, student_id):
                 'name': subject.name
             })
         
-        # Get grades
-        teacher_portal_grades = Grade.objects.filter(
-            student=student.student_id,
-            school_year=current_school_year
-        )
+        # Get grades using raw SQL for reliability
+        year_base = current_school_year.split(' ')[0] if ' ' in current_school_year else current_school_year
+        print(f"Diagnostics: Using base year '{year_base}' for matching grades")
         
-        if teacher_portal_grades.count() == 0:
-            teacher_portal_grades = Grade.objects.filter(
-                student=str(student.student_id),
-                school_year=current_school_year
+        # Use raw SQL to get grades
+        with connection.cursor() as cursor:
+            cursor.execute(
+                """
+                SELECT * FROM teacherportal_grade 
+                WHERE (student = %s OR student = %s) 
+                AND school_year LIKE %s
+                """,
+                [student.student_id, str(student.student_id), f"%{year_base}%"]
             )
+            # Convert the results to a list of dictionaries
+            columns = [col[0] for col in cursor.description]
+            grades_raw = [dict(zip(columns, row)) for row in cursor.fetchall()]
         
-        # Get grades using Q objects
-        # Extract base year format for better matching
-        year_base = current_school_year.split(' ')[0] if ' ' in current_school_year else current_school_year
+        print(f"Diagnostics: Found {len(grades_raw)} grades")
         
-        teacher_portal_grades = Grade.objects.filter(
-            (Q(student=student.student_id) | Q(student=str(student.student_id))),
-            school_year__contains=year_base
-        )
-        
-        for grade in teacher_portal_grades:
+        # Add grades to diagnostics
+        for grade in grades_raw:
             diagnostics['grades'].append({
-                'id': grade.id,
-                'student_id': grade.student,
-                'course': grade.course,
-                'quarter': grade.quarter,
-                'grade_value': float(grade.grade),
-                'uploaded_at': grade.uploaded_at.strftime('%Y-%m-%d %H:%M:%S')
-            })
-        
-        # Get grades using improved approach
-        # Extract base year format for better matching
-        year_base = current_school_year.split(' ')[0] if ' ' in current_school_year else current_school_year
-        
-        teacher_portal_grades = Grade.objects.filter(
-            (Q(student=student.student_id) | Q(student=str(student.student_id))),
-            school_year__contains=year_base
-        )
-        
-        for grade in teacher_portal_grades:
-            diagnostics['grades'].append({
-                'id': grade.id,
-                'student_id': grade.student,
-                'course': grade.course,
-                'quarter': grade.quarter,
-                'grade_value': float(grade.grade),
-                'uploaded_at': grade.uploaded_at.strftime('%Y-%m-%d %H:%M:%S')
-            })
-
-        # Get grades using improved Q objects approach with school_year__contains
-        # Extract base year format for better matching
-        year_base = current_school_year.split(' ')[0] if ' ' in current_school_year else current_school_year
-        print(f"Diagnostics: Using base year '{year_base}' for matching grades")
-        
-        teacher_portal_grades = Grade.objects.filter(
-            (Q(student=student.student_id) | Q(student=str(student.student_id))),
-            school_year__contains=year_base
-        )
-        print(f"Diagnostics: Found {teacher_portal_grades.count()} grades")
-        
-        for grade in teacher_portal_grades:
-            diagnostics['grades'].append({
-                'id': grade.id,
-                'student_id': grade.student,
-                'course': grade.course,
-                'quarter': grade.quarter,
-                'grade_value': float(grade.grade),
-                'uploaded_at': grade.uploaded_at.strftime('%Y-%m-%d %H:%M:%S')
-            })
-
-        # Get grades using improved Q objects approach with school_year__contains
-        # Extract base year format for better matching
-        year_base = current_school_year.split(' ')[0] if ' ' in current_school_year else current_school_year
-        print(f"Diagnostics: Using base year '{year_base}' for matching grades")
-        
-        teacher_portal_grades = Grade.objects.filter(
-            (Q(student=student.student_id) | Q(student=str(student.student_id))),
-            school_year__contains=year_base
-        )
-        print(f"Diagnostics: Found {teacher_portal_grades.count()} grades")
-        
-        for grade in teacher_portal_grades:
-            diagnostics['grades'].append({
-                'id': grade.id,
-                'student_id': grade.student,
-                'course': grade.course,
-                'quarter': grade.quarter,
-                'grade_value': float(grade.grade),
-                'uploaded_at': grade.uploaded_at.strftime('%Y-%m-%d %H:%M:%S')
+                'id': grade['id'],
+                'student_id': grade['student'],
+                'course': grade['course'],
+                'quarter': grade['quarter'],
+                'grade_value': float(grade['grade']) if grade['grade'] is not None else 0,
+                'uploaded_at': grade['uploaded_at'].strftime('%Y-%m-%d %H:%M:%S') if grade['uploaded_at'] else ''
             })
     
     # Return as HTML
@@ -597,12 +569,31 @@ def all_grades(request):
         messages.error(request, "Only staff can access this page.")
         return redirect('login')
     
-    # Get all grades from TeacherPortal
-    grades = Grade.objects.all().order_by('-uploaded_at')[:200]  # Limit to recent 200 records for performance
-    
-    # Count of grades by school year
-    from django.db.models import Count
-    school_year_counts = Grade.objects.values('school_year').annotate(count=Count('id')).order_by('-school_year')
+    # Get all grades from TeacherPortal using raw SQL for reliability
+    with connection.cursor() as cursor:
+        # Get the most recent 200 grades
+        cursor.execute(
+            """
+            SELECT * FROM teacherportal_grade 
+            ORDER BY uploaded_at DESC 
+            LIMIT 200
+            """
+        )
+        # Convert the results to a list of dictionaries
+        columns = [col[0] for col in cursor.description]
+        grades = [dict(zip(columns, row)) for row in cursor.fetchall()]
+        
+        # Count grades by school year
+        cursor.execute(
+            """
+            SELECT school_year, COUNT(*) as count 
+            FROM teacherportal_grade 
+            GROUP BY school_year 
+            ORDER BY school_year DESC
+            """
+        )
+        school_year_columns = [col[0] for col in cursor.description]
+        school_year_counts = [dict(zip(school_year_columns, row)) for row in cursor.fetchall()]
     
     # HTML output
     html_output = f"""
@@ -651,7 +642,7 @@ def all_grades(request):
                 </tr>
                 {
                     ''.join([
-                        f"<tr><td>{g.id}</td><td>{g.student}</td><td>{g.course}</td><td>{g.quarter}</td><td>{g.grade}</td><td>{g.school_year}</td><td>{g.uploaded_at}</td></tr>"
+                        f"<tr><td>{g['id']}</td><td>{g['student']}</td><td>{g['course']}</td><td>{g['quarter']}</td><td>{g['grade']}</td><td>{g['school_year']}</td><td>{g['uploaded_at']}</td></tr>"
                         for g in grades
                     ])
                 }

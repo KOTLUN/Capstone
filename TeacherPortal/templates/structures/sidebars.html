@@ -207,6 +207,9 @@ html, body {
             <a href="{% url 'advisory_enrollment' %}" class="nav-link {% if request.path == '/advisory_enrollment/' %}active{% endif %}">
               <i class="fas fa-user-plus"></i> <span>Advisory Enrollment</span>
             </a>
+            <a href="{% url 'uploadforms' %}" class="nav-link {% if request.path == '/uploadforms/' %}active{% endif %}">
+              <i class="fas fa-file-upload"></i> <span>Upload Forms</span>
+            </a>
             <a href="#" class="nav-link" data-bs-toggle="modal" data-bs-target="#logoutModal">
               <i class="fas fa-sign-out-alt"></i> <span>Logout</span>
             </a>
@@ -223,6 +226,10 @@ html, body {
         <a href="{% url 'grades' %}" class="{% if request.path == '/grades/' %}active{% endif %}">
           <i class="fas fa-chart-line"></i>
           <span>Grades</span>
+        </a>
+        <a href="{% url 'uploadforms' %}" class="{% if request.path == '/uploadforms/' %}active{% endif %}">
+          <i class="fas fa-file-upload"></i>
+          <span>Forms</span>
         </a>
         <a href="#" data-bs-toggle="modal" data-bs-target="#logoutModal">
           <i class="fas fa-sign-out-alt"></i>

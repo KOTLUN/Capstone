@@ -1,0 +1,412 @@
+{% extends 'structures/sidebars.html' %}
+{% load static %}
+
+{% block styles %}
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+    body {
+        font-family: 'Poppins', sans-serif;
+    }
+    
+    .page-title {
+        margin-bottom: 2rem;
+        color: #333;
+        font-weight: 600;
+    }
+    
+    .upload-form-container {
+        background-color: #fff;
+        border-radius: 10px;
+        padding: 2rem;
+        box-shadow: 0 0 15px rgba(0, 0, 0, 0.1);
+        margin-bottom: 2rem;
+    }
+    
+    .form-heading {
+        margin-bottom: 1.5rem;
+        border-bottom: 1px solid #eee;
+        padding-bottom: 1rem;
+    }
+    
+    .form-control {
+        border-radius: 5px;
+        border: 1px solid #ddd;
+        padding: 0.75rem;
+    }
+    
+    .file-upload-wrapper {
+        position: relative;
+        margin-bottom: 1.5rem;
+        background-color: #f9f9f9;
+        border: 2px dashed #ddd;
+        border-radius: 5px;
+        padding: 2rem;
+        text-align: center;
+        transition: all 0.3s ease;
+    }
+    
+    .file-upload-wrapper:hover {
+        border-color: #e73159;
+    }
+    
+    .file-upload-icon {
+        font-size: 3rem;
+        color: #e73159;
+        margin-bottom: 1rem;
+    }
+    
+    .file-upload-text {
+        margin-bottom: 1rem;
+        color: #666;
+    }
+    
+    .file-upload-input {
+        opacity: 0;
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        cursor: pointer;
+    }
+    
+    .selected-file-info {
+        display: none;
+        margin-top: 1rem;
+        padding: 0.5rem;
+        background-color: #f1f1f1;
+        border-radius: 5px;
+    }
+    
+    .submit-btn {
+        background-color: #e73159;
+        border: none;
+        padding: 0.75rem 2rem;
+        font-weight: 500;
+        transition: all 0.3s ease;
+    }
+    
+    .submit-btn:hover {
+        background-color: #d42a50;
+        transform: translateY(-2px);
+    }
+    
+    .category-select {
+        font-weight: 500;
+    }
+    
+    .forms-table-container {
+        background-color: #fff;
+        border-radius: 10px;
+        padding: 2rem;
+        box-shadow: 0 0 15px rgba(0, 0, 0, 0.1);
+        margin-top: 2rem;
+    }
+    
+    .forms-heading {
+        margin-bottom: 1.5rem;
+        border-bottom: 1px solid #eee;
+        padding-bottom: 1rem;
+    }
+    
+    .forms-table th {
+        font-weight: 600;
+        color: #333;
+    }
+    
+    .forms-table td {
+        vertical-align: middle;
+    }
+    
+    .form-icon {
+        font-size: 1.5rem;
+        margin-right: 0.5rem;
+    }
+    
+    .action-btn {
+        padding: 0.4rem 0.75rem;
+        font-size: 0.875rem;
+        border-radius: 4px;
+    }
+    
+    .download-btn {
+        background-color: #28a745;
+        color: white;
+        border: none;
+    }
+    
+    .download-btn:hover {
+        background-color: #218838;
+        color: white;
+    }
+    
+    .view-btn {
+        background-color: #007bff;
+        color: white;
+        border: none;
+    }
+    
+    .view-btn:hover {
+        background-color: #0069d9;
+        color: white;
+    }
+    
+    .category-badge {
+        font-size: 0.75rem;
+        font-weight: 500;
+        padding: 0.3rem 0.6rem;
+        border-radius: 30px;
+    }
+    
+    .category-filter {
+        width: auto;
+        display: inline-block;
+    }
+    
+    .search-box {
+        max-width: 300px;
+    }
+</style>
+{% endblock styles %}
+
+{% block content %}
+<div class="main-content">
+    <div class="layout-wrapper">
+        <div class="container-fluid">
+            <h2 class="page-title"></h2>
+            
+            {% if messages %}
+            <div class="row mb-3">
+                <div class="col-12">
+                    {% for message in messages %}
+                    <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                        <i class="fas {% if message.tags == 'success' %}fa-check-circle{% elif message.tags == 'error' or message.tags == 'danger' %}fa-exclamation-circle{% else %}fa-info-circle{% endif %} me-2"></i>
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+            
+            <div class="row">
+                <div class="col-md-8">
+                    <div class="upload-form-container">
+                        <div class="form-heading">
+                            <h4><i class="fas fa-file-upload"></i> Upload New Form</h4>
+                            <p class="text-muted">Upload forms for students and other teachers to download</p>
+                        </div>
+                        
+                        <form action="{% url 'upload_form' %}" method="post" enctype="multipart/form-data">
+                            {% csrf_token %}
+                            
+                            <div class="mb-3">
+                                <label for="title" class="form-label">Form Title <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control" id="title" name="title" required>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="category" class="form-label">Category <span class="text-danger">*</span></label>
+                                <select class="form-select category-select" id="category" name="category" required>
+                                    <option value="" selected disabled>Select a category</option>
+                                    {% for category_code, category_name in categories %}
+                                    <option value="{{ category_code }}">{{ category_name }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="description" class="form-label">Description (Optional)</label>
+                                <textarea class="form-control" id="description" name="description" rows="3"></textarea>
+                            </div>
+                            
+                            <div class="file-upload-wrapper">
+                                <i class="fas fa-cloud-upload-alt file-upload-icon"> Drag & drop a file here, or click to select a file</i>
+                                <p class="file-upload-text"></p>
+                                <p class="text-muted small">Max file size: 10MB. Accepted formats: PDF, DOC, DOCX, XLS, XLSX, PPT, PPTX, JPG, PNG</p>
+                                <input type="file" class="file-upload-input" id="file" name="file" required>
+                                <div id="selectedFileInfo" class="selected-file-info">
+                                    <p><span id="fileName"></span> <span id="fileSize"></span></p>
+                                </div>
+                            </div>
+                        
+                            <div class="text-end">
+                                <button type="submit" class="btn btn-primary submit-btn"style="margin-top: 10px; margin-right: 613px;">
+                                    <i class="fas fa-upload me-2"></i> Upload Form
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                    
+                    <!-- Forms List Section -->
+                    <div class="forms-table-container"style="margin-top: 50px;">
+                        <div class="forms-heading d-flex justify-content-between align-items-center">
+                            <h4><i class="fas fa-file-alt"></i> Uploaded Forms</h4>
+                            <span class="badge bg-primary">{{ total_forms }} Forms</span>
+                        </div>
+                        
+                        <!-- Filter and Search Section -->
+                        <div class="row mb-4">
+                            <div class="col-md-6">
+                                <form action="" method="get" class="d-flex">
+                                    <select name="category" class="form-select category-filter me-2">
+                                        <option value="">All Categories</option>
+                                        {% for category_code, category_name in categories %}
+                                        <option value="{{ category_code }}" {% if selected_category == category_code %}selected{% endif %}>{{ category_name }}</option>
+                                        {% endfor %}
+                                    </select>
+                                    <button type="submit" class="btn btn-sm btn-outline-secondary">Filter</button>
+                                </form>
+                            </div>
+                            <div class="col-md-6">
+                                <form action="" method="get" class="d-flex">
+                                    <input type="hidden" name="category" value="{{ selected_category }}">
+                                    <input type="text" name="search" class="form-control form-control-sm search-box" placeholder="Search forms..." value="{{ search_query }}">
+                                    <button type="submit" class="btn btn-sm btn-outline-secondary ms-2">Search</button>
+                                </form>
+                            </div>
+                        </div>
+                        
+                        {% if forms %}
+                        <div class="table-responsive">
+                            <table class="table table-hover forms-table">
+                                <thead>
+                                    <tr>
+                                        <th>Form</th>
+                                        <th>Category</th>
+                                        <th>Uploaded</th>
+                                        <th>Size</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for form in forms %}
+                                    <tr>
+                                        <td>
+                                            <div class="d-flex align-items-center">
+                                                <i class="fas {{ form.file_icon_class }} form-icon"></i>
+                                                <div>
+                                                    <h6 class="mb-0">{{ form.title }}</h6>
+                                                    {% if form.description %}
+                                                    <small class="text-muted">{{ form.description|truncatechars:60 }}</small>
+                                                    {% endif %}
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <span class="badge category-badge bg-secondary">{{ form.category }}</span>
+                                        </td>
+                                        <td>
+                                            <small>{{ form.date_uploaded|date:"M d, Y" }}</small>
+                                            <br>
+                                            <small class="text-muted">by {{ form.uploaded_by }}</small>
+                                        </td>
+                                        <td>{{ form.file_size_display }}</td>
+                                        <td>
+                                            <div class="btn-group">
+                                                <a href="{% url 'download_form' form.id %}" class="btn action-btn download-btn" title="Download">
+                                                    <i class="fas fa-download"></i>
+                                                </a>
+                                                <a href="{% url 'view_form' form.id %}" class="btn action-btn view-btn" title="View Details">
+                                                    <i class="fas fa-eye"></i>
+                                                </a>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                        {% else %}
+                        <div class="text-center py-5">
+                            <i class="fas fa-folder-open text-muted mb-3" style="font-size: 3rem;"></i>
+                            <p class="mb-0">No forms found. Upload a new form to get started.</p>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <div class="col-md-4">
+                    <div class="card">
+                        <div class="card-header bg-primary text-white">
+                            <h5 class="mb-0"><i class="fas fa-info-circle me-2"></i> Upload Guidelines</h5>
+                        </div>
+                        <div class="card-body">
+                            <ul class="list-group list-group-flush">
+                                <li class="list-group-item">
+                                    <i class="fas fa-check-circle text-success me-2"></i> Provide a clear and descriptive title
+                                </li>
+                                <li class="list-group-item">
+                                    <i class="fas fa-check-circle text-success me-2"></i> Select the appropriate category
+                                </li>
+                                <li class="list-group-item">
+                                    <i class="fas fa-check-circle text-success me-2"></i> Description should explain the form's purpose
+                                </li>
+                                <li class="list-group-item">
+                                    <i class="fas fa-check-circle text-success me-2"></i> Maximum file size: 10MB
+                                </li>
+                                <li class="list-group-item">
+                                    <i class="fas fa-check-circle text-success me-2"></i> Supported file types: PDF, DOC, DOCX, XLS, XLSX, PPT, PPTX, JPG, PNG
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock content %}
+
+{% block scripts %}
+<script>
+$(document).ready(function() {
+    // Handle file selection display
+    $('#file').change(function() {
+        var file = this.files[0];
+        if (file) {
+            $('#fileName').text(file.name);
+            
+            // Format file size
+            var size = file.size;
+            var formattedSize = '';
+            
+            if (size < 1024) {
+                formattedSize = size + ' bytes';
+            } else if (size < 1024 * 1024) {
+                formattedSize = (size / 1024).toFixed(2) + ' KB';
+            } else {
+                formattedSize = (size / (1024 * 1024)).toFixed(2) + ' MB';
+            }
+            
+            $('#fileSize').text(formattedSize);
+            $('#selectedFileInfo').show();
+            
+            // File size validation (10MB max)
+            if (size > 10 * 1024 * 1024) {
+                alert('File size exceeds the 10MB limit. Please select a smaller file.');
+                this.value = '';
+                $('#selectedFileInfo').hide();
+            }
+        } else {
+            $('#selectedFileInfo').hide();
+        }
+    });
+    
+    // Visual feedback when dragging files
+    $('.file-upload-wrapper').on('dragover', function(e) {
+        e.preventDefault();
+        $(this).addClass('border-primary');
+    });
+    
+    $('.file-upload-wrapper').on('dragleave', function(e) {
+        e.preventDefault();
+        $(this).removeClass('border-primary');
+    });
+    
+    $('.file-upload-wrapper').on('drop', function(e) {
+        $(this).removeClass('border-primary');
+    });
+});
+</script>
+{% endblock scripts %}

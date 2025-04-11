@@ -16,6 +16,7 @@ Including another URLconf
 """
 from django.urls import path
 from . import views
+from . import form_views
 
 urlpatterns = [
     path('profile/', views.profile_view, name='profile'),
@@ -43,6 +44,15 @@ urlpatterns = [
     path('get-enrolled-students/', views.get_enrolled_students, name='get_enrolled_students'),
     path('subject-students/<int:subject_id>/<int:grade_level>/<str:section_id>/', views.subject_students_view, name='subject_students'),
     path('get-subject-students/', views.get_subject_students, name='get_subject_students'),
+    
+    # Form management
+    path('forms/', form_views.forms_view, name='forms'),
+    path('upload-form/', form_views.upload_form, name='upload_form'),
+    path('uploadforms/', form_views.upload_forms_page, name='uploadforms'),
+    path('download-form/<int:form_id>/', form_views.download_form, name='download_form'),
+    path('delete-form/<int:form_id>/', form_views.delete_form, name='delete_form'),
+    path('view-form/<int:form_id>/', form_views.view_form, name='view_form'),
+    path('forms-search-ajax/', form_views.forms_search_ajax, name='forms_search_ajax'),
 ]
 
 

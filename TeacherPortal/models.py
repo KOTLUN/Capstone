@@ -38,50 +38,8 @@ class Grade(models.Model):
 
     def __str__(self):
         return f"{self.student} - {self.course} - Q{self.quarter} - {self.grade}"
-    
-    def save(self, *args, **kwargs):
-        # Set default status if not provided
-        if self.status is None:
-            self.status = 'draft'
-            
-        # If status changed to submitted, update the submitted timestamp
-        if self.status == 'submitted' and not self.date_submitted:
-            self.date_submitted = timezone.now()
-            
-        # If status changed to approved, update the approved timestamp
-        if self.status == 'approved' and not self.date_approved:
-            self.date_approved = timezone.now()
-            
-        super().save(*args, **kwargs)
-        
-        # Sync with dashboard after saving
-        try:
-            sync_grades_to_dashboard()
-        except Exception as e:
-            print(f"Error syncing grade to dashboard: {e}")
-    
-    @property
-    def letter_grade(self):
-        """Convert numerical grade to letter grade"""
-        if self.grade >= 90:
-            return "A"
-        elif self.grade >= 80:
-            return "B"
-        elif self.grade >= 70:
-            return "C"
-        elif self.grade >= 60:
-            return "D"
-        else:
-            return "F"
-    
-    @property
-    def is_passing(self):
-        """Check if grade is passing (assumes 75 as passing)"""
-        return self.grade >= 75
-
 
 class GradeComment(models.Model):
-    """Model for comments on grades (teachers, coordinators, etc.)"""
     grade = models.ForeignKey(Grade, on_delete=models.CASCADE, related_name='comments')
     author = models.CharField(max_length=100)  # Teacher ID
     comment = models.TextField()
@@ -93,3 +51,5 @@ class GradeComment(models.Model):
     def __str__(self):
         return f"Comment on {self.grade} by {self.author}"
 
+# Import SchoolForm from form_models.py
+from .form_models import SchoolForm

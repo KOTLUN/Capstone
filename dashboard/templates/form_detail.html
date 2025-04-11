@@ -1,0 +1,217 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ form.title }} - Form Details</title>
+    <link rel="stylesheet" href="{% static 'css/sidebar.css' %}">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&family=Quicksand:wght@500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary-color: #0d6efd;
+            --success-color: #198754;
+            --danger-color: #dc3545;
+            --warning-color: #ffc107;
+            --info-color: #0dcaf0;
+            --light-bg: #f8f9e3;
+            --white: #ffffff;
+        }
+
+        body {
+            background-color: var(--light-bg);
+            font-family: 'Poppins', sans-serif;
+        }
+        
+        .page-wrapper {
+            display: flex;
+            min-height: 100vh;
+        }
+        
+        .main-content {
+            margin-left: 250px;
+            flex: 1;
+            padding: 20px;
+            background: var(--light-bg);
+        }
+
+        .card {
+            background: var(--white);
+            border-radius: 10px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+
+        .file-header {
+            padding: 25px;
+            border-bottom: 1px solid #eee;
+        }
+
+        .file-icon {
+            font-size: 3rem;
+            margin-right: 20px;
+        }
+
+        .file-details {
+            padding: 20px;
+        }
+
+        .preview-container {
+            text-align: center;
+            margin: 20px 0;
+            padding: 20px;
+            background-color: #f8f9fa;
+            border-radius: 5px;
+        }
+
+        .preview-frame {
+            width: 100%;
+            height: 600px;
+            border: 1px solid #dee2e6;
+            border-radius: 5px;
+        }
+
+        .badge-category {
+            font-size: 0.8rem;
+            padding: 0.25rem 0.5rem;
+            border-radius: 50px;
+            font-weight: 500;
+            margin-right: 5px;
+        }
+
+        .metadata-item {
+            margin-bottom: 10px;
+        }
+
+        .metadata-label {
+            font-weight: 500;
+            color: #6c757d;
+        }
+
+        @media (max-width: 768px) {
+            .main-content {
+                margin-left: 0;
+                padding: 15px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="page-wrapper">
+        {% include 'structures/sidebar.html' %}
+        <div class="main-content">
+            <div class="container-fluid">
+                <!-- Header -->
+                <nav aria-label="breadcrumb" class="mb-4">
+                    <ol class="breadcrumb">
+                        <li class="breadcrumb-item"><a href="{% url 'forms' %}">Forms</a></li>
+                        <li class="breadcrumb-item active" aria-current="page">{{ form.title }}</li>
+                    </ol>
+                </nav>
+
+                <div class="card">
+                    <div class="file-header d-flex align-items-center">
+                        <div class="file-icon">
+                            <i class="fas {{ form.file_icon_class }}"></i>
+                        </div>
+                        <div class="flex-grow-1">
+                            <h2 class="mb-1">{{ form.title }}</h2>
+                            <div class="d-flex align-items-center">
+                                <span class="badge bg-primary badge-category">{{ form.get_category_display }}</span>
+                                <span class="text-muted ms-2">{{ form.file_type }}</span>
+                            </div>
+                        </div>
+                        <div class="ms-auto">
+                            <a href="{% url 'download_form' form.id %}" class="btn btn-primary">
+                                <i class="fas fa-download me-2"></i>Download
+                            </a>
+                            {% if request.user.is_staff or form.uploaded_by == request.user.username %}
+                            <a href="{% url 'delete_form' form.id %}" class="btn btn-outline-danger ms-2" 
+                               onclick="return confirm('Are you sure you want to delete this form?');">
+                                <i class="fas fa-trash me-2"></i>Delete
+                            </a>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-8">
+                            {% if can_preview %}
+                                <div class="preview-container">
+                                    {% if form.file_extension in 'pdf' %}
+                                        <iframe src="{{ form.file.url }}" class="preview-frame" type="application/pdf"></iframe>
+                                    {% elif form.file_extension in 'jpg,jpeg,png,gif' %}
+                                        <img src="{{ form.file.url }}" alt="{{ form.title }}" class="img-fluid">
+                                    {% endif %}
+                                </div>
+                            {% else %}
+                                <div class="preview-container">
+                                    <div class="py-5">
+                                        <i class="fas {{ form.file_icon_class }} fa-5x mb-3"></i>
+                                        <h4>Preview not available</h4>
+                                        <p class="text-muted">This file type cannot be previewed in the browser.</p>
+                                        <a href="{% url 'download_form' form.id %}" class="btn btn-primary mt-3">
+                                            <i class="fas fa-download me-2"></i>Download to view
+                                        </a>
+                                    </div>
+                                </div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-4">
+                            <div class="file-details">
+                                <h4 class="mb-4">File Information</h4>
+                                
+                                {% if form.description %}
+                                <div class="metadata-item">
+                                    <div class="metadata-label">Description</div>
+                                    <p>{{ form.description }}</p>
+                                </div>
+                                <hr>
+                                {% endif %}
+                                
+                                <div class="metadata-item">
+                                    <div class="metadata-label">File Type</div>
+                                    <div>{{ form.file_type }}</div>
+                                </div>
+                                
+                                <div class="metadata-item">
+                                    <div class="metadata-label">Size</div>
+                                    <div>{{ form.file_size_display }}</div>
+                                </div>
+                                
+                                <div class="metadata-item">
+                                    <div class="metadata-label">Uploaded By</div>
+                                    <div>{{ form.uploaded_by }}</div>
+                                </div>
+                                
+                                <div class="metadata-item">
+                                    <div class="metadata-label">Upload Date</div>
+                                    <div>{{ form.date_uploaded|date:"F j, Y" }}</div>
+                                </div>
+                                
+                                {% if form.school_year %}
+                                <div class="metadata-item">
+                                    <div class="metadata-label">School Year</div>
+                                    <div>{{ form.school_year }}</div>
+                                </div>
+                                {% endif %}
+                                
+                                <div class="metadata-item">
+                                    <div class="metadata-label">Downloads</div>
+                                    <div>{{ form.downloads }}</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap Bundle with Popper -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html> 
