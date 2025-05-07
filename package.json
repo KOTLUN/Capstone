@@ -1,0 +1,29 @@
+{
+  "name": "project-arms",
+  "version": "1.0.0",
+  "description": "Student Management System",
+  "scripts": {
+    "build:css": "tailwindcss -i ./static/css/styles.css -o ./static/css/dist/styles.css --minify",
+    "watch:css": "tailwindcss -i ./static/css/styles.css -o ./static/css/dist/styles.css --watch"
+  },
+  "main": "postcss.config.js",
+  "devDependencies": {
+    "@tailwindcss/aspect-ratio": "^0.4.2",
+    "@tailwindcss/forms": "^0.5.10",
+    "@tailwindcss/typography": "^0.5.16",
+    "autoprefixer": "^10.4.21",
+    "postcss": "^8.5.3",
+    "tailwindcss": "^4.1.3"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/KOTLUN/Capstone.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/KOTLUN/Capstone/issues"
+  },
+  "homepage": "https://github.com/KOTLUN/Capstone#readme"
+}

@@ -389,6 +389,147 @@
                 </div>
             </div>
 
+            <!-- Recent Announcements -->
+            <div class="row mb-4">
+                <div class="col-12">
+                    <div class="card border-0 rounded-4 shadow-sm">
+                        <div class="card-header bg-white p-4 border-0">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <h5 class="card-title mb-1">Recent Announcements</h5>
+                                    <p class="text-muted small mb-0">Latest updates and important notices</p>
+                                </div>
+                                <div class="dropdown">
+                                    <button class="btn btn-light btn-sm" type="button" data-bs-toggle="dropdown">
+                                        <i class="fas fa-ellipsis-v"></i>
+                                    </button>
+                                    <ul class="dropdown-menu">
+                                        <li><a class="dropdown-item" href="{% url 'dashboard:announcement' %}">
+                                            <i class="fas fa-plus me-2"></i>Add Announcement
+                                        </a></li>
+                                        <li><a class="dropdown-item" href="#" onclick="location.reload()">
+                                            <i class="fas fa-sync me-2"></i>Refresh
+                                        </a></li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="card-body p-0">
+                            <div class="list-group list-group-flush recent-announcements-list">
+                                {% for announcement in recent_announcements %}
+                                <div class="list-group-item border-0 px-4 py-3">
+                                    <div class="d-flex align-items-center">
+                                        <div class="flex-shrink-0">
+                                            <div class="bg-primary bg-opacity-10 rounded-circle p-3">
+                                                <i class="fas fa-bullhorn text-primary"></i>
+                                            </div>
+                                        </div>
+                                        <div class="flex-grow-1 ms-3">
+                                            <h6 class="mb-1">{{ announcement.title }}</h6>
+                                            <p class="text-muted small mb-0">{{ announcement.content }}</p>
+                                            <small class="text-muted">
+                                                <i class="fas fa-clock me-1"></i>
+                                                {{ announcement.created_at|date:"F j, Y" }}
+                                            </small>
+                                        </div>
+                                        <div class="flex-shrink-0 ms-3">
+                                            <small class="text-muted">
+                                                <i class="fas fa-user me-1"></i>
+                                                {{ announcement.created_by.username }}
+                                            </small>
+                                        </div>
+                                    </div>
+                                </div>
+                                {% empty %}
+                                <div class="list-group-item border-0 px-4 py-3 text-center text-muted">
+                                    <i class="fas fa-info-circle me-2"></i>No recent announcements
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        <div class="card-footer bg-white border-0 py-3">
+                            <a href="{% url 'dashboard:announcement' %}" class="text-primary text-decoration-none d-flex align-items-center">
+                                <span class="flex-grow-1">View All Announcements</span>
+                                <i class="fas fa-arrow-right"></i>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Upcoming Events -->
+            <div class="row mb-4">
+                <div class="col-12">
+                    <div class="card border-0 rounded-4 shadow-sm">
+                        <div class="card-header bg-white p-4 border-0">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <h5 class="card-title mb-1">Upcoming Events</h5>
+                                    <p class="text-muted small mb-0">School events and activities</p>
+                                </div>
+                                <div class="dropdown">
+                                    <button class="btn btn-light btn-sm" type="button" data-bs-toggle="dropdown">
+                                        <i class="fas fa-ellipsis-v"></i>
+                                    </button>
+                                    <ul class="dropdown-menu">
+                                        <li><a class="dropdown-item" href="{% url 'dashboard:event' %}">
+                                            <i class="fas fa-plus me-2"></i>Add Event
+                                        </a></li>
+                                        <li><a class="dropdown-item" href="#" onclick="location.reload()">
+                                            <i class="fas fa-sync me-2"></i>Refresh
+                                        </a></li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="card-body p-0">
+                            <div class="list-group list-group-flush upcoming-events-list">
+                                {% for event in upcoming_events %}
+                                <div class="list-group-item border-0 px-4 py-3">
+                                    <div class="d-flex align-items-center">
+                                        <div class="flex-shrink-0">
+                                            <div class="bg-info bg-opacity-10 rounded-circle p-3">
+                                                <i class="fas fa-calendar-alt text-info"></i>
+                                            </div>
+                                        </div>
+                                        <div class="flex-grow-1 ms-3">
+                                            <h6 class="mb-1">{{ event.title }}</h6>
+                                            <p class="text-muted small mb-0">{{ event.description }}</p>
+                                            <small class="text-muted">
+                                                <i class="fas fa-clock me-1"></i>
+                                                {{ event.start_date|date:"F j, Y" }} 
+                                                {% if event.start_time %}
+                                                at {{ event.start_time|time:"g:i A" }}
+                                                {% endif %}
+                                            </small>
+                                        </div>
+                                        <div class="flex-shrink-0 ms-3">
+                                            <small class="text-muted">
+                                                <i class="fas fa-calendar-check me-1"></i>
+                                                {% if event.end_date %}
+                                                    Ends: {{ event.end_date|date:"M j" }}
+                                                {% endif %}
+                                            </small>
+                                        </div>
+                                    </div>
+                                </div>
+                                {% empty %}
+                                <div class="list-group-item border-0 px-4 py-3 text-center text-muted">
+                                    <i class="fas fa-info-circle me-2"></i>No upcoming events
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        <div class="card-footer bg-white border-0 py-3">
+                            <a href="{% url 'dashboard:event' %}" class="text-primary text-decoration-none d-flex align-items-center">
+                                <span class="flex-grow-1">View All Events</span>
+                                <i class="fas fa-arrow-right"></i>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <!-- Charts Row -->
             <div class="row g-4">
                 <!-- Gender Distribution -->
@@ -659,19 +800,16 @@
 
             // Function to fetch and update dashboard statistics
             function updateDashboardStats() {
-                fetch('{% url "administrator:get_dashboard_data" %}')
+                fetch('{% url "dashboard:get_dashboard_data" %}')
                     .then(response => response.json())
                     .then(data => {
                         if (!data.error) {
                             // Update total students
                             document.querySelector('.card.bg-primary .display-5').textContent = data.total_students;
-                            
                             // Update total teachers
                             document.querySelector('.card.bg-success .display-5').textContent = data.total_teachers;
-                            
                             // Update total sections
                             document.querySelector('.card.bg-warning .display-5').textContent = data.total_sections;
-                            
                             // Update student growth if available
                             if (data.student_growth !== undefined) {
                                 const growthBadge = document.querySelector('.card.bg-primary .badge');
@@ -680,6 +818,86 @@
                                     <i class="fas ${data.student_growth >= 0 ? 'fa-arrow-up' : 'fa-arrow-down'} me-1"></i>
                                     ${data.student_growth}%
                                 `;
+                            }
+                            // Update recent announcements
+                            const announcementsList = document.querySelector('.recent-announcements-list');
+                            if (announcementsList && data.recent_announcements) {
+                                announcementsList.innerHTML = '';
+                                if (data.recent_announcements.length > 0) {
+                                    data.recent_announcements.forEach(a => {
+                                        announcementsList.innerHTML += `
+                                            <div class="list-group-item border-0 px-4 py-3">
+                                                <div class="d-flex align-items-center">
+                                                    <div class="flex-shrink-0">
+                                                        <div class="bg-primary bg-opacity-10 rounded-circle p-3">
+                                                            <i class="fas fa-bullhorn text-primary"></i>
+                                                        </div>
+                                                    </div>
+                                                    <div class="flex-grow-1 ms-3">
+                                                        <h6 class="mb-1">${a.title}</h6>
+                                                        <p class="text-muted small mb-0">${a.content}</p>
+                                                        <small class="text-muted">
+                                                            <i class="fas fa-clock me-1"></i>
+                                                            ${a.created_at}
+                                                        </small>
+                                                    </div>
+                                                    <div class="flex-shrink-0 ms-3">
+                                                        <small class="text-muted">
+                                                            <i class="fas fa-user me-1"></i>
+                                                            ${a.created_by}
+                                                        </small>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        `;
+                                    });
+                                } else {
+                                    announcementsList.innerHTML = `
+                                        <div class="list-group-item border-0 px-4 py-3 text-center text-muted">
+                                            <i class="fas fa-info-circle me-2"></i>No recent announcements
+                                        </div>
+                                    `;
+                                }
+                            }
+                            // Update upcoming events
+                            const eventsList = document.querySelector('.upcoming-events-list');
+                            if (eventsList && data.upcoming_events) {
+                                eventsList.innerHTML = '';
+                                if (data.upcoming_events.length > 0) {
+                                    data.upcoming_events.forEach(e => {
+                                        eventsList.innerHTML += `
+                                            <div class="list-group-item border-0 px-4 py-3">
+                                                <div class="d-flex align-items-center">
+                                                    <div class="flex-shrink-0">
+                                                        <div class="bg-info bg-opacity-10 rounded-circle p-3">
+                                                            <i class="fas fa-calendar-alt text-info"></i>
+                                                        </div>
+                                                    </div>
+                                                    <div class="flex-grow-1 ms-3">
+                                                        <h6 class="mb-1">${e.title}</h6>
+                                                        <p class="text-muted small mb-0">${e.description}</p>
+                                                        <small class="text-muted">
+                                                            <i class="fas fa-clock me-1"></i>
+                                                            ${e.start_date} ${e.start_time ? 'at ' + e.start_time : ''}
+                                                        </small>
+                                                    </div>
+                                                    <div class="flex-shrink-0 ms-3">
+                                                        <small class="text-muted">
+                                                            <i class="fas fa-calendar-check me-1"></i>
+                                                            ${e.end_date ? 'Ends: ' + e.end_date : ''}
+                                                        </small>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        `;
+                                    });
+                                } else {
+                                    eventsList.innerHTML = `
+                                        <div class="list-group-item border-0 px-4 py-3 text-center text-muted">
+                                            <i class="fas fa-info-circle me-2"></i>No upcoming events
+                                        </div>
+                                    `;
+                                }
                             }
                         }
                     })

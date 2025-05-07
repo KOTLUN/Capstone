@@ -1,0 +1,116 @@
+{% if error_message %}
+<div class="dashboard-card">
+    <div class="card-header">
+        <i class="fas fa-exclamation-circle"></i>
+        Grade Analytics
+    </div>
+    <div class="p-6 text-center text-gray-500">
+        <div class="text-5xl mb-3 text-gray-300">
+            <i class="fas fa-exclamation-circle"></i>
+        </div>
+        <p>{{ error_message }}</p>
+    </div>
+</div>
+{% elif detailed_grades %}
+<div class="dashboard-card">
+    <div class="card-header">
+        <i class="fas fa-chart-line"></i>
+        Grade Analytics
+    </div>
+    <canvas id="gradeChart" width="400" height="200" class="mb-6"></canvas>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const ctx = document.getElementById('gradeChart').getContext('2d');
+        
+        // Use the JSON-safe data
+        const quarters = {{ quarters_json|safe }};
+        const subjectGradesData = {{ subject_grades_data_json|safe }};
+        
+        // Generate colors for each subject
+        function generateColor(index) {
+            const colors = [
+                '#e3125b', // Pink (primary)
+                '#2563eb', // Blue
+                '#16a34a', // Green
+                '#ca8a04', // Yellow
+                '#9333ea', // Purple
+                '#0891b2', // Cyan
+                '#ea580c', // Orange
+                '#be185d'  // Dark Pink
+            ];
+            return colors[index % colors.length];
+        }
+        
+        // Prepare datasets for each subject
+        const datasets = Object.entries(subjectGradesData).map(([subject, grades], index) => {
+            const color = generateColor(index);
+            return {
+                label: subject,
+                data: grades,
+                borderColor: color,
+                backgroundColor: `${color}20`,
+                tension: 0.4,
+                fill: true
+            };
+        });
+        
+        new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: quarters,
+                datasets: datasets
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: {
+                        display: true,
+                        position: 'bottom',
+                        labels: {
+                            usePointStyle: true,
+                            padding: 20,
+                            font: {
+                                size: 12
+                            }
+                        }
+                    },
+                    tooltip: {
+                        mode: 'index',
+                        intersect: false
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: false,
+                        min: 70,
+                        max: 100,
+                        ticks: {
+                            stepSize: 5
+                        }
+                    }
+                },
+                interaction: {
+                    mode: 'nearest',
+                    axis: 'x',
+                    intersect: false
+                }
+            }
+        });
+    });
+</script>
+{% else %}
+<div class="dashboard-card">
+    <div class="card-header">
+        <i class="fas fa-chart-line"></i>
+        Grade Analytics
+    </div>
+    <div class="p-6 text-center text-gray-500">
+        <div class="text-5xl mb-3 text-gray-300">
+            <i class="fas fa-chart-line"></i>
+        </div>
+        <p>No grades available for {{ current_school_year }}</p>
+    </div>
+</div>
+{% endif %} 

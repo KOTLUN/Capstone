@@ -14,6 +14,8 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&family=Quicksand:wght@500;600;700&display=swap" rel="stylesheet">
+    <!-- Add Toastr CSS -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css" rel="stylesheet">
     <style>
         body {
             background-color: #f8f9e3;
@@ -176,6 +178,11 @@
         .processing {
             pointer-events: none;
         }
+
+        /* Hide default Django messages */
+        .alert {
+            display: none !important;
+        }
     </style>
 </head>
 <body>
@@ -183,36 +190,16 @@
         {% include 'structures/sidebar.html' %}
         <div class="main-content">
             <div class="content-container p-4">
-                <!-- Add the floating button here, before the header -->
-                <div class="floating-year">
-                    <div class="year-badge">
-                        {% if active_school_year %}
-                            <span class="text-primary fw-bold">{{ active_school_year.display_name }}</span>
-                        {% else %}
-                            <span class="text-muted">No Active SY</span>
-                        {% endif %}
-                    </div>
-                    <button class="float-btn" 
-                            data-bs-toggle="modal" 
-                            data-bs-target="#schoolYearModal"
-                            title="Manage School Years">
-                        <i class="fas fa-calendar-alt text-white"></i>
-                    </button>
-                </div>
+                
 
                 <div class="d-sm-flex align-items-center justify-content-between mb-4">
                     <h1 class="h3 mb-0 text-gray-800">Student Enrollment</h1>
+                    <div class="d-flex gap-2">
+                        <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#uploadEnrollmentModal">
+                            <i class="fas fa-file-excel me-2"></i> Upload Excel
+                        </button>
+                    </div>
                 </div>
-
-                <!-- Display Messages -->
-                {% if messages %}
-                    {% for message in messages %}
-                        <div class="alert {% if message.tags == 'error' %}alert-danger{% else %}alert-{{ message.tags }}{% endif %} alert-dismissible fade show" role="alert">
-                            {{ message }}
-                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                        </div>
-                    {% endfor %}
-                {% endif %}
 
                 <!-- Enrollment Form Card -->
                 <div class="card shadow mb-4">
@@ -220,7 +207,7 @@
                         <h6 class="m-0 fw-bold text-primary">Enroll Student</h6>
                     </div>
                     <div class="card-body">
-                        <form method="POST" action="{% url 'administrator:add_enrollment' %}">
+                        <form method="POST" action="{% url 'dashboard:add_enrollment' %}">
                             {% csrf_token %}
                             <div class="row">
                                 <div class="col-md-4 mb-3">
@@ -495,7 +482,7 @@
                     <h5 class="modal-title" id="editEnrollmentModalLabel">Edit Enrollment</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
-                <form method="POST" action="{% url 'administrator:edit_enrollment' %}">
+                <form method="POST" action="{% url 'dashboard:edit_enrollment' %}">
                     {% csrf_token %}
                     <div class="modal-body">
                         <input type="hidden" id="edit_enrollment_id" name="enrollment_id">
@@ -623,6 +610,46 @@
     <script src="https://cdn.datatables.net/1.11.5/js/jquery.dataTables.min.js"></script>
     <script src="https://cdn.datatables.net/1.11.5/js/dataTables.bootstrap5.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+
+    <!-- Fix for blinking DataTables inside grade modals -->
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const initializedTables = new Set();
+
+        // When any grade modal is shown
+        $('[id^=gradeModal]').on('shown.bs.modal', function () {
+            const table = $(this).find('table');
+
+            if (table.length && !initializedTables.has(table.attr('id'))) {
+                const tableId = table.attr('id');
+
+                $('#' + tableId).DataTable({
+                    responsive: true,
+                    pageLength: 10,
+                    lengthChange: false,
+                    autoWidth: false,
+                    ordering: true,
+                    columnDefs: [
+                        { orderable: false, targets: -1 }
+                    ],
+                    language: {
+                        emptyTable: "No students enrolled in this grade level",
+                        info: "Showing _START_ to _END_ of _TOTAL_ entries",
+                        infoEmpty: "Showing 0 to 0 of 0 entries",
+                        paginate: {
+                            first: "First",
+                            last: "Last",
+                            next: "Next",
+                            previous: "Previous"
+                        }
+                    }
+                });
+
+                initializedTables.add(tableId);
+            }
+        });
+    });
+</script>
     
     <script>
         $(document).ready(function() {
@@ -633,7 +660,65 @@
                 "responsive": true
             });
             
-            // Initialize Select2 for student dropdowns
+            // Function to update available students based on section and school year
+            function updateAvailableStudents() {
+                const sectionId = $('#section').val();
+                const schoolYear = $('#school_year').val();
+                
+                if (!sectionId || !schoolYear) return;
+                
+                // Get the grade level from the selected section
+                const gradeLevel = $('#section option:selected').text().match(/Grade (\d+)/)[1];
+                
+                // Make AJAX request to get enrolled students
+                $.ajax({
+                    url: '{% url "dashboard:get_enrolled_students" %}',
+                    data: {
+                        'grade_level': gradeLevel,
+                        'school_year': schoolYear
+                    },
+                    success: function(response) {
+                        // Get the student select element
+                        const studentSelect = $('#student');
+                        
+                        // Store current value
+                        const currentValue = studentSelect.val();
+                        
+                        // Clear existing options except the first one
+                        studentSelect.find('option:not(:first)').remove();
+                        
+                        // Add available students
+                        if (response.students) {
+                            response.students.forEach(function(student) {
+                                studentSelect.append(new Option(
+                                    `${student.name} (${student.student_id})`,
+                                    student.id
+                                ));
+                            });
+                        }
+                        
+                        // Restore previous selection if it's still valid
+                        if (currentValue && studentSelect.find(`option[value="${currentValue}"]`).length) {
+                            studentSelect.val(currentValue);
+                        }
+                        
+                        // Reinitialize Select2
+                        studentSelect.trigger('change');
+                    },
+                    error: function(xhr, status, error) {
+                        console.error('Error fetching enrolled students:', error);
+                        // Show error message to user
+                        toastr.error('Error loading available students. Please try again.');
+                    }
+                });
+            }
+            
+            // Update available students when section or school year changes
+            $('#section, #school_year').change(function() {
+                updateAvailableStudents();
+            });
+            
+            // Initialize Select2 for student dropdown
             $('.student-select').select2({
                 theme: 'bootstrap-5',
                 placeholder: 'Search for a student...',
@@ -679,7 +764,7 @@
 
                 // Send delete request
                 $.ajax({
-                    url: '{% url "administrator:delete_enrollment" %}',
+                    url: '{% url "dashboard:delete_enrollment" %}',
                     type: 'POST',
                     data: {
                         'enrollment_id': enrollmentId,
@@ -741,7 +826,7 @@
                 );
 
                 $.ajax({
-                    url: '{% url "administrator:get_eligible_students" %}',
+                    url: '{% url "dashboard:get_eligible_students" %}',
                     data: {
                         school_year: schoolYear,
                         grade_level: gradeLevel
@@ -933,69 +1018,7 @@
         });
     </script>
 
-    <!-- School Year Management Modal -->
-    <div class="modal fade" id="schoolYearModal" tabindex="-1">
-        <div class="modal-dialog modal-lg">
-            <div class="modal-content">
-                <div class="modal-header bg-primary text-white">
-                    <h5 class="modal-title">School Year Management</h5>
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body">
-                    <!-- Add School Year Form -->
-                    <div class="card mb-4">
-                        <div class="card-header bg-light">
-                            <h6 class="card-title mb-0">Add New School Year</h6>
-                        </div>
-                        <div class="card-body">
-                            <form method="POST" id="addSchoolYearForm" action="{% url 'administrator:school_year_management' %}">
-                                {% csrf_token %}
-                                <input type="hidden" name="action" value="add">
-                                <div class="row g-3">
-                                    <div class="col-md-4">
-                                        <label for="year_start" class="form-label">Start Year</label>
-                                        <input type="number" class="form-control" id="year_start" name="year_start" required>
-                                    </div>
-                                    <div class="col-md-4">
-                                        <label for="year_end" class="form-label">End Year</label>
-                                        <input type="number" class="form-control" id="year_end" name="year_end" required>
-                                    </div>
-                                    <div class="col-md-4 d-flex align-items-end">
-                                        <div class="form-check">
-                                            <input class="form-check-input" type="checkbox" id="is_active" name="is_active" value="true">
-                                            <label class="form-check-label" for="is_active">
-                                                Set as Active School Year
-                                            </label>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="mt-3">
-                                    <button type="submit" class="btn btn-primary">Add School Year</button>
-                                </div>
-                            </form>
-                        </div>
-                    </div>
-
-                    <!-- School Years List -->
-                    <div class="table-responsive">
-                        <table class="table table-hover">
-                            <thead>
-                                <tr>
-                                    <th>School Year</th>
-                                    <th>Status</th>
-                                    <th>Created At</th>
-                                    <th>Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody id="schoolYearsList">
-                                <!-- School years will be loaded here -->
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
+    
 
   
 
@@ -1025,7 +1048,7 @@
         });
 
         function loadSchoolYears() {
-            fetch('{% url "administrator:school_year_management" %}', {
+            fetch('{% url "dashboard:school_year_management" %}', {
                 headers: {
                     'X-Requested-With': 'XMLHttpRequest'
                 }
@@ -1056,7 +1079,7 @@
                         return;
                     }
                     
-                    fetch('{% url "administrator:school_year_management" %}', {
+                    fetch('{% url "dashboard:school_year_management" %}', {
                         method: 'POST',
                         body: new FormData(this),
                         headers: {
@@ -1094,6 +1117,124 @@
     });
     </script>
 
-  
+    <!-- Upload Enrollment Modal -->
+    <div class="modal fade" id="uploadEnrollmentModal" tabindex="-1" aria-labelledby="uploadEnrollmentModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header bg-success text-white">
+                    <h5 class="modal-title" id="uploadEnrollmentModalLabel">Upload Enrollments from Excel</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="upload-enrollment-form" method="POST" action="#" enctype="multipart/form-data">
+                        {% csrf_token %}
+                        <div class="mb-4">
+                            <div class="alert alert-info">
+                                <h6 class="alert-heading"><i class="fas fa-info-circle me-2"></i>Excel File Requirements:</h6>
+                                <ul class="mb-0">
+                                    <li>File must be in .xlsx or .xls format</li>
+                                    <li>Required columns: Student ID, Section ID, School Year</li>
+                                    <li>Optional columns: Status (defaults to Active)</li>
+                                </ul>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="excel-file" class="form-label">Select Excel File</label>
+                            <input type="file" id="excel-file" name="excel_file" class="form-control" accept=".xlsx,.xls" required>
+                            <div class="form-text">Only .xlsx and .xls files are accepted</div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="school_year" class="form-label">School Year</label>
+                            <select class="form-select" id="school_year" name="school_year" required>
+                                {% if active_school_year %}
+                                    <option value="{{ active_school_year.display_name }}" selected>
+                                        {{ active_school_year.display_name }} (Active)
+                                    </option>
+                                {% else %}
+                                    <option value="">No Active School Year</option>
+                                {% endif %}
+                            </select>
+                        </div>
+                        
+                        <div class="text-end">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                            <button type="submit" class="btn btn-success">Upload Enrollments</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Toastr JS -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
+    <script>
+        // Configure Toastr
+        toastr.options = {
+            "closeButton": true,
+            "debug": false,
+            "newestOnTop": true,
+            "progressBar": true,
+            "positionClass": "toast-top-right",
+            "preventDuplicates": false,
+            "onclick": null,
+            "showDuration": "300",
+            "hideDuration": "1000",
+            "timeOut": "5000",
+            "extendedTimeOut": "1000",
+            "showEasing": "swing",
+            "hideEasing": "linear",
+            "showMethod": "fadeIn",
+            "hideMethod": "fadeOut"
+        };
+
+        // Handle Django messages with Toastr
+        {% if messages %}
+            {% for message in messages %}
+                {% if message.tags == 'success' %}
+                    toastr.success("{{ message }}");
+                {% elif message.tags == 'error' %}
+                    toastr.error("{{ message }}");
+                {% elif message.tags == 'warning' %}
+                    toastr.warning("{{ message }}");
+                {% elif message.tags == 'info' %}
+                    toastr.info("{{ message }}");
+                {% endif %}
+            {% endfor %}
+        {% endif %}
+    </script>
+
+    <!-- Load section students -->
+    <script>
+    function loadSectionStudents(sectionId) {
+        if (!sectionId) return;
+        
+        $.ajax({
+            url: `{% url "dashboard:get_enrolled_students_by_section" section_id=0 %}`.replace('0', sectionId),
+            success: function(response) {
+                if (response.students) {
+                    // Update the students list
+                    let html = '';
+                    response.students.forEach(function(student) {
+                        html += `
+                            <tr>
+                                <td>${student.student_id}</td>
+                                <td>${student.name}</td>
+                                <td>${response.section.section_id}</td>
+                                <td>Grade ${response.section.grade_level}</td>
+                                <td>${student.status}</td>
+                                <td>
+                                    <button class="btn btn-sm btn-info edit-enrollment" 
+                                            data-bs-toggle="modal" 
+                                            data-bs-target="#editEnrollmentModal"
+                                            data-id="${student.enrollment_id}"
+                                            data-student="${student.id}"
+                                            data-section="${response.section.id}"
+                                            data-status="${student.status}">
+                                        <i class="fas fa-edit"></i>
+                                    </button>
+                                    <button class="btn btn-sm btn-danger delete-enrollment"
 </body>
 </html>

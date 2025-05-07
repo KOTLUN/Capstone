@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+{% load static %}
+{% load custom_filters %}
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Student Schedule</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Poppins', sans-serif;
+            margin-top: 70px !important;
+            background: #f8f9fa;
+        }
+
+        /* Schedule Table Styles */
+        .schedule-container {
+            width: 100%;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+            scrollbar-width: thin;
+            position: relative;
+            margin: 0 -1rem;
+            padding: 0 1rem;
+        }
+
+        .schedule-container::-webkit-scrollbar {
+            height: 8px;
+        }
+
+        .schedule-container::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 3px;
+        }
+
+        .schedule-container::-webkit-scrollbar-thumb {
+            background: #e3125b;
+            border-radius: 3px;
+        }
+
+        .schedule-table {
+            min-width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
+        }
+
+        .schedule-cell {
+            min-height: 80px;
+            position: relative;
+            padding: 0.5rem;
+        }
+
+        .schedule-item {
+            height: 100%;
+            width: 100%;
+            padding: 0.5rem;
+            border-radius: 0.25rem;
+            background: #f8f9fa;
+            transition: all 0.2s ease;
+        }
+
+        .schedule-item:hover {
+            background: #e9ecef;
+        }
+
+        .time-column {
+            position: sticky;
+            left: 0;
+            background: white;
+            z-index: 2;
+            min-width: 120px;
+        }
+
+        .day-header {
+            position: sticky;
+            top: 0;
+            background: #f8f9fa;
+            z-index: 1;
+        }
+
+        /* Scroll Indicator */
+        .scroll-indicator {
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 0.5rem;
+            color: #666;
+            font-size: 0.875rem;
+            margin-bottom: 0.5rem;
+            background-color: #f8f9fa;
+            border-radius: 0.25rem;
+        }
+
+        .scroll-indicator i {
+            animation: scrollHint 1.5s infinite;
+        }
+
+        @keyframes scrollHint {
+            0%, 100% { transform: translateX(0); }
+            50% { transform: translateX(10px); }
+        }
+
+        /* Mobile Styles */
+        @media (max-width: 768px) {
+            .schedule-cell {
+                min-height: 60px;
+                padding: 0.25rem;
+            }
+
+            .schedule-item {
+                padding: 0.25rem;
+            }
+
+            .time-column {
+                min-width: 100px;
+            }
+
+            .scroll-indicator {
+                display: flex;
+            }
+
+            .schedule-table th,
+            .schedule-table td {
+                font-size: 0.75rem;
+            }
+
+            .schedule-item p {
+                font-size: 0.7rem;
+            }
+        }
+
+        @media (max-width: 576px) {
+            .schedule-cell {
+                min-height: 50px;
+            }
+
+            .time-column {
+                min-width: 80px;
+            }
+
+            .schedule-table th,
+            .schedule-table td {
+                font-size: 0.7rem;
+            }
+
+            .schedule-item p {
+                font-size: 0.65rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    {% include 'structures/nav.html' %}
+    
+    <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        <!-- Header Section -->
+        <div class="bg-white rounded-lg shadow-sm p-4 mb-6">
+            <h2 class="text-xl font-bold text-center text-gray-800 mb-4">Student Schedule</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <h4 class="text-base font-semibold text-gray-700 mb-2">Student Information</h4>
+                    <div class="space-y-1">
+                        <p class="text-sm text-gray-600">
+                            <span class="font-medium text-gray-700">Name:</span> 
+                            {{ student.first_name }} {{ student.last_name }}
+                        </p>
+                        <p class="text-sm text-gray-600">
+                            <span class="font-medium text-gray-700">ID:</span> 
+                            {{ student.student_id }}
+                        </p>
+                    </div>
+                </div>
+                <div>
+                    <h4 class="text-base font-semibold text-gray-700 mb-2">Academic Information</h4>
+                    <div class="space-y-1">
+                        <p class="text-sm text-gray-600">
+                            <span class="font-medium text-gray-700">Grade Level:</span> 
+                            Grade {{ current_enrollment.section.grade_level }}
+                        </p>
+                        <p class="text-sm text-gray-600">
+                            <span class="font-medium text-gray-700">Section:</span> 
+                            {{ current_enrollment.section.section_id }}
+                        </p>
+                        <p class="text-sm text-gray-600">
+                            <span class="font-medium text-gray-700">School Year:</span> 
+                            {{ current_school_year }}
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Schedule Table -->
+        <div class="bg-white rounded-lg shadow-sm overflow-hidden">
+            <div class="scroll-indicator d-flex align-items-center justify-content-center d-md-none">
+                <i class="fas fa-arrow-right me-2"></i>
+                <span>Scroll horizontally to view schedule</span>
+                <i class="fas fa-arrow-right ms-2"></i>
+            </div>
+            <div class="schedule-container">
+                <table class="schedule-table">
+                    <thead>
+                        <tr>
+                            <th scope="col" class="time-column day-header px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Time
+                            </th>
+                            <th scope="col" class="day-header px-3 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Monday
+                            </th>
+                            <th scope="col" class="day-header px-3 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Tuesday
+                            </th>
+                            <th scope="col" class="day-header px-3 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Wednesday
+                            </th>
+                            <th scope="col" class="day-header px-3 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Thursday
+                            </th>
+                            <th scope="col" class="day-header px-3 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Friday
+                            </th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% regroup schedule by start_time as time_slots %}
+                        {% for time_slot in time_slots %}
+                            <tr>
+                                <td class="time-column px-3 py-2 whitespace-nowrap text-xs font-medium text-gray-900">
+                                    {{ time_slot.grouper|time:"g:i A" }} - {{ time_slot.list.0.end_time|time:"g:i A" }}
+                                </td>
+                                {% for day in "Monday,Tuesday,Wednesday,Thursday,Friday"|split:"," %}
+                                    <td class="schedule-cell">
+                                        {% for slot in time_slot.list %}
+                                            {% if slot.day == day %}
+                                                <div class="schedule-item">
+                                                    <p class="text-xs font-medium text-gray-900">{{ slot.subject.name }}</p>
+                                                    <p class="text-xs text-gray-500">Room: {{ slot.room }}</p>
+                                                    <p class="text-xs text-gray-500">{{ slot.teacher_id.first_name }} {{ slot.teacher_id.last_name }}</p>
+                                                </div>
+                                            {% endif %}
+                                        {% endfor %}
+                                    </td>
+                                {% endfor %}
+                            </tr>
+                        {% empty %}
+                            <tr>
+                                <td colspan="6" class="px-3 py-2 text-center text-xs text-gray-500">
+                                    No schedule found for the current enrollment.
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

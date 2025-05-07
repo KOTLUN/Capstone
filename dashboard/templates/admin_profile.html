@@ -1,4 +1,5 @@
 {% load static %}
+{% load user_passes_test %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -377,7 +378,7 @@
                     <h5 class="modal-title"><i class="fas fa-user-edit me-2"></i>Edit Profile</h5>
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                 </div>
-                <form method="POST" action="{% url 'administrator:admin_profile_update' %}" enctype="multipart/form-data">
+                <form method="POST" action="{% url 'dashboard:admin_profile_update' %}" enctype="multipart/form-data">
                     {% csrf_token %}
                     <div class="modal-body p-4">
                         <div class="mb-4 text-center">

@@ -56,7 +56,10 @@
             display: flex;
             align-items: center;
             gap: 0.5rem;
-            font-size: 0.95rem;
+            font-size: 0.9rem;
+            font-weight: 500;
+            letter-spacing: 0.025em;
+            text-transform: capitalize;
         }
 
         .nav-link:hover {
@@ -66,7 +69,13 @@
 
         .nav-link.active {
             background-color: rgba(252, 253, 253, 0.2);
-            font-weight: bold;
+            font-weight: 600;
+        }
+
+        .nav-link i {
+            font-size: 1rem;
+            width: 1.25rem;
+            text-align: center;
         }
 
         .profile-section {
@@ -74,6 +83,160 @@
             align-items: center;
             gap: 1rem;
             color: white;
+        }
+
+        .notification-section {
+            position: relative;
+            margin-right: 1rem;
+        }
+
+        .notification-icon {
+            color: white;
+            font-size: 1.25rem;
+            cursor: pointer;
+            padding: 0.5rem;
+            border-radius: 0.375rem;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .notification-icon:hover {
+            background-color: rgba(255, 255, 255, 0.2);
+        }
+
+        .notification-badge {
+            position: absolute;
+            top: -5px;
+            right: -5px;
+            background-color: #ff4444;
+            color: white;
+            border-radius: 50%;
+            padding: 0.25rem 0.5rem;
+            font-size: 0.75rem;
+            font-weight: 600;
+            min-width: 1.25rem;
+            height: 1.25rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+        }
+
+        .notification-badge.hidden {
+            display: none;
+        }
+
+        .notification-dropdown {
+            position: absolute;
+            top: 100%;
+            right: 0;
+            background: white;
+            border-radius: 0.5rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            width: 300px;
+            max-height: 400px;
+            overflow-y: auto;
+            display: none;
+            z-index: 1000;
+        }
+
+        .notification-dropdown.active {
+            display: block;
+            animation: slideDown 0.3s ease-out;
+        }
+
+        .notification-header {
+            padding: 1rem;
+            border-bottom: 1px solid #e5e7eb;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            background: white;
+            z-index: 1;
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .back-button {
+            display: none;
+            background: none;
+            border: none;
+            color: white;
+            font-size: 1.25rem;
+            cursor: pointer;
+            padding: 0.5rem;
+            border-radius: 0.375rem;
+            transition: background-color 0.3s ease;
+        }
+
+        .back-button:hover {
+            background-color: rgba(255, 255, 255, 0.1);
+        }
+
+        .mobile-only {
+            display: none;
+        }
+
+        .notification-header h3 {
+            margin: 0;
+            font-size: 1rem;
+            font-weight: 600;
+            color: var(--text-dark);
+        }
+
+        .notification-list {
+            padding: 0;
+            margin: 0;
+        }
+
+        .notification-item {
+            padding: 1rem;
+            border-bottom: 1px solid #e5e7eb;
+            transition: background-color 0.3s ease;
+        }
+
+        .notification-item:hover {
+            background-color: #f9fafb;
+        }
+
+        .notification-item.unread {
+            background-color: #fff6fa;
+        }
+
+        .notification-title {
+            font-weight: 600;
+            color: var(--text-dark);
+            margin-bottom: 0.25rem;
+            font-size: 0.95rem;
+        }
+
+        .notification-message {
+            color: var(--text-light);
+            font-size: 0.875rem;
+            margin-bottom: 0.5rem;
+            line-height: 1.4;
+        }
+
+        .notification-time {
+            color: var(--text-light);
+            font-size: 0.75rem;
+        }
+
+        .mark-all-read {
+            color: var(--primary);
+            font-size: 0.875rem;
+            cursor: pointer;
+            transition: color 0.3s ease;
+        }
+
+        .mark-all-read:hover {
+            color: var(--primary-dark);
         }
 
         .profile-img {
@@ -155,11 +318,224 @@
             .nav-brand img {
                 height: 1.75rem;
             }
+
+            .notification-dropdown {
+                position: fixed;
+                top: 0;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                width: 100%;
+                max-height: none;
+                height: 100vh;
+                border-radius: 0;
+                animation: slideIn 0.3s ease-out;
+            }
+
+            .notification-header {
+                padding: 1.25rem;
+                background: #e3125b;
+                color: white;
+                position: sticky;
+                top: 0;
+                z-index: 2;
+            }
+
+            .mobile-only {
+                display: block;
+            }
+
+            .back-button {
+                display: block;
+            }
+
+            .header-left h3 {
+                margin: 0;
+                font-size: 1.1rem;
+            }
+
+            .mark-all-read {
+                color: white;
+                font-size: 0.9rem;
+            }
+
+            .notification-list {
+                padding-bottom: 1rem;
+            }
+
+            .notification-item {
+                padding: 1.25rem;
+                margin: 0.5rem;
+                border-radius: 0.5rem;
+                background: white;
+                box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+            }
+
+            .notification-title {
+                font-size: 1rem;
+            }
+
+            .notification-message {
+                font-size: 0.9rem;
+                line-height: 1.5;
+            }
+
+            .notification-time {
+                font-size: 0.8rem;
+            }
+
+            @keyframes slideIn {
+                from {
+                    transform: translateX(100%);
+                }
+                to {
+                    transform: translateX(0);
+                }
+            }
         }
 
         @media (max-width: 480px) {
             .nav-brand span {
                 display: none;
+            }
+
+            .notification-item {
+                padding: 1rem;
+                margin: 0.25rem;
+            }
+
+            .notification-title {
+                font-size: 0.95rem;
+            }
+
+            .notification-message {
+                font-size: 0.85rem;
+            }
+
+            .notification-time {
+                font-size: 0.75rem;
+            }
+        }
+
+        .logo-img {
+            transition: all 0.3s ease;
+            transform-origin: center;
+        }
+
+        .logo-img:hover {
+            transform: scale(1.1) rotate(5deg);
+            filter: drop-shadow(0 0 8px rgba(227, 18, 91, 0.3));
+        }
+
+        @keyframes pulse {
+            0% {
+                transform: scale(1);
+            }
+            50% {
+                transform: scale(1.05);
+            }
+            100% {
+                transform: scale(1);
+            }
+        }
+
+        .logo-img {
+            animation: pulse 3s infinite;
+        }
+
+        @media (max-width: 768px) {
+            .logo-img {
+                height: 6rem;
+                width: auto;
+            }
+        }
+
+        /* Announcement Modal Styles */
+        .announcement-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: white;
+            z-index: 1100;
+            display: none;
+            flex-direction: column;
+            animation: slideIn 0.3s ease-out;
+        }
+
+        .announcement-modal.active {
+            display: flex;
+        }
+
+        .modal-header {
+            padding: 1.25rem;
+            background: #e3125b;
+            color: white;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            position: sticky;
+            top: 0;
+            z-index: 1;
+        }
+
+        .modal-title {
+            margin: 0;
+            font-size: 1.1rem;
+            font-weight: 600;
+        }
+
+        .modal-content {
+            padding: 1.5rem;
+            overflow-y: auto;
+            flex: 1;
+        }
+
+        .announcement-meta {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+            color: #6b7280;
+            font-size: 0.9rem;
+        }
+
+        .announcement-body {
+            color: #1f2937;
+            line-height: 1.6;
+            font-size: 1rem;
+        }
+
+        @media (max-width: 768px) {
+            .announcement-modal {
+                animation: slideIn 0.3s ease-out;
+            }
+
+            .modal-header {
+                padding: 1.25rem;
+            }
+
+            .modal-content {
+                padding: 1.25rem;
+            }
+
+            .announcement-meta {
+                flex-direction: column;
+                gap: 0.5rem;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .modal-header {
+                padding: 1rem;
+            }
+
+            .modal-content {
+                padding: 1rem;
+            }
+
+            .announcement-body {
+                font-size: 0.95rem;
             }
         }
     </style>
@@ -168,15 +544,65 @@
     <nav class="top-nav">
         <div class="nav-content">
             <div class="nav-brand">
-                <img src="{% static 'img/logo1.png' %}" alt="Logo" class="h-8 w-auto">
-                <span class="text-xl font-bold">My Portal</span>
+                <img src="{% static 'img/logo1.png' %}" alt="Logo" class="logo-img h-8 w-auto">
+                <span class="text-xl font-bold"></span>
             </div>
 
             <button class="mobile-menu-btn md:hidden" id="navbarToggle">
                 <i class="fas fa-bars"></i>
             </button>
+            
 
             <div class="nav-links">
+                <div class="notification-section">
+                    <div class="notification-icon" id="notificationToggle">
+                        <i class="fas fa-bell"></i>
+                        <span class="notification-badge hidden" id="notificationBadge">0</span>
+                    </div>
+                    <div class="notification-dropdown" id="notificationDropdown">
+                        <div class="notification-header">
+                            <div class="header-left">
+                                <button class="back-button mobile-only" id="notificationBack">
+                                    <i class="fas fa-arrow-left"></i>
+                                </button>
+                                <h3>Announcements</h3>
+                            </div>
+                            <span class="mark-all-read">View All</span>
+                        </div>
+                        <ul class="notification-list">
+                            {% for announcement in announcements %}
+                            <li class="notification-item {% if forloop.counter <= 3 %}unread{% endif %}" data-announcement-id="{{ announcement.id }}">
+                                <div class="notification-title">{{ announcement.title }}</div>
+                                <div class="notification-message">{{ announcement.content|truncatechars:100 }}</div>
+                                <div class="notification-time">{{ announcement.created_at|timesince }} ago</div>
+                            </li>
+                            {% empty %}
+                            <li class="notification-item">
+                                <div class="notification-title">No Announcements</div>
+                                <div class="notification-message">There are no announcements at this time.</div>
+                            </li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+
+                    <!-- Announcement Modal -->
+                    <div class="announcement-modal" id="announcementModal">
+                        <div class="modal-header">
+                            <button class="back-button" id="modalBack">
+                                <i class="fas fa-arrow-left"></i>
+                            </button>
+                            <h3 class="modal-title"></h3>
+                        </div>
+                        <div class="modal-content">
+                            <div class="announcement-meta">
+                                <span class="announcement-date"></span>
+                                <span class="announcement-author"></span>
+                            </div>
+                            <div class="announcement-body"></div>
+                        </div>
+                    </div>
+                </div>
+
                 <div class="profile-section">
                     {% if student.student_photo %}
                         <img src="{{ student.student_photo.url }}" alt="Profile" class="profile-img">
@@ -185,18 +611,27 @@
                     {% endif %}
                     <div>
                         <p class="font-medium">{{ student.first_name }} {{ student.last_name }}</p>
-                        
+                        <p class="text-sm text-gray-200">{{ student.student_id }}</p>
                     </div>
                 </div>
 
                 <a href="{% url 'student_profile' student.id %}" class="nav-link {% if request.resolver_match.url_name == 'student_profile' %}active{% endif %}">
-                    <i class="fas fa-user mr-2"></i>My Profile
+                    <i class="fas fa-user"></i>Profile
                 </a>
                 <a href="{% url 'student_dashboard' student.id %}" class="nav-link {% if request.resolver_match.url_name == 'student_dashboard' %}active{% endif %}">
-                    <i class="fas fa-tachometer-alt mr-2"></i>My Dashboard
+                    <i class="fas fa-tachometer-alt"></i>Overview
+                </a>
+                <!-- <a href="{% url 'student_grades' student.id %}" class="nav-link {% if request.resolver_match.url_name == 'student_grades' %}active{% endif %}">
+                    <i class="fas fa-graduation-cap"></i>Grades
+                </a> -->
+                <a href="{% url 'student_subjects' student.id %}" class="nav-link {% if request.resolver_match.url_name == 'student_subjects' %}active{% endif %}">
+                    <i class="fas fa-book"></i>Subjects
+                </a>
+                <a href="{% url 'student_schedule' student.id %}" class="nav-link {% if request.resolver_match.url_name == 'student_schedule' %}active{% endif %}">
+                    <i class="fas fa-calendar-alt"></i>Schedule
                 </a>
                 <a href="{% url 'logout' %}" class="nav-link">
-                    <i class="fas fa-sign-out-alt mr-2"></i>Logout
+                    <i class="fas fa-sign-out-alt"></i>Logout
                 </a>
             </div>
         </div>
@@ -205,9 +640,85 @@
     <script>
         const navbarToggle = document.getElementById('navbarToggle');
         const navLinks = document.querySelector('.nav-links');
+        const notificationToggle = document.getElementById('notificationToggle');
+        const notificationDropdown = document.getElementById('notificationDropdown');
+        const notificationBack = document.getElementById('notificationBack');
+        const announcementModal = document.getElementById('announcementModal');
+        const modalBack = document.getElementById('modalBack');
+        const modalTitle = document.querySelector('.modal-title');
+        const announcementDate = document.querySelector('.announcement-date');
+        const announcementAuthor = document.querySelector('.announcement-author');
+        const announcementBody = document.querySelector('.announcement-body');
+        const notificationBadge = document.getElementById('notificationBadge');
+
+        // Track read announcements
+        let readAnnouncements = new Set();
+
+        // Update notification badge
+        function updateNotificationBadge() {
+            const unreadItems = document.querySelectorAll('.notification-item.unread').length;
+            
+            if (unreadItems > 0) {
+                notificationBadge.textContent = unreadItems;
+                notificationBadge.classList.remove('hidden');
+            } else {
+                notificationBadge.classList.add('hidden');
+            }
+        }
+
+        // Initialize badge on page load
+        document.addEventListener('DOMContentLoaded', () => {
+            updateNotificationBadge();
+        });
 
         navbarToggle.addEventListener('click', () => {
             navLinks.classList.toggle('active');
+        });
+
+        notificationToggle.addEventListener('click', (e) => {
+            e.stopPropagation();
+            notificationDropdown.classList.toggle('active');
+        });
+
+        notificationBack.addEventListener('click', () => {
+            notificationDropdown.classList.remove('active');
+        });
+
+        modalBack.addEventListener('click', () => {
+            announcementModal.classList.remove('active');
+        });
+
+        // Handle announcement item clicks
+        document.querySelectorAll('.notification-item').forEach(item => {
+            item.addEventListener('click', () => {
+                const announcementId = item.dataset.announcementId;
+                const title = item.querySelector('.notification-title').textContent;
+                const message = item.querySelector('.notification-message').textContent;
+                const time = item.querySelector('.notification-time').textContent;
+                
+                // Mark as read
+                if (item.classList.contains('unread')) {
+                    item.classList.remove('unread');
+                    readAnnouncements.add(announcementId);
+                    updateNotificationBadge();
+                }
+                
+                modalTitle.textContent = title;
+                announcementBody.textContent = message;
+                announcementDate.textContent = time;
+                announcementAuthor.textContent = "Posted by Admin";
+                
+                announcementModal.classList.add('active');
+            });
+        });
+
+        // Close notification dropdown when clicking outside
+        document.addEventListener('click', (event) => {
+            if (!event.target.closest('.notification-dropdown') && 
+                !event.target.closest('.notification-icon') && 
+                notificationDropdown.classList.contains('active')) {
+                notificationDropdown.classList.remove('active');
+            }
         });
 
         // Close menu when clicking outside

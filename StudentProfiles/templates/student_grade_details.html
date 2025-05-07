@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Detailed Grade Report</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        body {
+            font-family: 'Poppins', sans-serif;
+            padding-top: 4rem;
+        }
+        
+        .grade-card {
+            transition: transform 0.2s;
+        }
+        
+        .grade-card:hover {
+            transform: translateY(-2px);
+        }
+        
+        .subject-row:hover {
+            background-color: #f8fafc;
+        }
+    </style>
+</head>
+<body>
+    {% include 'structures/nav.html' %}
+    
+    <div class="container mx-auto px-4 py-8">
+        <!-- Header -->
+        <div class="text-center mb-8">
+            <h1 class="text-3xl font-bold text-gray-800">Detailed Grade Report</h1>
+            <p class="text-gray-600">For {{ student.first_name }} {{ student.last_name }}</p>
+        </div>
+        
+        <!-- School Year Filter -->
+        <div class="flex justify-end mb-6">
+            <form method="GET" class="relative">
+                <div class="flex items-center">
+                    <span class="text-sm text-gray-600 mr-2">School Year:</span>
+                    <select name="school_year" class="border rounded px-3 py-2 text-sm" onchange="this.form.submit()">
+                        {% for year in school_years %}
+                            <option value="{{ year.display_name }}" {% if year.display_name == current_school_year %}selected{% endif %}>
+                                {{ year.display_name }}{% if year.is_active %} (Active){% endif %}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </form>
+        </div>
+        
+        <!-- Grade Analytics Cards -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+            <div class="grade-card bg-white rounded-lg shadow p-4">
+                <h3 class="text-sm font-semibold text-gray-500">Total Subjects</h3>
+                <p class="text-2xl font-bold text-gray-800">{{ grade_analytics.total_subjects }}</p>
+            </div>
+            <div class="grade-card bg-white rounded-lg shadow p-4">
+                <h3 class="text-sm font-semibold text-gray-500">Subjects with Grades</h3>
+                <p class="text-2xl font-bold text-blue-600">{{ grade_analytics.subjects_with_grades }}</p>
+            </div>
+            <div class="grade-card bg-white rounded-lg shadow p-4">
+                <h3 class="text-sm font-semibold text-gray-500">Passing Subjects</h3>
+                <p class="text-2xl font-bold text-green-600">{{ grade_analytics.passing_subjects }}</p>
+            </div>
+            <div class="grade-card bg-white rounded-lg shadow p-4">
+                <h3 class="text-sm font-semibold text-gray-500">Overall Average</h3>
+                <p class="text-2xl font-bold {% if grade_analytics.average_grade >= 75 %}text-green-600{% else %}text-red-600{% endif %}">
+                    {{ grade_analytics.average_grade|floatformat:2 }}
+                </p>
+            </div>
+        </div>
+        
+        <!-- Detailed Grades Table -->
+        <div class="bg-white rounded-lg shadow overflow-hidden">
+            <div class="overflow-x-auto">
+                <table class="min-w-full divide-y divide-gray-200">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Subject</th>
+                            <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">First Quarter</th>
+                            <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Second Quarter</th>
+                            <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Third Quarter</th>
+                            <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Fourth Quarter</th>
+                            <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Final Grade</th>
+                            <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                        </tr>
+                    </thead>
+                    <tbody class="bg-white divide-y divide-gray-200">
+                        {% for subject_name, data in subject_grades.items %}
+                        <tr class="subject-row">
+                            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                                {{ subject_name }}
+                            </td>
+                            {% for quarter in '1234' %}
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-center">
+                                {% if data.quarters.quarter %}
+                                    <div class="flex flex-col">
+                                        <span class="{% if data.quarters.quarter.grade >= 75 %}text-green-600{% else %}text-red-600{% endif %}">
+                                            {{ data.quarters.quarter.grade|floatformat:2 }}
+                                        </span>
+                                        {% if data.quarters.quarter.remarks %}
+                                            <span class="text-xs text-gray-500" title="{{ data.quarters.quarter.remarks }}">
+                                                <i class="fas fa-info-circle"></i>
+                                            </span>
+                                        {% endif %}
+                                    </div>
+                                {% else %}
+                                    -
+                                {% endif %}
+                            </td>
+                            {% endfor %}
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-center font-semibold {% if data.average >= 75 %}text-green-600{% else %}text-red-600{% endif %}">
+                                {{ data.average|floatformat:2|default:"-" }}
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-center">
+                                <span class="px-2 py-1 rounded-full text-xs font-semibold 
+                                    {% if data.status == 'Passing' %}bg-green-100 text-green-800
+                                    {% elif data.status == 'Failing' %}bg-red-100 text-red-800
+                                    {% else %}bg-gray-100 text-gray-800{% endif %}">
+                                    {{ data.status }}
+                                </span>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="7" class="px-6 py-4 text-center text-gray-500">
+                                No grades available for the current school year.
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        
+        <!-- Legend -->
+        <div class="mt-6 flex justify-center space-x-4">
+            <div class="flex items-center">
+                <div class="w-4 h-4 bg-green-600 rounded-full mr-2"></div>
+                <span class="text-sm text-gray-600">Passing Grade (≥75)</span>
+            </div>
+            <div class="flex items-center">
+                <div class="w-4 h-4 bg-red-600 rounded-full mr-2"></div>
+                <span class="text-sm text-gray-600">Failing Grade (<75)</span>
+            </div>
+        </div>
+    </div>
+</body>
+</html> 

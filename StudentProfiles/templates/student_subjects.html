@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Student Subjects</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Poppins', sans-serif;
+            margin-top: 70px !important;
+            background: #f8f9fa;
+        }
+    </style>
+</head>
+<body>
+    {% include 'structures/nav.html' %}
+    
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        <!-- Header Section -->
+        <div class="bg-white rounded-lg shadow-sm p-4">
+            <!-- Student Info Section -->
+            <div class="mb-8">
+                <div class="grid grid-cols-3 gap-8">
+                    <div>
+                        <p class="text-gray-600 mb-1">Student Name:</p>
+                        <p class="font-medium">{{ student.first_name }} {{ student.last_name }}</p>
+                    </div>
+                    <div>
+                        <p class="text-gray-600 mb-1">Grade Level:</p>
+                        <p class="font-medium">Grade {{ current_enrollment.section.grade_level }}</p>
+                    </div>
+                    <div>
+                        <p class="text-gray-600 mb-1">Section:</p>
+                        <p class="font-medium">{{ current_enrollment.section.section_id }}</p>
+                    </div>
+                </div>
+            </div>
+
+            {% if subjects %}
+                <div class="overflow-x-auto">
+                    <table class="w-full">
+                        <thead>
+                            <tr class="border-b">
+                                <th class="text-left py-3 text-gray-500 uppercase text-xs font-medium tracking-wider">Subject</th>
+                                <th class="text-left py-3 text-gray-500 uppercase text-xs font-medium tracking-wider">Instructor</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y">
+                            {% for subject in subjects %}
+                                {% with teacher=subject.schedules_set.first.teacher_id %}
+                                <tr class="hover:bg-gray-50">
+                                    <td class="py-4">
+                                        <div>
+                                            <p class="text-sm font-medium text-gray-900">{{ subject.subject_id }}</p>
+                                            <p class="text-sm text-gray-500">{{ subject.name }}</p>
+                                        </div>
+                                    </td>
+                                    <td class="py-4">
+                                        <p class="text-sm text-gray-900">{{ teacher.first_name }} {{ teacher.last_name }}</p>
+                                    </td>
+                                </tr>
+                                {% endwith %}
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <div class="text-center py-8">
+                    <p class="text-gray-500 italic">No subjects found for the current enrollment.</p>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</body>
+</html>

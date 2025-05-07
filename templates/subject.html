@@ -1,0 +1,107 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Subjects{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">Subject List</h3>
+                    <div class="card-tools">
+                        <button type="button" class="btn btn-primary" data-toggle="modal" data-target="#addSubjectModal">
+                            <i class="fas fa-plus"></i> Add Subject
+                        </button>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <table id="subjectTable" class="table table-bordered table-striped">
+                        <thead>
+                            <tr>
+                                <th>Subject ID</th>
+                                <th>Subject Name</th>
+                                <th>Grade Level</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for subject in subjects %}
+                            <tr>
+                                <td>{{ subject.subject_id }}</td>
+                                <td>{{ subject.subject_name }}</td>
+                                <td>{{ subject.grade_level }}</td>
+                                <td>
+                                    <button class="btn btn-sm btn-info view-subject" data-id="{{ subject.id }}">
+                                        <i class="fas fa-eye"></i>
+                                    </button>
+                                    <button class="btn btn-sm btn-warning edit-subject" data-id="{{ subject.id }}">
+                                        <i class="fas fa-edit"></i>
+                                    </button>
+                                    <button class="btn btn-sm btn-danger delete-subject" data-id="{{ subject.id }}">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Add Subject Modal -->
+<div class="modal fade" id="addSubjectModal" tabindex="-1" role="dialog" aria-labelledby="addSubjectModalLabel" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="addSubjectModalLabel">Add Subject</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <form id="addSubjectForm" method="POST" action="{% url 'dashboard:add_subject' %}">
+                {% csrf_token %}
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label for="subject_id">Subject ID</label>
+                        <input type="text" class="form-control" id="subject_id" name="subject_id" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="subject_name">Subject Name</label>
+                        <input type="text" class="form-control" id="subject_name" name="subject_name" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="grade_level">Grade Level</label>
+                        <select class="form-control" id="grade_level" name="grade_level" required>
+                            <option value="">Select Grade Level</option>
+                            {% for grade in grade_levels %}
+                            <option value="{{ grade }}">Grade {{ grade }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                    <button type="submit" class="btn btn-primary">Add Subject</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    // Initialize DataTable
+    $('#subjectTable').DataTable({
+        "responsive": true,
+        "autoWidth": false,
+    });
+});
+</script>
+{% endblock %} 

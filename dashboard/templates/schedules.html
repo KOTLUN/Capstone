@@ -13,6 +13,9 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&family=Quicksand:wght@500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css">
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
 </head>
 <body>
     <div class="page-wrapper">
@@ -64,6 +67,7 @@
                                                 <h5 class="card-title mb-0">Grade {{ section.grade_level }}</h5>
                                                 <button class="btn btn-light btn-sm view-schedule-btn" 
                                                         data-section-id="{{ section.id }}"
+                                                        data-section-name="{{ section.section_id }}"
                                                         data-bs-toggle="tooltip" 
                                                         title="View Weekly Schedule">
                                                     <i class="fas fa-calendar-week"></i>
@@ -123,7 +127,9 @@
                                 <div class="row" id="teachersContainer">
                                     {% for teacher in teachers %}
                                     <div class="col-md-4 teacher-item mb-4" 
-                                         data-role="{% if teacher.sections.exists %}adviser{% else %}subject{% endif %}">
+                                         data-role="{% if teacher.sections.exists %}adviser{% else %}subject{% endif %}"
+                                         data-teacher-id="{{ teacher.id }}"
+                                         data-teacher-name="{{ teacher.first_name }} {{ teacher.last_name }}">
                                         <div class="card teacher-card h-100">
                                             <div class="card-header {% cycle 'bg-primary' 'bg-success' 'bg-info' 'bg-warning' 'bg-danger' 'bg-secondary' %} text-white d-flex justify-content-between align-items-center">
                                                 <h5 class="card-title mb-0">{{ teacher.first_name }} {{ teacher.last_name }}</h5>
@@ -216,7 +222,7 @@
                                 <h5 class="modal-title">Add New Schedule</h5>
                                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                             </div>
-                            <form id="addScheduleForm" method="POST" action="{% url 'administrator:add_schedule' %}">
+                            <form id="addScheduleForm" method="POST" action="{% url 'dashboard:add_schedule' %}">
                                 {% csrf_token %}
                                 <div class="modal-body p-4">
                                     <div class="row g-4">
@@ -247,9 +253,12 @@
                                                 <label for="gradeLevel" class="form-label fw-bold">Grade Level</label>
                                                 <select class="form-select shadow-sm" id="gradeLevel" name="grade_level" required>
                                                     <option value="">Select Grade Level</option>
-                                                    {% for grade in grade_levels %}
-                                                    <option value="{{ grade }}">Grade {{ grade }}</option>
-                                                    {% endfor %}
+                                                    <option value="7">Grade 7</option>
+                                                    <option value="8">Grade 8</option>
+                                                    <option value="9">Grade 9</option>
+                                                    <option value="10">Grade 10</option>
+                                                    <option value="11">Grade 11</option>
+                                                    <option value="12">Grade 12</option>
                                                 </select>
                                             </div>
                                         </div>
@@ -258,6 +267,9 @@
                                                 <label for="section" class="form-label fw-bold">Section</label>
                                                 <select class="form-select shadow-sm" id="section" name="section" required>
                                                     <option value="">Select Section</option>
+                                                    {% for section in sections %}
+                                                        <option value="{{ section.id }}">Grade {{ section.grade_level }} - {{ section.section_id }}</option>
+                                                    {% endfor %}
                                                 </select>
                                             </div>
                                         </div>
@@ -343,7 +355,7 @@
                 
                 if (gradeLevel) {
                     $.ajax({
-                        url: "{% url 'administrator:get_sections_by_grade' %}",
+                        url: "{% url 'dashboard:get_sections_by_grade' %}",
                         data: { grade_level: gradeLevel },
                         success: function(data) {
                             data.sections.forEach(function(section) {
@@ -365,13 +377,17 @@
 
                 if (!teacherId || !subjectId || !gradeLevel || !sectionId) return;
 
+                // Pick the first checked day, or default to 'Monday'
+                let day = $('input[name="days[]"]:checked').first().val() || 'Monday';
+
                 $.ajax({
-                    url: "{% url 'administrator:get_available_time_slots' %}",
+                    url: "{% url 'dashboard:get_available_time_slots' %}",
                     data: {
                         teacher_id: teacherId,
                         subject: subjectId,
                         grade_level: gradeLevel,
-                        section_id: sectionId
+                        section_id: sectionId,
+                        day: day
                     },
                     success: function(response) {
                         // Clear any existing error messages
@@ -452,7 +468,7 @@
 
                 // Get available time slots for each selected day
                 const promises = selectedDays.map(day => 
-                    $.get("{% url 'administrator:get_available_time_slots' %}", {
+                    $.get("{% url 'dashboard:get_available_time_slots' %}", {
                         teacher_id: teacherId,
                         day: day,
                         section_id: sectionId,
@@ -466,7 +482,7 @@
                 Promise.all(promises)
                     .then(results => {
                         const commonSlots = results.reduce((common, result, index) => {
-                            const slots = result.time_slots;
+                            const slots = result.available_slots || result.time_slots || [];
                             if (index === 0) return slots;
                             return common.filter(commonSlot => 
                                 slots.some(slot => slot.start === commonSlot.start)
@@ -499,12 +515,6 @@
             $('#addScheduleForm').submit(function(e) {
                 e.preventDefault();
                 
-                // Check for subject error
-                if ($('.subject-error').length > 0) {
-                    alert('Please resolve subject conflicts before submitting');
-                    return false;
-                }
-                
                 // Validate at least one day is selected
                 if ($('input[name="days[]"]:checked').length === 0) {
                     alert('Please select at least one day');
@@ -517,9 +527,9 @@
                     selectedDays.push($(this).val());
                 });
                 
-                // Create a schedule for each selected day
                 let successCount = 0;
                 let errorCount = 0;
+                let errorMessages = [];
                 
                 // Show loading message
                 const loadingDiv = $('<div class="alert alert-info mt-3">Adding schedules...</div>');
@@ -527,19 +537,26 @@
                 
                 // Process each day
                 selectedDays.forEach(function(day) {
+                    // Always extract start and end time from the selected time slot for each day
+                    const timeSlotValue = $('#timeSlot').val();
+                    let startTime = '';
+                    let endTime = '';
+                    if (timeSlotValue) {
+                        [startTime, endTime] = timeSlotValue.split(',');
+                    }
                     const formData = new FormData();
-                    formData.append('teacher_id', $('#teacher').val());
+                    formData.append('teacher', $('#teacher').val());
                     formData.append('subject', $('#subject').val());
                     formData.append('grade_level', $('#gradeLevel').val());
                     formData.append('section', $('#section').val());
                     formData.append('day', day);
-                    formData.append('start_time', $('#startTime').val());
-                    formData.append('end_time', $('#endTime').val());
+                    formData.append('start_time', startTime);
+                    formData.append('end_time', endTime);
                     formData.append('room', $('#room').val());
                     formData.append('csrfmiddlewaretoken', $('[name=csrfmiddlewaretoken]').val());
                     
                     $.ajax({
-                        url: "{% url 'administrator:add_schedule' %}",
+                        url: "{% url 'dashboard:add_schedule' %}",
                         method: 'POST',
                         data: formData,
                         processData: false,
@@ -549,13 +566,13 @@
                                 successCount++;
                             } else {
                                 errorCount++;
-                                console.error('Error adding schedule for ' + day + ':', response.message);
+                                errorMessages.push(response.message);
                             }
                             checkCompletion();
                         },
                         error: function(xhr, status, error) {
                             errorCount++;
-                            console.error('Error adding schedule for ' + day + ':', error);
+                            errorMessages.push(error);
                             checkCompletion();
                         }
                     });
@@ -565,11 +582,14 @@
                     if (successCount + errorCount === selectedDays.length) {
                         loadingDiv.remove();
                         if (errorCount === 0) {
-                            alert('All schedules added successfully!');
+                            toastr.success('All schedules added successfully!');
                             $('#addScheduleModal').modal('hide');
-                            location.reload();
+                            setTimeout(function() {
+                                location.reload();
+                            }, 1200);
                         } else {
-                            alert(`Added ${successCount} schedules, but ${errorCount} failed. Check console for details.`);
+                            const errorMessage = `Added ${successCount} schedules, but ${errorCount} failed.\n\nErrors:\n${errorMessages.join('\n')}`;
+                            toastr.error(errorMessage.replace(/\n/g, '<br>'));
                         }
                     }
                 }
@@ -613,6 +633,7 @@
             $('.view-schedule-btn').click(function(e) {
                 e.preventDefault();
                 const sectionId = $(this).data('section-id');
+                const sectionName = $(this).data('section-name');
                 
                 // Show loading state
                 $('#weeklyScheduleContent').html('<div class="text-center"><div class="spinner-border" role="status"><span class="visually-hidden">Loading...</span></div></div>');
@@ -620,14 +641,86 @@
 
                 // Fetch schedule data
                 $.ajax({
-                    url: "{% url 'administrator:get_section_schedule' %}",
+                    url: "{% url 'dashboard:get_section_schedule' %}",
                     data: { section_id: sectionId },
                     success: function(response) {
-                        $('#weeklyScheduleContent').html(response.html);
-                        $('.modal-title').text('Weekly Schedule - ' + response.section_name);
+                        if (response.success) {
+                            // Create calendar grid
+                            let html = '<div class="schedule-calendar">';
+                            
+                            // Create time slots (7:00 AM to 5:00 PM)
+                            const timeSlots = [];
+                            for (let hour = 7; hour <= 17; hour++) {
+                                timeSlots.push({
+                                    start: `${hour.toString().padStart(2, '0')}:00`,
+                                    end: `${(hour + 1).toString().padStart(2, '0')}:00`
+                                });
+                            }
+
+                            // Group schedules by day
+                            const schedulesByDay = {
+                                'Monday': [],
+                                'Tuesday': [],
+                                'Wednesday': [],
+                                'Thursday': [],
+                                'Friday': []
+                            };
+
+                            // Organize schedules by day
+                            response.schedules.forEach(schedule => {
+                                if (!schedulesByDay[schedule.day]) {
+                                    schedulesByDay[schedule.day] = [];
+                                }
+                                schedulesByDay[schedule.day].push(schedule);
+                            });
+
+                            // Create header row
+                            html += '<div class="calendar-row header">';
+                            html += '<div class="time-slot">Time</div>';
+                            Object.keys(schedulesByDay).forEach(day => {
+                                html += `<div class="day-header">${day}</div>`;
+                            });
+                            html += '</div>';
+
+                            // Create schedule grid
+                            timeSlots.forEach(timeSlot => {
+                                html += '<div class="calendar-row">';
+                                // Format time display
+                                const startTime = new Date(`2000-01-01 ${timeSlot.start}`);
+                                const endTime = new Date(`2000-01-01 ${timeSlot.end}`);
+                                const timeDisplay = `${startTime.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })} - ${endTime.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })}`;
+                                html += `<div class="time-slot">${timeDisplay}</div>`;
+                                
+                                Object.keys(schedulesByDay).forEach(day => {
+                                    const daySchedules = schedulesByDay[day] || [];
+                                    const matchingSchedule = daySchedules.find(schedule => 
+                                        schedule.start_time === timeSlot.start && 
+                                        schedule.end_time === timeSlot.end
+                                    );
+
+                                    if (matchingSchedule) {
+                                        html += `<div class="calendar-cell schedule-slot">
+                                            <div class="subject">${matchingSchedule.subject_name}</div>
+                                            <div class="teacher">${matchingSchedule.teacher_name}</div>
+                                            <div class="room">${matchingSchedule.room}</div>
+                                        </div>`;
+                                    } else {
+                                        html += '<div class="calendar-cell empty-slot"></div>';
+                                    }
+                                });
+                                
+                                html += '</div>';
+                            });
+
+                            html += '</div>';
+                            $('#weeklyScheduleContent').html(html);
+                            $('.modal-title').text(`Weekly Schedule - ${sectionName}`);
+                        } else {
+                            $('#weeklyScheduleContent').html(`<div class="alert alert-danger">${response.message}</div>`);
+                        }
                     },
-                    error: function() {
-                        $('#weeklyScheduleContent').html('<div class="alert alert-danger">Error loading schedule. Please try again.</div>');
+                    error: function(xhr, status, error) {
+                        $('#weeklyScheduleContent').html(`<div class="alert alert-danger">Error loading schedule: ${error}</div>`);
                     }
                 });
             });
@@ -664,6 +757,7 @@
             $('.view-teacher-schedule-btn').click(function(e) {
                 e.preventDefault();
                 const teacherId = $(this).data('teacher-id');
+                const teacherName = $(this).data('teacher-name');
                 
                 // Show loading state
                 $('#weeklyScheduleContent').html('<div class="text-center"><div class="spinner-border" role="status"><span class="visually-hidden">Loading...</span></div></div>');
@@ -671,14 +765,86 @@
 
                 // Fetch teacher schedule data
                 $.ajax({
-                    url: "{% url 'administrator:get_teacher_schedule' %}",
+                    url: "{% url 'dashboard:get_teacher_schedule' %}",
                     data: { teacher_id: teacherId },
                     success: function(response) {
-                        $('#weeklyScheduleContent').html(response.html);
-                        $('.modal-title').text('Weekly Schedule - ' + response.teacher_name);
+                        if (response.success) {
+                            // Create calendar grid
+                            let html = '<div class="schedule-calendar">';
+                            
+                            // Create time slots (7:00 AM to 5:00 PM)
+                            const timeSlots = [];
+                            for (let hour = 7; hour <= 17; hour++) {
+                                timeSlots.push({
+                                    start: `${hour.toString().padStart(2, '0')}:00`,
+                                    end: `${(hour + 1).toString().padStart(2, '0')}:00`
+                                });
+                            }
+
+                            // Group schedules by day
+                            const schedulesByDay = {
+                                'Monday': [],
+                                'Tuesday': [],
+                                'Wednesday': [],
+                                'Thursday': [],
+                                'Friday': []
+                            };
+
+                            // Organize schedules by day
+                            response.schedules.forEach(schedule => {
+                                if (!schedulesByDay[schedule.day]) {
+                                    schedulesByDay[schedule.day] = [];
+                                }
+                                schedulesByDay[schedule.day].push(schedule);
+                            });
+
+                            // Create header row
+                            html += '<div class="calendar-row header">';
+                            html += '<div class="time-slot">Time</div>';
+                            Object.keys(schedulesByDay).forEach(day => {
+                                html += `<div class="day-header">${day}</div>`;
+                            });
+                            html += '</div>';
+
+                            // Create schedule grid
+                            timeSlots.forEach(timeSlot => {
+                                html += '<div class="calendar-row">';
+                                // Format time display
+                                const startTime = new Date(`2000-01-01 ${timeSlot.start}`);
+                                const endTime = new Date(`2000-01-01 ${timeSlot.end}`);
+                                const timeDisplay = `${startTime.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })} - ${endTime.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })}`;
+                                html += `<div class="time-slot">${timeDisplay}</div>`;
+                                
+                                Object.keys(schedulesByDay).forEach(day => {
+                                    const daySchedules = schedulesByDay[day] || [];
+                                    const matchingSchedule = daySchedules.find(schedule => 
+                                        schedule.start_time === timeSlot.start && 
+                                        schedule.end_time === timeSlot.end
+                                    );
+
+                                    if (matchingSchedule) {
+                                        html += `<div class="calendar-cell schedule-slot">
+                                            <div class="subject">${matchingSchedule.subject_name}</div>
+                                            <div class="section">${matchingSchedule.section_name}</div>
+                                            <div class="room">${matchingSchedule.room}</div>
+                                        </div>`;
+                                    } else {
+                                        html += '<div class="calendar-cell empty-slot"></div>';
+                                    }
+                                });
+                                
+                                html += '</div>';
+                            });
+
+                            html += '</div>';
+                            $('#weeklyScheduleContent').html(html);
+                            $('.modal-title').text(`Weekly Schedule - ${teacherName}`);
+                        } else {
+                            $('#weeklyScheduleContent').html(`<div class="alert alert-danger">${response.message}</div>`);
+                        }
                     },
-                    error: function() {
-                        $('#weeklyScheduleContent').html('<div class="alert alert-danger">Error loading schedule. Please try again.</div>');
+                    error: function(xhr, status, error) {
+                        $('#weeklyScheduleContent').html(`<div class="alert alert-danger">Error loading schedule: ${error}</div>`);
                     }
                 });
             });
@@ -816,24 +982,132 @@
                 width: 100%;
             }
         }
+
+        /* Calendar Grid Styles */
+        .schedule-calendar {
+            display: flex;
+            flex-direction: column;
+            border: 1px solid #dee2e6;
+            border-radius: 0.5rem;
+            overflow: hidden;
+            margin: 1rem 0;
+        }
+
+        .calendar-header {
+            display: grid;
+            grid-template-columns: 100px repeat(5, 1fr);
+            background-color: #0d6efd;
+            color: white;
+            font-weight: 600;
+        }
+
+        .time-header, .day-header {
+            padding: 0.75rem;
+            text-align: center;
+            border-right: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .calendar-row {
+            display: grid;
+            grid-template-columns: 100px repeat(5, 1fr);
+            border-bottom: 1px solid #dee2e6;
+        }
+
+        .calendar-row:last-child {
+            border-bottom: none;
+        }
+
+        .time-slot {
+            padding: 0.75rem;
+            text-align: center;
+            background-color: #f8f9fa;
+            border-right: 1px solid #dee2e6;
+            font-size: 0.875rem;
+            color: #6c757d;
+        }
+
+        .calendar-cell {
+            padding: 0.5rem;
+            border-right: 1px solid #dee2e6;
+            min-height: 80px;
+        }
+
+        .calendar-cell:last-child {
+            border-right: none;
+        }
+
+        .empty-slot {
+            background-color: #f8f9fa;
+        }
+
+        .schedule-slot {
+            background-color: #e9ecef;
+            border-radius: 0.25rem;
+            padding: 0.5rem;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        .schedule-slot .subject {
+            font-weight: 600;
+            color: #0d6efd;
+            margin-bottom: 0.25rem;
+        }
+
+        .schedule-slot .teacher,
+        .schedule-slot .section {
+            font-size: 0.75rem;
+            color: #6c757d;
+            margin-bottom: 0.25rem;
+        }
+
+        .schedule-slot .room {
+            font-size: 0.75rem;
+            color: #6c757d;
+        }
+
+        @media (max-width: 992px) {
+            .schedule-calendar {
+                font-size: 0.875rem;
+            }
+            
+            .time-slot {
+                padding: 0.5rem;
+            }
+            
+            .calendar-cell {
+                padding: 0.25rem;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .schedule-calendar {
+                font-size: 0.75rem;
+            }
+            
+            .time-slot {
+                padding: 0.25rem;
+            }
+            
+            .calendar-cell {
+                min-height: 60px;
+            }
+        }
     </style>
 
     <!-- Weekly Schedule Modal -->
-    <div class="modal fade" id="weeklyScheduleModal" tabindex="-1">
-        <div class="modal-dialog modal-xl">
+    <div class="modal fade" id="weeklyScheduleModal" tabindex="-1" aria-labelledby="weeklyScheduleModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
             <div class="modal-content">
-                <div class="modal-header bg-primary text-white">
-                    <h5 class="modal-title">Weekly Schedule</h5>
-                    <div class="ms-auto">
-                        <button type="button" class="btn btn-light btn-sm me-2" id="printScheduleBtn">
-                            <i class="fas fa-print"></i> Print
-                        </button>
-                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-                    </div>
+                <div class="modal-header">
+                    <h5 class="modal-title" id="weeklyScheduleModalLabel">Weekly Schedule</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
-                    <div id="weeklyScheduleContent" class="p-3">
-                        <!-- Schedule content will be loaded here -->
+                    <div id="weeklyScheduleContent">
+                        <!-- Schedule will be loaded here -->
                     </div>
                 </div>
             </div>
@@ -955,6 +1229,18 @@
                 }, 1000);
             };
         });
+    });
+    </script>
+
+    <script>
+    $(document).ready(function() {
+        toastr.options = {
+            "closeButton": true,
+            "progressBar": true,
+            "positionClass": "toast-top-right",
+            "timeOut": "3000",
+            "zIndex": 99999
+        };
     });
     </script>
 </body>

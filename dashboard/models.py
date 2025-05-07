@@ -3,32 +3,96 @@ from django.contrib.auth.models import User
 from django.utils import timezone
 from django.core.validators import MinValueValidator, MaxValueValidator
 from django.apps import apps
+import os
+from django.conf import settings
+from django.contrib import messages
+from django.contrib.auth.decorators import login_required
+from django.shortcuts import redirect
 
 
 # Create your models here.
+class SchoolYear(models.Model):
+    year_start = models.IntegerField()
+    year_end = models.IntegerField()
+    is_active = models.BooleanField(default=False)
+    is_previous = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    @property
+    def display_name(self):
+        return f"{self.year_start}-{self.year_end}"
+
+    def save(self, *args, **kwargs):
+        if self.is_active:
+            # Set all other years as inactive and update previous year
+            try:
+                current_active = SchoolYear.objects.get(is_active=True)
+                if current_active and current_active.id != self.id:
+                    current_active.is_active = False
+                    current_active.is_previous = True
+                    current_active.save()
+            except SchoolYear.DoesNotExist:
+                pass
+
+            # Set all other years as inactive
+            SchoolYear.objects.exclude(id=self.id).update(is_active=False)
+
+        super().save(*args, **kwargs)
+
+    @classmethod
+    def get_active(cls):
+        try:
+            return cls.objects.get(is_active=True)
+        except cls.DoesNotExist:
+            return None
+
+    @classmethod
+    def get_all_years(cls):
+        return cls.objects.all().order_by('-year_start')
+
+    def __str__(self):
+        status = " (Active)" if self.is_active else " (Previous)" if self.is_previous else ""
+        return f"{self.display_name}{status}"
+
+# Example: Get the first school year
+school_year = SchoolYear.objects.first()
+print(school_year.display_name)  # e.g., "2023-2024"
+print(school_year.year_start)    # e.g., 2023
+print(school_year.year_end)      # e.g., 2024
+print(school_year.is_active)     # True or False
+print(school_year.created_at)    # DateTime object
+
 class Student(models.Model):
-    student_id = models.CharField(max_length=50, unique=True)
+    user = models.OneToOneField(User, on_delete=models.CASCADE, null=True, blank=True)
+    student_id = models.CharField(max_length=20, unique=True)
+    username = models.CharField(max_length=150, default='username123')
+    password = models.CharField(max_length=128, default='password123')
     first_name = models.CharField(max_length=100)
     middle_name = models.CharField(max_length=100, blank=True, null=True)
     last_name = models.CharField(max_length=100)
-    gender = models.CharField(max_length=10)
+    suffix = models.CharField(max_length=10, blank=True, null=True)
+    gender = models.CharField(max_length=10, choices=[('Male', 'Male'), ('Female', 'Female')])
     religion = models.CharField(max_length=50)
     date_of_birth = models.DateField()
     email = models.EmailField(unique=True)
-    mobile_number = models.CharField(max_length=15)
+    mobile_number = models.CharField(max_length=20)
     address = models.TextField()
-    school_year = models.CharField(max_length=20, blank=True, null=True)  # e.g., "2023-2024"
-    status = models.CharField(max_length=20, default='Not Enrolled', 
-                             choices=[('Not Enrolled', 'Not Enrolled'),
-                                     ('Enrolled', 'Enrolled'), 
-                                     ('Transferred', 'Transferred'),
-                                     ('Dropped', 'Dropped'),
-                                     ('Completed', 'Completed')])
+    student_photo = models.ImageField(upload_to='student_photos/', null=True, blank=True)
+    school_year = models.CharField(max_length=20, null=True, blank=True)
+    has_account = models.BooleanField(default=False)
+    force_password_change = models.BooleanField(default=False)
+    student_status = models.CharField(
+        max_length=20,
+        choices=[
+            ('New Student', 'New Student'),
+            ('Transferee', 'Transferee'),
+            ('Returnee', 'Returnee'),
+        ],
+        default='New Student',
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-    has_account = models.BooleanField(default=False)
-    user = models.OneToOneField(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='student_profile')
-    student_photo = models.ImageField(upload_to='student_photos/', null=True, blank=True)
 
     def __str__(self):
         return f"{self.first_name} {self.last_name} ({self.student_id})"
@@ -91,7 +155,7 @@ class Teachers(models.Model):
 
 class Subject(models.Model):
     subject_id = models.CharField(max_length=50, unique=True)
-    name = models.CharField(max_length=100)
+    name = models.CharField(max_length=100, default='Unnamed Subject')
 
     def __str__(self):
         return self.name
@@ -374,12 +438,14 @@ class Grades(models.Model):
     student = models.ForeignKey(Student, on_delete=models.CASCADE, related_name='grades')
     subject = models.ForeignKey(Subject, on_delete=models.CASCADE)
     teacher = models.ForeignKey(Teachers, on_delete=models.CASCADE)
+    school_year = models.ForeignKey(SchoolYear, on_delete=models.CASCADE)
+    section = models.ForeignKey(Sections, on_delete=models.CASCADE, null=True, blank=True)
     grade = models.DecimalField(max_digits=5, decimal_places=2, validators=[MinValueValidator(0), MaxValueValidator(100)], default=0)
     quarter = models.CharField(max_length=2, choices=QUARTER_CHOICES)
-    school_year = models.CharField(max_length=50)
+    
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='draft', blank=True, null=True)
     remarks = models.TextField(blank=True, null=True)
-    date_created = models.DateTimeField(auto_now_add=True)
+    date_created = models.DateTimeField(default=timezone.now)
     date_modified = models.DateTimeField(auto_now=True)
     date_submitted = models.DateTimeField(null=True, blank=True)
     date_approved = models.DateTimeField(null=True, blank=True)
@@ -604,50 +670,86 @@ class Grade12Enrollment(models.Model):
     class Meta:
         ordering = ['-created_at']
         unique_together = ['student', 'section', 'school_year']
+    
+    
+    
 
-class SchoolYear(models.Model):
-    year_start = models.IntegerField()
-    year_end = models.IntegerField()
-    is_active = models.BooleanField(default=False)
-    is_previous = models.BooleanField(default=False)
+class Event(models.Model):
+    title = models.CharField(max_length=200)
+    description = models.TextField(blank=True)
+    start_date = models.DateField()
+    start_time = models.TimeField()
+    end_date = models.DateField()
+    end_time = models.TimeField()
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
-    @property
-    def display_name(self):
-        return f"{self.year_start}-{self.year_end}"
+    def __str__(self):
+        return self.title
 
-    def save(self, *args, **kwargs):
-        if self.is_active:
-            # Set all other years as inactive and update previous year
-            try:
-                current_active = SchoolYear.objects.get(is_active=True)
-                if current_active and current_active.id != self.id:
-                    current_active.is_active = False
-                    current_active.is_previous = True
-                    current_active.save()
-            except SchoolYear.DoesNotExist:
-                pass
+    class Meta:
+        ordering = ['start_date', 'start_time']
+    
+    
+    
 
-            # Set all other years as inactive
-            SchoolYear.objects.exclude(id=self.id).update(is_active=False)
+class Archive(models.Model):
+    ARCHIVE_TYPES = [
+        ('student', 'Student'),
+        ('teacher', 'Teacher'),
+        ('enrollment', 'Enrollment'),
+        ('grade', 'Grade'),
+        ('section', 'Section'),
+        ('schedule', 'Schedule'),
+        ('event', 'Event'),
+    ]
+    
+    archive_type = models.CharField(max_length=20, choices=ARCHIVE_TYPES)
+    school_year = models.CharField(max_length=20)
+    data = models.JSONField()  # Store the actual data
+    created_at = models.DateTimeField(auto_now_add=True)
+    created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
+    
+    class Meta:
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['archive_type', 'school_year']),
+        ]
+    
+    def __str__(self):
+        return f"{self.get_archive_type_display()} - {self.school_year}"
+    
+    
+    
 
-        super().save(*args, **kwargs)
-
-    @classmethod
-    def get_active(cls):
-        try:
-            return cls.objects.get(is_active=True)
-        except cls.DoesNotExist:
-            return None
-
-    @classmethod
-    def get_all_years(cls):
-        return cls.objects.all().order_by('-year_start')
+class Announcement(models.Model):
+    title = models.CharField(max_length=200)
+    content = models.TextField()
+    created_by = models.ForeignKey(User, on_delete=models.CASCADE)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
-        status = " (Active)" if self.is_active else " (Previous)" if self.is_previous else ""
-        return f"{self.display_name}{status}"
+        return self.title
+
+    class Meta:
+        ordering = ['-created_at']
     
     
     
+
+def get_enrollment_model(grade_level):
+    """
+    Returns the appropriate enrollment model based on the grade level.
+    For Grade 11 and 12, track information is required.
+    """
+    enrollment_models = {
+        7: Enrollment,  # Base Enrollment model for Grade 7
+        8: Grade8Enrollment,
+        9: Grade9Enrollment,
+        10: Grade10Enrollment,
+        11: Grade11Enrollment,  # Requires track field
+        12: Grade12Enrollment   # Requires track field
+    }
+    return enrollment_models.get(grade_level)
+

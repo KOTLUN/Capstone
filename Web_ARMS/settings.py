@@ -26,8 +26,8 @@ SECRET_KEY = 'django-insecure-79hhusg%blbv%*2qof!+i-n&k)4y@r7*e&&42!r$f8ys7-fbas
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['localhost', '127.0.0.1', '192.168.1.x']  # Replace 192.168.1.x with your actual IP
-
+# ALLOWED_HOSTS = ['localhost', '127.0.0.1', '192.168.1.x']  # Replace 192.168.1.x with your actual IP
+ALLOWED_HOSTS = ['*']
 
 # Application definition
 
@@ -42,8 +42,8 @@ INSTALLED_APPS = [
     'login',
     'TeacherPortal',
     'StudentProfiles',
-    
-    
+    'corsheaders',
+    'social_django',
 ]
 STATIC_URL = '/static/'
 STATICFILES_DIRS = [
@@ -61,12 +61,14 @@ MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'corsheaders.middleware.CorsMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'social_django.middleware.SocialAuthExceptionMiddleware',
 ]
 
 ROOT_URLCONF = 'Web_ARMS.urls'
@@ -85,6 +87,8 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
+                'social_django.context_processors.backends',
+                'social_django.context_processors.login_redirect',
             ],
         },
     },
@@ -100,7 +104,7 @@ WSGI_APPLICATION = 'Web_ARMS.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',
-        'NAME': 'arms1',
+        'NAME': 'final_arms',
         'USER': 'root',
         'PASSWORD': '',
         'HOST': 'localhost',
@@ -164,3 +168,106 @@ EMAIL_USE_TLS = True
 EMAIL_HOST_USER = 'rombinesalfonsoii.stcfi@gmail.com'  # Replace with your actual Gmail address
 EMAIL_HOST_PASSWORD = 'zpme nakg yawc eqzz'  # Replace with the app password you just generated
 DEFAULT_FROM_EMAIL = 'rombinesalfonsoii.stcfi@gmail.com'  # Replace with your actual Gmail address
+
+# Add these new settings
+CORS_ALLOW_ALL_ORIGINS = True
+CORS_ALLOW_CREDENTIALS = True
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:8000",
+    "http://127.0.0.1:8000",
+]
+
+CSRF_TRUSTED_ORIGINS = [
+    "http://localhost:8000",
+    "http://127.0.0.1:8000",
+]
+
+X_FRAME_OPTIONS = 'SAMEORIGIN'
+SECURE_CROSS_ORIGIN_OPENER_POLICY = None
+
+# Session settings
+SESSION_ENGINE = 'django.contrib.sessions.backends.db'  # Use database for sessions
+SESSION_COOKIE_NAME = 'armsessionid'
+SESSION_COOKIE_SECURE = False  # Set to True in production with HTTPS
+SESSION_COOKIE_HTTPONLY = True
+SESSION_COOKIE_SAMESITE = 'Lax'
+SESSION_SAVE_EVERY_REQUEST = True
+SESSION_EXPIRE_AT_BROWSER_CLOSE = False
+SESSION_COOKIE_AGE = 86400  # 24 hours in seconds
+
+# Add these settings at the end of the file
+AUTHENTICATION_BACKENDS = (
+    'social_core.backends.google.GoogleOAuth2',
+    'django.contrib.auth.backends.ModelBackend',
+)
+
+SOCIAL_AUTH_URL_NAMESPACE = 'social'
+LOGIN_URL = 'login'
+LOGIN_REDIRECT_URL = '/'
+LOGOUT_URL = 'logout'
+LOGOUT_REDIRECT_URL = 'login'
+
+SOCIAL_AUTH_GOOGLE_OAUTH2_KEY = '895114434737-61km44nq1b2q7s8mc2trmgo9jtghrs2u.apps.googleusercontent.com'
+SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET = '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'
+SOCIAL_AUTH_GOOGLE_OAUTH2_SCOPE = [
+    'https://www.googleapis.com/auth/userinfo.email',
+    'https://www.googleapis.com/auth/userinfo.profile',
+]
+SOCIAL_AUTH_GOOGLE_OAUTH2_AUTH_EXTRA_ARGUMENTS = {
+    'access_type': 'offline',
+    'prompt': 'consent',
+}
+
+# Social Auth Pipeline
+SOCIAL_AUTH_PIPELINE = (
+    'social_core.pipeline.social_auth.social_details',
+    'social_core.pipeline.social_auth.social_uid',
+    'social_core.pipeline.social_auth.auth_allowed',
+    'social_core.pipeline.social_auth.social_user',
+    'login.pipeline.check_existing_email',
+    'login.pipeline.associate_by_email',
+    'social_core.pipeline.user.get_username',
+    'social_core.pipeline.social_auth.associate_user',
+    'social_core.pipeline.social_auth.load_extra_data',
+    'social_core.pipeline.user.user_details',
+    'login.pipeline.redirect_by_role',
+)
+
+# Additional settings
+SOCIAL_AUTH_LOGIN_REDIRECT_URL = '/'
+SOCIAL_AUTH_NEW_USER_REDIRECT_URL = '/'
+SOCIAL_AUTH_LOGIN_ERROR_URL = 'login'
+SOCIAL_AUTH_RAISE_EXCEPTIONS = True  # Changed to True to see errors
+SOCIAL_AUTH_SANITIZE_REDIRECTS = True
+SOCIAL_AUTH_REDIRECT_IS_HTTPS = False  # Set to True in production
+
+# Message settings
+MESSAGE_STORAGE = 'django.contrib.messages.storage.session.SessionStorage'
+
+# Logging configuration
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+        },
+    },
+    'loggers': {
+        'login.pipeline': {
+            'handlers': ['console'],
+            'level': 'DEBUG',
+            'propagate': True,
+        },
+        'social_core': {
+            'handlers': ['console'],
+            'level': 'DEBUG',
+            'propagate': True,
+        },
+        'login.views': {
+            'handlers': ['console'],
+            'level': 'DEBUG',
+            'propagate': True,
+        },
+    },
+}

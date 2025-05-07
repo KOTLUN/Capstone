@@ -19,13 +19,21 @@ from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
 from dashboard import views as dashboard_views
+from login import views as login_views
 
 
 urlpatterns = [
+    path('', login_views.root_view, name='root'),
     path('admin/', admin.site.urls),
-    path('administrator/', include(('dashboard.urls', 'dashboard'), namespace='administrator')),
-    path('teacher/', include('TeacherPortal.urls')),
-    path('', include('login.urls')),
+    path('social-auth/', include('social_django.urls', namespace='social')),
+    path('dashboard/', include(('dashboard.urls', 'dashboard'), namespace='dashboard')),
+    path('teacher/', include(('TeacherPortal.urls', 'TeacherPortal'), namespace='TeacherPortal')),
+    path('login/', include('login.urls')),
     path('student-profile/<int:student_id>/', dashboard_views.student_profile_view, name='student_profile'),
     path('student/', include('StudentProfiles.urls')),
-] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+    
+    # Add these new URL patterns for dashboard redirects
+    path('teacher-dashboard/', login_views.teacher_dashboard, name='teacher_dashboard'),
+    path('admin-dashboard/', login_views.admin_dashboard, name='admin_dashboard'),
+    path('student-dashboard/', login_views.student_dashboard, name='student_dashboard'),
+] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT) 

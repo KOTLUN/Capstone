@@ -263,7 +263,7 @@
                             <div class="row info-item">
                                 <div class="col-md-4 info-label">Class Schedule</div>
                                 <div class="col-md-8 info-value">
-                                    <a href="{% url 'teacher_schedule' %}" class="btn btn-primary btn-sm">
+                                    <a href="{% url 'TeacherPortal:teacher_schedule' %}" class="btn btn-primary btn-sm">
                                         <i class="fas fa-calendar-alt me-1"></i> View Schedule
                                     </a>
                                 </div>
@@ -488,7 +488,7 @@
                     <h5 class="modal-title" id="editProfileModalLabel"><i class="fas fa-user-edit me-2"></i>Edit Profile</h5>
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
-                <form action="{% url 'edit_profile' %}" method="POST" enctype="multipart/form-data">
+                <form action="{% url 'TeacherPortal:edit_profile' %}" method="POST" enctype="multipart/form-data">
                     {% csrf_token %}
                     <div class="modal-body">
                         <div class="row">

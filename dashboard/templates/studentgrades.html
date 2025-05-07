@@ -1,12 +1,10 @@
-{% load custom_filters %}
-{% load grade_filters %}
-{% load static %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Student Grades</title>
+    <title>Student Grades Management</title>
+    {% load static %}
     <link rel="stylesheet" href="{% static 'css/sidebar.css' %}">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
@@ -15,18 +13,8 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&family=Quicksand:wght@500;600;700&display=swap" rel="stylesheet">
     <style>
-        :root {
-            --primary-color: #0d6efd;
-            --success-color: #198754;
-            --danger-color: #dc3545;
-            --warning-color: #ffc107;
-            --info-color: #0dcaf0;
-            --light-bg: #f8f9e3;
-            --white: #ffffff;
-        }
-
         body {
-            background-color: var(--light-bg);
+            background-color: #f8f9e3;
             font-family: 'Poppins', sans-serif;
         }
         
@@ -39,614 +27,523 @@
             margin-left: 250px;
             flex: 1;
             padding: 20px;
-            background: var(--light-bg);
+            background: #f8f9e3;
         }
 
-        .search-box {
-            background: var(--white);
-            padding: 20px;
-            border-radius: 10px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-            margin-bottom: 20px;
+        .search-container {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 15px;
+            margin-bottom: 1.5rem;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
         }
 
-        .nav-tabs {
-            border-bottom: 2px solid #dee2e6;
-            margin-bottom: 20px;
-        }
-
-        .nav-tabs .nav-link {
-            border: none;
-            color: #495057;
-            font-weight: 500;
-            padding: 10px 20px;
-            border-radius: 0;
-            margin-right: 5px;
-            transition: all 0.3s ease;
-        }
-
-        .nav-tabs .nav-link.active {
-            color: var(--primary-color);
-            border-bottom: 3px solid var(--primary-color);
-            background: transparent;
-        }
-
-        .grade-table {
-            background: var(--white);
-            border-radius: 10px;
+        .grade-level-card {
+            background: #fff;
+            border-radius: 15px;
+            margin-bottom: 2rem;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
             overflow: hidden;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
         }
 
-        .grade-table th {
-            background: #f8f9fa;
+        .grade-level-header {
+            background: #4a90e2;
+            color: white;
+            padding: 1rem 1.5rem;
+            font-size: 1.25rem;
             font-weight: 600;
-            white-space: nowrap;
-            padding: 1rem;
         }
 
-        .grade-value {
+        .section-card {
+            border: none;
+            border-radius: 12px;
+            margin: 1rem;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+            background: #f8f9fa;
+        }
+
+        .section-header {
+            background: #6c757d;
+            color: white;
+            padding: 0.75rem 1.25rem;
+            border-radius: 12px 12px 0 0;
             font-weight: 500;
+        }
+
+        .student-card {
+            background: white;
+            border-radius: 10px;
+            margin: 1rem;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            transition: transform 0.2s;
+        }
+
+        .student-card:hover {
+            transform: translateY(-2px);
+        }
+
+        .student-info {
+            padding: 1.25rem;
+            border-bottom: 1px solid #dee2e6;
+            background: #f8f9fa;
+        }
+
+        .student-info h5 {
+            color: #2c3e50;
+            margin-bottom: 0.5rem;
+        }
+
+        .grades-table {
+            margin: 0;
+            background: white;
+        }
+
+        .grades-table th {
+            background: #f1f3f5;
+            color: #495057;
+            font-weight: 600;
             text-align: center;
-            padding: 0.5rem;
+            padding: 0.75rem;
         }
 
-        .grade-value.passing {
-            color: var(--success-color);
+        .grades-table td {
+            padding: 0.75rem;
+            vertical-align: middle;
         }
 
-        .grade-value.failing {
-            color: var(--danger-color);
-        }
-
-        .status-badge {
-            font-size: 0.8rem;
-            padding: 0.25rem 0.5rem;
-            border-radius: 50px;
+        .grade-cell {
+            text-align: center;
             font-weight: 500;
+            padding: 0.5rem;
+            border-radius: 4px;
         }
 
-        .status-draft {
-            background-color: var(--warning-color);
-            color: #000;
+        .passing {
+            color: #28a745;
+            font-weight: 600;
         }
 
-        .status-submitted {
-            background-color: var(--info-color);
-            color: #fff;
+        .failing {
+            color: #dc3545;
+            font-weight: 600;
         }
 
-        .status-approved {
-            background-color: var(--success-color);
-            color: #fff;
+        .badge {
+            padding: 0.5em 1em;
+            font-weight: 500;
+            border-radius: 6px;
         }
 
-        .status-returned {
-            background-color: var(--danger-color);
-            color: #fff;
+        .btn-print {
+            background: #4a90e2;
+            color: white;
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            transition: all 0.3s;
         }
 
-        .table-responsive {
-            overflow-x: auto;
-            -webkit-overflow-scrolling: touch;
+        .btn-print:hover {
+            background: #357abd;
+            transform: translateY(-1px);
         }
 
-        .dataTables_wrapper .dataTables_filter {
-            margin-bottom: 1rem;
-        }
-
-        .dataTables_wrapper .dataTables_length {
-            margin-bottom: 1rem;
-        }
-
-        .dataTables_wrapper .dataTables_info {
-            padding-top: 1rem;
-        }
-
-        .dataTables_wrapper .dataTables_paginate {
-            padding-top: 1rem;
+        @media print {
+            body {
+                background: white;
+            }
+            
+            .page-wrapper {
+                margin: 0;
+                padding: 0;
+            }
+            
+            .main-content {
+                margin-left: 0;
+                padding: 0;
+            }
+            
+            .no-print {
+                display: none !important;
+            }
+            
+            .student-card {
+                break-inside: avoid;
+                margin: 0;
+                padding: 1rem;
+                box-shadow: none;
+                border: 1px solid #dee2e6;
+            }
         }
 
         @media (max-width: 768px) {
             .main-content {
                 margin-left: 0;
-                padding: 15px;
+                padding: 1rem;
             }
             
-            .search-box {
-                padding: 15px;
+            .search-container {
+                padding: 1rem;
             }
             
-            .grade-table th,
-            .grade-table td {
-                padding: 0.75rem;
+            .student-info {
+                padding: 1rem;
+            }
+        }
+
+        .table {
+            background-color: white;
+            margin-bottom: 0;
+        }
+        
+        .table th {
+            background-color: #f8f9fa;
+            font-weight: 600;
+            vertical-align: middle;
+        }
+        
+        .table td {
+            vertical-align: middle;
+            padding: 0.75rem;
+        }
+        
+        .text-success {
+            color: #28a745 !important;
+        }
+        
+        .text-danger {
+            color: #dc3545 !important;
+        }
+        
+        @media print {
+            .table {
+                width: 100%;
+                border-collapse: collapse;
+            }
+            
+            .table th,
+            .table td {
+                border: 1px solid #dee2e6;
+            }
+            
+            .badge {
+                border: 1px solid #dee2e6;
+            }
+        }
+
+        .grade-slip {
+            background: white;
+            padding: 40px;
+            margin: 20px auto;
+            max-width: 1000px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+        
+        .school-header h4, .school-header h5 {
+            margin-bottom: 5px;
+        }
+        
+        .grade-slip-title {
+            border-top: 2px solid #000;
+            border-bottom: 2px solid #000;
+            padding: 10px 0;
+            margin: 20px 0;
+        }
+        
+        .student-info {
+            margin: 20px 0;
+        }
+        
+        @media print {
+            .grade-slip {
+                box-shadow: none;
+                padding: 0;
+            }
+            
+            body {
+                background: white;
+            }
+            
+            .no-print {
+                display: none !important;
             }
         }
     </style>
 </head>
 <body>
+    <div>
+      <strong>DEBUG:</strong>
+      all_grades length: {{ all_grades|length }}
+      {% for g in all_grades %}
+        <div>{{ g.student }} - {{ g.subject }} - {{ g.grade }} - {{ g.school_year }}</div>
+      {% endfor %}
+    </div>
     <div class="page-wrapper">
         {% include 'structures/sidebar.html' %}
+        
         <div class="main-content">
-            <div class="container-fluid">
-                <!-- Header -->
-                <div class="d-flex justify-content-between align-items-center mb-4">
-                    <h2 class="mb-0">
-                        <i class="fas fa-graduation-cap me-2"></i>
-                        Student Grades
-                    </h2>
-                    <div class="school-year">
-                        School Year: {{ active_school_year.display_name|default:"No active school year" }}
+            <!-- Page Header -->
+            <div class="d-flex justify-content-between align-items-center mb-4 no-print">
+                <h1 class="h3 mb-0 text-gray-800">Student Grades</h1>
+                <button onclick="window.print()" class="btn-print">
+                    <i class="fas fa-print me-2"></i>Print All Grades
+                </button>
+            </div>
+
+            <!-- Search Form -->
+            <div class="search-container mb-4">
+                <form id="searchForm" class="row g-3" method="GET" action="{% url 'dashboard:student_grades' %}">
+                    <div class="col-md-4">
+                        <input type="text" class="form-control" id="searchInput" name="search" 
+                               placeholder="Search by Student Name or ID..." 
+                               value="{{ search_query }}"
+                               autocomplete="off">
                     </div>
-                </div>
-<!-- 
-                <!-- Debug Info -->
-                <!-- <div class="debug-info mb-4"> -->
-                    <!-- <h5>Debug Information:</h5>
-                    <p>Number of Grade Levels: {{ sections_by_grade|length }}</p>
-                    <p>Grade Levels Available: {{ sections_by_grade.keys|join:", "|default:"None" }}</p>
-                    <p>Active School Year: {{ active_school_year|default:"None" }}</p>
-                    <p>Total Sections with Students: {{ students_by_section|length }}</p> -->
-<!--                     
-                    Add test grade button
-                    <div class="mb-3">
-                        <button id="addTestGradeBtn" class="btn btn-sm btn-primary">
-                            Add Test Grade
+                    <div class="col-md-2">
+                        <button type="submit" class="btn btn-primary w-100">
+                            <i class="fas fa-search me-2"></i>Search
                         </button>
-                        <span id="addGradeResult" class="ms-2"></span>
                     </div>
-                    
-                    <!-- Debug Teacher Portal Grades -->
-                    <!-- <h6>TeacherPortal Grades:</h6>
-                    <div id="teacherPortalGrades" class="mb-3">
-                        <table class="table table-sm table-bordered">
-                            <thead>
+                    <div class="col-md-2">
+                        <a href="{% url 'dashboard:student_grades' %}" class="btn btn-secondary w-100">
+                            <i class="fas fa-times me-2"></i>Clear
+                        </a>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Active School Year Info -->
+            {% if active_school_year %}
+            <div class="alert alert-info mb-4">
+                <i class="fas fa-info-circle me-2"></i>
+                Displaying grades for School Year: <strong>{{ active_school_year }}</strong>
+            </div>
+            {% endif %}
+
+            <!-- Grades Table -->
+            <div class="grades-table">
+                <!-- DEBUG BLOCK: Show grades found for troubleshooting -->
+                {% if search_query %}
+                  {% if all_grades %}
+                    <div class="alert alert-info">Grades found: {{ all_grades|length }}</div>
+                    <ul>
+                    {% for grade in all_grades %}
+                      <li>{{ grade.student }} - {{ grade.subject }} - {{ grade.grade }} ({{ grade.school_year }})</li>
+                    {% endfor %}
+                    </ul>
+                  {% else %}
+                    <div class="alert alert-warning">No grades found for this student in the active school year.</div>
+                  {% endif %}
+                {% endif %}
+                <!-- END DEBUG BLOCK -->
+                {% if all_grades %}
+                    <div class="grade-slip">
+                        <div class="school-header text-center mb-4">
+                            <!-- <h4>Department of Education – Region X</h4>
+                            <h5>Division of Misamis Oriental - Initao North District</h5> -->
+                            <h5>SANTA CATALINA SCIENCE HIGH SCHOOL</h5>
+                            <h5>Cawitan, Santa Catalina, Negros Oriental</h5>
+                        </div>
+                        
+                        <div class="grade-slip-title text-center mb-4">
+                            <h4>G R A D E  S L I P</h4>
+                            <p>SY {{ active_school_year }}</p>
+                        </div>
+
+                        <div class="student-info mb-4">
+                            <div class="row">
+                                <div class="col-md-8">
+                                    <p><strong>Name:</strong> {{ all_grades.0.student.last_name }}, {{ all_grades.0.student.first_name }}</p>
+                                </div>
+                                <div class="col-md-4">
+                                    <p><strong>Gr.&Section:</strong> {{ all_grades.0.section.section_id }}</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <table class="table table-bordered">
+                            <thead class="table-light">
                                 <tr>
-                                    <th>Student ID</th>
-                                    <th>Course</th>
-                                    <th>Quarter</th>
-                                    <th>Grade</th>
-                                    <th>Status</th>
-                                    <th>School Year</th>
+                                    <th style="width: 30%">LEARNING AREAS</th>
+                                    <th class="text-center">First Quarter</th>
+                                    <th class="text-center">Second Quarter</th>
+                                    <th class="text-center">Third Quarter</th>
+                                    <th class="text-center">Fourth Quarter</th>
+                                    <th class="text-center">FINAL GRADE</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                <!-- Will be populated via JS -->
-                            <!-- </tbody>
-                        </table>
-                    </div>  -->
-                    
-                    <!-- Student ID to Section Mapping for Debug -->
-                    <!-- <h6>Student-Section Mapping:</h6>
-                    <div class="mb-3 small">
-                        {% for section_id, students in students_by_section.items %}
-                            <p><strong>Section {{ section_id }}:</strong> 
-                                {% for student in students %}
-                                    {{ student.student_id }}{% if not forloop.last %}, {% endif %}
+                                {% regroup all_grades by subject.name as subject_grades %}
+                                {% for subject in subject_grades %}
+                                <tr>
+                                    <td>{{ subject.grouper }}</td>
+                                    {% for quarter in "1234"|make_list %}
+                                        <td class="text-center">
+                                            {% for grade in subject.list %}
+                                                {% if grade.quarter == quarter %}
+                                                    {{ grade.grade|floatformat:0 }}
+                                                {% endif %}
+                                            {% endfor %}
+                                        </td>
+                                    {% endfor %}
+                                    <td class="text-center fw-bold">
+                                        {% with final_grade=subject.list.0.grade %}
+                                            {{ final_grade|floatformat:0 }}
+                                        {% endwith %}
+                                    </td>
+                                </tr>
                                 {% endfor %}
-                            </p>
-                        {% endfor %}
-                    </div>
-                    
-                    {% for section_id, students in students_by_section.items %}
-                        <p>Section {{ section_id }} - Students: {{ students|length }}</p>
-                        {% for student in students %}
-                            <p>Student {{ student.student_id }} - Grades: {{ student.processed_grades|length }}</p>
-                        {% endfor %}
-                    {% endfor %} -->
-                <!-- </div> --> 
+                            </tbody>
+                        </table>
 
-                <!-- Search Box -->
-                <div class="search-box mb-4">
-                    <div class="row">
-                        <div class="col-md-6">
-                            <div class="input-group">
-                                <input type="text" class="form-control" id="studentSearch" 
-                                       placeholder="Search by Name or ID">
-                                <button class="btn btn-primary" type="button" id="searchBtn">
-                                    <i class="fas fa-search me-2"></i>Search
-                                </button>
+                        <!-- General Average Summary -->
+                        <div class="d-flex justify-content-end align-items-center mt-2 mb-3">
+                            <div class="border-bottom border-dark" style="display: inline-block;">
+                                <strong style="font-size: 11pt;">General Average: </strong>
+                                {% regroup all_grades by subject.name as subject_grades %}
+                                {% with total=0 count=0 %}
+                                    {% for subject in subject_grades %}
+                                        {% with final_grade=subject.list.0.grade %}
+                                            {% with total=total|add:final_grade count=count|add:1 %}
+                                                {% if forloop.last %}
+                                                    <strong style="font-size: 11pt;">{{ total|divisibleby:count|floatformat:0 }}</strong>
+                                                {% endif %}
+                                            {% endwith %}
+                                        {% endwith %}
+                                    {% endfor %}
+                                {% endwith %}
                             </div>
                         </div>
-                    </div>
-                </div>
 
-                {% if not sections_by_grade %}
+                        <div class="row mt-4">
+                            <div class="col-md-6">
+                                <p><strong>PARENT'S/GUARDIAN'S SIGNATURE</strong></p>
+                                <p>1<sup>st</sup> Quarter: _______________________</p>
+                                <p>2<sup>nd</sup> Quarter: _______________________</p>
+                                <p>3<sup>rd</sup> Quarter: _______________________</p>
+                                <p>4<sup>th</sup> Quarter: _______________________</p>
+                            </div>
+                            <div class="col-md-6">
+                                <table class="table table-sm">
+                                    <tr>
+                                        <th>Grading Scale</th>
+                                        <th>Remarks</th>
+                                    </tr>
+                                    <tr>
+                                        <td>98-100</td>
+                                        <td>With Highest Honor</td>
+                                    </tr>
+                                    <tr>
+                                        <td>95-97</td>
+                                        <td>With High Honor</td>
+                                    </tr>
+                                    <tr>
+                                        <td>90-94</td>
+                                        <td>With Honor</td>
+                                    </tr>
+                                    <tr>
+                                        <td>75-89</td>
+                                        <td>Passed</td>
+                                    </tr>
+                                </table>
+                            </div>
+                        </div>
+
+                        <div class="text-center mt-4">
+                            <p><strong>{{ all_grades.0.section.adviser.first_name }} {{ all_grades.0.section.adviser.last_name }}</strong></p>
+                            <p>Class Adviser</p>
+                        </div>
+                    </div>
+                {% elif search_query %}
                     <div class="alert alert-info">
-                        <i class="fas fa-info-circle me-2"></i>
-                        No grade levels or sections found. Please make sure sections are properly configured.
+                        <p class="text-center">No grades found for the search query</p>
                     </div>
                 {% else %}
-                    <!-- Grade Level Tabs -->
-                    <ul class="nav nav-tabs mb-3" id="gradeLevelTabs" role="tablist">
-                        {% for grade_level, sections in sections_by_grade.items %}
-                            <li class="nav-item" role="presentation">
-                                <button class="nav-link {% if forloop.first %}active{% endif %}" 
-                                        id="grade{{ grade_level }}-tab" 
-                                        data-bs-toggle="tab" 
-                                        data-bs-target="#grade{{ grade_level }}" 
-                                        type="button" 
-                                        role="tab">
-                                    <i class="fas fa-users me-2"></i>Grade {{ grade_level }}
-                                </button>
-                            </li>
-                        {% endfor %}
-                    </ul>
-
-                    <!-- Tab Content -->
-                    <div class="tab-content" id="gradeLevelContent">
-                        {% for grade_level, sections in sections_by_grade.items %}
-                            <div class="tab-pane fade {% if forloop.first %}show active{% endif %}" 
-                                 id="grade{{ grade_level }}" 
-                                 role="tabpanel">
-                                
-                                {% if not sections %}
-                                    <div class="alert alert-info">
-                                        <i class="fas fa-info-circle me-2"></i>
-                                        No sections found for Grade {{ grade_level }}.
-                                    </div>
-                                {% else %}
-                                    <!-- Section Tabs -->
-                                    <ul class="nav nav-tabs mb-3" role="tablist">
-                                        {% for section in sections %}
-                                            <li class="nav-item" role="presentation">
-                                                <button class="nav-link {% if forloop.first %}active{% endif %}" 
-                                                        id="section{{ section.id }}-tab" 
-                                                        data-bs-toggle="tab" 
-                                                        data-bs-target="#section{{ section.id }}" 
-                                                        type="button" 
-                                                        role="tab">
-                                                    <i class="fas fa-chalkboard me-2"></i>{{ section.section_id }}
-                                                </button>
-                                            </li>
-                                        {% endfor %}
-                                    </ul>
-
-                                    <!-- Section Content -->
-                                    <div class="tab-content">
-                                        {% for section in sections %}
-                                            <div class="tab-pane fade {% if forloop.first %}show active{% endif %}" 
-                                                 id="section{{ section.id }}" 
-                                                 role="tabpanel">
-                                                
-                                                {% with section_students=students_by_section|get_item:section.id %}
-                                                    <!-- Debug info for section -->
-                                                    <div class="debug-info mb-3">
-                                                        <p>Section Name: {{ section.section_id }}</p>
-                                                        <p>Number of Students: {{ section_students|length|default:"0" }}</p>
-                                                    </div>
-
-                                                    <div class="grade-table">
-                                                        <div class="table-responsive">
-                                                            <table class="table table-hover mb-0" id="gradeTable{{ section.id }}">
-                                                                <thead>
-                                                                    <tr>
-                                                                        <th>Student Name</th>
-                                                                        <th>ID</th>
-                                                                        <th>Subject</th>
-                                                                        <th class="text-center">1st Quarter</th>
-                                                                        <th class="text-center">2nd Quarter</th>
-                                                                        <th class="text-center">3rd Quarter</th>
-                                                                        <th class="text-center">4th Quarter</th>
-                                                                        <th class="text-center">Final Grade</th>
-                                                                        <!-- <th class="text-center">Status</th> -->
-                                                                    </tr>
-                                                                </thead>
-                                                                <tbody>
-                                                                    {% if section_students %}
-                                                                        {% for student_data in section_students %}
-                                                                            {% for grade in student_data.processed_grades %}
-                                                                                <tr>
-                                                                                    <td>
-                                                                                        <div class="fw-medium">
-                                                                                            {{ student_data.last_name }}, {{ student_data.first_name }}
-                                                                                        </div>
-                                                                                    </td>
-                                                                                    <td>
-                                                                                        <div class="text-muted">
-                                                                                            {{ student_data.student_id }}
-                                                                                        </div>
-                                                                                    </td>
-                                                                                    <td>{{ grade.subject_name }}</td>
-                                                                                    {% for quarter in '1234'|make_list %}
-                                                                                        <td class="grade-value {% if grade.grades|get_item:quarter >= 75 %}passing{% elif grade.grades|get_item:quarter %}failing{% endif %}">
-                                                                                            {{ grade.grades|get_item:quarter|default:"-" }}
-                                                                                        </td>
-                                                                                    {% endfor %}
-                                                                                    <td class="grade-value {% if grade.final_grade >= 75 %}passing{% elif grade.final_grade %}failing{% endif %}">
-                                                                                        {{ grade.final_grade|default:"-" }}
-                                                                                    </td>
-                                                                                    <!-- <td class="text-center">
-                                                                                        <span class="status-badge status-{{ grade.status|lower }}">
-                                                                                            {{ grade.status|title }}
-                                                                                        </span>
-                                                                                    </td> -->
-                                                                                </tr>
-                                                                            {% empty %}
-                                                                                <tr>
-                                                                                    <td colspan="9" class="text-center py-4">
-                                                                                        <i class="fas fa-info-circle me-2"></i>
-                                                                                        No grades recorded for {{ student_data.first_name }} {{ student_data.last_name }}
-                                                                                    </td>
-                                                                                </tr>
-                                                                            {% endfor %}
-                                                                        {% endfor %}
-                                                                    {% else %}
-                                                                        <tr>
-                                                                            <td colspan="9" class="text-center py-4">
-                                                                                <i class="fas fa-info-circle me-2"></i>
-                                                                                No students found in this section
-                                                                            </td>
-                                                                        </tr>
-                                                                    {% endif %}
-                                                                </tbody>
-                                                            </table>
-                                                        </div>
-                                                    </div>
-                                                {% endwith %}
-                                            </div>
-                                        {% endfor %}
-                                    </div>
-                                {% endif %}
-                            </div>
-                        {% endfor %}
+                    <div class="alert alert-info">
+                        <p class="text-center">Enter a student name or ID to search for grades</p>
                     </div>
                 {% endif %}
             </div>
         </div>
     </div>
 
-    <!-- Bootstrap Bundle with Popper -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- Scripts -->
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdn.datatables.net/1.11.5/js/jquery.dataTables.min.js"></script>
     <script src="https://cdn.datatables.net/1.11.5/js/dataTables.bootstrap5.min.js"></script>
-
     <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            // Initialize Bootstrap tabs
-            const triggerTabList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tab"]'));
-            triggerTabList.forEach(function(triggerEl) {
-                new bootstrap.Tab(triggerEl);
-                
-                // Add click event to load grades when tab is clicked
-                triggerEl.addEventListener('shown.bs.tab', function(event) {
-                    const targetId = event.target.getAttribute('data-bs-target');
-                    if (targetId.startsWith('#section')) {
-                        const sectionId = targetId.replace('#section', '');
-                        loadGrades(sectionId);
-                    }
-                });
+        $(document).ready(function() {
+            // Initialize DataTable with search functionality
+            const table = $('.table').DataTable({
+                "pageLength": 10,
+                "order": [[1, 'asc']], // Sort by student name by default
+                "searching": true,
+                "paging": true,
+                "info": true,
+                "language": {
+                    "search": "Search within results:"
+                }
             });
 
-            // Add test grade button handler
-            const addTestGradeBtn = document.getElementById('addTestGradeBtn');
-            const addGradeResult = document.getElementById('addGradeResult');
+            // If there's a search query, apply it to the DataTable
+            {% if search_query %}
+                table.search('{{ search_query|escapejs }}').draw();
+            {% endif %}
+
+            // Get the sections data from the server
+            const sectionsData = JSON.parse('{{ sections_json|escapejs }}');
+            const gradeLevel = $('#grade_level');
+            const sectionSelect = $('#section');
             
-            if (addTestGradeBtn) {
-                // Collect available student IDs from the debug section
-                const studentIds = [];
-                document.querySelectorAll('.mb-3.small strong').forEach(section => {
-                    const sectionText = section.closest('p').textContent;
-                    const studentMatches = sectionText.match(/\d{7}/g); // Match 7-digit student IDs
-                    if (studentMatches) {
-                        studentIds.push(...studentMatches);
+            // Function to update sections based on selected grade
+            function updateSections() {
+                const selectedGrade = gradeLevel.val();
+                
+                // Reset section dropdown
+                sectionSelect.empty();
+                sectionSelect.append('<option value="">All Sections</option>');
+                
+                // Filter and add sections
+                sectionsData.forEach(function(section) {
+                    if (!selectedGrade || section.grade_level === parseInt(selectedGrade)) {
+                        const option = `<option value="${section.id}" data-grade="${section.grade_level}">${section.section_id} (Grade ${section.grade_level})</option>`;
+                        sectionSelect.append(option);
                     }
                 });
-                
-                console.log('Available student IDs for test grades:', studentIds);
-                
-                addTestGradeBtn.addEventListener('click', function() {
-                    // Use an available student ID or default to 2025001
-                    const studentId = studentIds.length > 0 ? 
-                        studentIds[Math.floor(Math.random() * studentIds.length)] : '2025001';
-                    
-                    // Generate random values
-                    
-                    const courseId = ['0001', '0002', '0003'][Math.floor(Math.random() * 3)];
-                    const quarter = Math.floor(Math.random() * 4) + 1;
-                    const grade = Math.floor(Math.random() * 30) + 70; // 70-99
-                    const status = ['draft', 'submitted', 'approved'][Math.floor(Math.random() * 3)];
-                    
-                    // Show loading
-                    addGradeResult.textContent = 'Adding grade...';
-                    
-                    // Call the endpoint
-                    fetch(`/administrator/add-test-grade/?student_id=${studentId}&course_id=${courseId}&quarter=${quarter}&grade=${grade}&status=${status}`)
-                        .then(response => response.json())
-                        .then(data => {
-                            if (data.success) {
-                                addGradeResult.textContent = `Added grade: ${data.grade.grade} for subject ${data.grade.course}, Q${data.grade.quarter}`;
-                                // Refresh debug table
-                                fetch(`/administrator/debug-grades/`)
-                                    .then(response => response.json())
-                                    .then(debugData => {
-                                        console.log("Debug grades data:", debugData);
-                                        
-                                        // Populate TeacherPortal grades debug table
-                                        const tpGradesTable = document.querySelector('#teacherPortalGrades tbody');
-                                        if (tpGradesTable && debugData.teacher_portal_grades_sample) {
-                                            tpGradesTable.innerHTML = '';
-                                            debugData.teacher_portal_grades_sample.forEach(grade => {
-                                                const row = document.createElement('tr');
-                                                row.innerHTML = `
-                                                    <td>${grade.student}</td>
-                                                    <td>${grade.course}</td>
-                                                    <td>${grade.quarter}</td>
-                                                    <td>${grade.grade}</td>
-                                                    <td>${grade.status}</td>
-                                                    <td>${grade.school_year}</td>
-                                                `;
-                                                tpGradesTable.appendChild(row);
-                                            });
-                                        }
-                                    });
-                                
-                                // Reload active section
-                                const activeTab = document.querySelector('[data-bs-toggle="tab"].active');
-                                if (activeTab && activeTab.getAttribute('data-bs-target').startsWith('#section')) {
-                                    const sectionId = activeTab.getAttribute('data-bs-target').replace('#section', '');
-                                    loadGrades(sectionId);
-                                }
-                            } else {
-                                addGradeResult.textContent = `Error: ${data.error}`;
-                            }
-                        })
-                        .catch(error => {
-                            console.error('Error:', error);
-                            addGradeResult.textContent = 'Error adding grade';
-                        });
-                });
             }
-
-            // Function to load grades for a section
-            function loadGrades(sectionId) {
-                const tableBody = document.querySelector(`#section${sectionId} .table tbody`);
-                if (!tableBody) return;
-
-                // Show loading indicator
-                tableBody.innerHTML = '<tr><td colspan="9" class="text-center"><i class="fas fa-spinner fa-spin me-2"></i>Loading grades...</td></tr>';
-
-                // Get the active school year
-                const activeSchoolYear = '{{ active_school_year.display_name }}';
-
-                // For debugging - check if grades are available in the system
-                fetch(`/administrator/debug-grades/`)
-                    .then(response => response.json())
-                    .then(debugData => {
-                        console.log("Debug grades data:", debugData);
-                        
-                        // Populate TeacherPortal grades debug table
-                        const tpGradesTable = document.querySelector('#teacherPortalGrades tbody');
-                        if (tpGradesTable && debugData.teacher_portal_grades_sample) {
-                            tpGradesTable.innerHTML = '';
-                            debugData.teacher_portal_grades_sample.forEach(grade => {
-                                const row = document.createElement('tr');
-                                row.innerHTML = `
-                                    <td>${grade.student}</td>
-                                    <td>${grade.course}</td>
-                                    <td>${grade.quarter}</td>
-                                    <td>${grade.grade}</td>
-                                    <td>${grade.status}</td>
-                                    <td>${grade.school_year}</td>
-                                `;
-                                tpGradesTable.appendChild(row);
-                            });
-                        }
-                    });
-
-                // Fetch grades using the new endpoint
-                fetch(`/administrator/fetch-student-grades/?section_id=${sectionId}&school_year=${activeSchoolYear}`)
-                    .then(response => response.json())
-                    .then(data => {
-                        console.log("Fetch student grades response:", data);
-                        if (data.success) {
-                            // Clear loading indicator
-                            tableBody.innerHTML = '';
-
-                            // Process each student's grades
-                            data.students.forEach(student => {
-                                if (student.processed_grades.length > 0) {
-                                    student.processed_grades.forEach(grade => {
-                                        const row = document.createElement('tr');
-                                        row.innerHTML = `
-                                            <td>
-                                                <div class="fw-medium">
-                                                    ${student.last_name}, ${student.first_name}
-                                                </div>
-                                            </td>
-                                            <td>
-                                                <div class="text-muted">
-                                                    ${student.student_id}
-                                                </div>
-                                            </td>
-                                            <td>${grade.subject_name}</td>
-                                            <td class="grade-value ${grade.grades['1'] >= 75 ? 'passing' : grade.grades['1'] ? 'failing' : ''}">
-                                                ${grade.grades['1'] !== null ? grade.grades['1'] : '-'}
-                                            </td>
-                                            <td class="grade-value ${grade.grades['2'] >= 75 ? 'passing' : grade.grades['2'] ? 'failing' : ''}">
-                                                ${grade.grades['2'] !== null ? grade.grades['2'] : '-'}
-                                            </td>
-                                            <td class="grade-value ${grade.grades['3'] >= 75 ? 'passing' : grade.grades['3'] ? 'failing' : ''}">
-                                                ${grade.grades['3'] !== null ? grade.grades['3'] : '-'}
-                                            </td>
-                                            <td class="grade-value ${grade.grades['4'] >= 75 ? 'passing' : grade.grades['4'] ? 'failing' : ''}">
-                                                ${grade.grades['4'] !== null ? grade.grades['4'] : '-'}
-                                            </td>
-                                            <td class="grade-value ${grade.final_grade >= 75 ? 'passing' : grade.final_grade ? 'failing' : ''}">
-                                                ${grade.final_grade !== null ? grade.final_grade : '-'}
-                                            </td>
-                                            <td class="text-center">
-                                                <span class="status-badge status-${grade.status.toLowerCase()}">
-                                                    ${grade.status.charAt(0).toUpperCase() + grade.status.slice(1)}
-                                                </span>
-                                            </td>
-                                        `;
-                                        tableBody.appendChild(row);
-                                    });
-                                } else {
-                                    const row = document.createElement('tr');
-                                    row.innerHTML = `
-                                        <td colspan="9" class="text-center py-4">
-                                            <i class="fas fa-info-circle me-2"></i>
-                                            No grades recorded for ${student.first_name} ${student.last_name}
-                                        </td>
-                                    `;
-                                    tableBody.appendChild(row);
-                                }
-                            });
-
-                            if (data.students.length === 0) {
-                                tableBody.innerHTML = `
-                                    <tr>
-                                        <td colspan="9" class="text-center py-4">
-                                            <i class="fas fa-info-circle me-2"></i>
-                                            No students found in this section
-                                        </td>
-                                    </tr>
-                                `;
-                            }
-
-                            // Initialize DataTable
-                            if ($.fn.DataTable.isDataTable(`#gradeTable${sectionId}`)) {
-                                $(`#gradeTable${sectionId}`).DataTable().destroy();
-                            }
-                            $(`#gradeTable${sectionId}`).DataTable({
-                                pageLength: 10,
-                                order: [[0, 'asc']],
-                                responsive: true
-                            });
-                        } else {
-                            tableBody.innerHTML = `
-                                <tr>
-                                    <td colspan="9" class="text-center py-4">
-                                        <i class="fas fa-exclamation-circle me-2"></i>
-                                        Error loading grades: ${data.error}
-                                    </td>
-                                </tr>
-                            `;
-                        }
-                    })
-                    .catch(error => {
-                        console.error('Error:', error);
-                        tableBody.innerHTML = `
-                            <tr>
-                                <td colspan="9" class="text-center py-4">
-                                    <i class="fas fa-exclamation-circle me-2"></i>
-                                    Error loading grades. Please try again.
-                                </td>
-                            </tr>
-                        `;
-                    });
-            }
-
-            // Load grades for the first active tab on page load
-            const firstTab = document.querySelector('[data-bs-toggle="tab"].active');
-            if (firstTab) {
-                const sectionId = firstTab.getAttribute('data-bs-target').replace('#section', '');
-                loadGrades(sectionId);
-            }
+            
+            // Update sections when grade level changes
+            gradeLevel.change(updateSections);
+            
+            // Initialize tooltips
+            $('[data-bs-toggle="tooltip"]').tooltip();
+            
+            // Auto-dismiss alerts after 5 seconds
+            setTimeout(function() {
+                $('.alert').alert('close');
+            }, 5000);
         });
+
+        function printIndividual(cardId) {
+            const content = document.getElementById(cardId).innerHTML;
+            const printWindow = window.open('', '', 'height=600,width=800');
+            
+            printWindow.document.write('<html><head><title>Student Grade Report</title>');
+            printWindow.document.write('<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">');
+            printWindow.document.write('<style>body { padding: 20px; } .no-print { display: none !important; }</style>');
+            printWindow.document.write('</head><body>');
+            printWindow.document.write(content);
+            printWindow.document.write('</body></html>');
+            
+            printWindow.document.close();
+            printWindow.focus();
+            
+            setTimeout(function() {
+                printWindow.print();
+                printWindow.close();
+            }, 250);
+        }
     </script>
 </body>
 </html>

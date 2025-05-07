@@ -6,87 +6,37 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Student Dashboard</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <!-- Chart.js for analytics -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
+        :root {
+            --primary: #e3125b;
+            --primary-light: rgba(227, 18, 91, 0.1);
+            --primary-dark: #be185d;
+            --text-dark: #1f2937;
+            --text-light: #6b7280;
+            --bg-light: #f8f9fa;
+        }
+
         body {
+            font-family: 'Poppins', sans-serif;
             margin-top: 70px !important;
-            background: #f8f9fa;
+            background: var(--bg-light);
+            color: var(--text-dark);
         }
 
-        .dashboard-card {
-            background: white;
-            border-radius: 0.5rem;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-            padding: 1rem;
-            height: 100%;
-            width: 100%;
-            overflow-x: auto;
-        }
+        .text-primary { color: var(--primary); }
+        .bg-primary { background-color: var(--primary); }
+        .border-primary { border-color: var(--primary); }
 
-        @media (min-width: 768px) {
-            .dashboard-card {
-                padding: 1.5rem;
-            }
-        }
-
-        .card-header {
-            color: #e3125b;
-            font-size: 1.125rem;
-            font-weight: 600;
-            margin-bottom: 1rem;
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-        }
-
-        @media (min-width: 768px) {
-            .card-header {
-                font-size: 1.25rem;
-            }
-        }
-
-        .stat-card {
-            background: #fff6fa;
-            border-left: 4px solid #e3125b;
-            padding: 0.75rem;
-            border-radius: 0.5rem;
-            width: 100%;
-        }
-
-        @media (min-width: 768px) {
-            .stat-card {
-                padding: 1rem;
-            }
-        }
-
-        .schedule-item {
-            border-left: 4px solid #e3125b;
-            padding: 0.75rem;
-            margin-bottom: 0.5rem;
-            background: #fff6fa;
-            border-radius: 0.25rem;
-        }
-
-        .grade-badge {
-            background: #e3125b;
-            color: white;
-            padding: 0.25rem 0.5rem;
-            border-radius: 9999px;
-            font-weight: 600;
-            font-size: 0.875rem;
-        }
-
-        @media (min-width: 768px) {
-            .grade-badge {
-                padding: 0.25rem 0.75rem;
-            }
-        }
-
+        /* Dashboard Container */
         .dashboard-container {
-            width: 100%;
             max-width: 1200px;
             margin: 0 auto;
             padding: 1rem 0.5rem;
@@ -104,7 +54,81 @@
             }
         }
 
-        /* Enhanced table responsiveness */
+        /* Welcome Section */
+        .welcome-section {
+            background: white;
+            border-radius: 0.5rem;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            padding: 2rem;
+            margin-bottom: 2rem;
+            text-align: center;
+        }
+
+        .welcome-section h1 {
+            color: var(--primary);
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }
+
+        .welcome-section p {
+            color: var(--text-light);
+            font-size: 1.1rem;
+        }
+
+        /* Cards */
+        .dashboard-card {
+            background: white;
+            border-radius: 0.5rem;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            padding: 1.25rem;
+            height: 100%;
+            width: 100%;
+            overflow-x: auto;
+            max-width: 100%;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .dashboard-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .card-header {
+            color: var(--primary);
+            font-size: 1.125rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding-bottom: 0.75rem;
+            border-bottom: 2px solid var(--primary-light);
+        }
+
+        .card-header i {
+            color: var(--primary);
+        }
+
+        /* School Year Filter */
+        .school-year-filter {
+            background: white;
+            border-radius: 0.5rem;
+            padding: 1rem;
+            margin-bottom: 1.5rem;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .form-select {
+            border-color: var(--primary-light);
+            color: var(--text-dark);
+        }
+
+        .form-select:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 0.2rem rgba(227, 18, 91, 0.25);
+        }
+
+        /* Table Styles */
         .table-container {
             width: 100%;
             overflow-x: auto;
@@ -113,68 +137,86 @@
             position: relative;
             margin: 0 -1rem;
             padding: 0 1rem;
+            max-width: 100%;
         }
 
         .table-container::-webkit-scrollbar {
-            height: 6px;
+            height: 8px;
         }
 
         .table-container::-webkit-scrollbar-track {
-            background: #f1f1f1;
+            background: var(--bg-light);
             border-radius: 3px;
         }
 
         .table-container::-webkit-scrollbar-thumb {
-            background: #e3125b;
+            background: var(--primary);
             border-radius: 3px;
         }
 
-        .table-container table {
+        .grades-table {
             min-width: 100%;
             border-collapse: separate;
             border-spacing: 0;
+            font-size: 0.95rem;
         }
 
-        .table-container td, 
-        .table-container th {
+        .grades-table th,
+        .grades-table td {
             white-space: nowrap;
             padding: 0.75rem 1rem;
             min-width: 120px;
+            text-align: center;
         }
 
-        @media (max-width: 640px) {
-            .table-container {
-                margin: 0 -0.5rem;
-                padding: 0 0.5rem;
-            }
-
-            .table-container td, 
-            .table-container th {
-                padding: 0.5rem 0.75rem;
-                min-width: 100px;
-            }
+        .grades-table th {
+            background-color: var(--bg-light);
+            position: sticky;
+            top: 0;
+            z-index: 1;
+            color: var(--text-dark);
+            font-weight: 600;
         }
 
-        /* Add horizontal scroll indicator */
+        .sticky-column {
+            position: sticky;
+            left: 0;
+            background-color: white;
+            z-index: 2;
+            min-width: 150px;
+            text-align: left;
+        }
+
+        /* Grade Values */
+        .grade-value {
+            font-weight: 600;
+            font-size: 1rem;
+        }
+
+        .grade-passing {
+            color: #198754;
+        }
+
+        .grade-failing {
+            color: #dc3545;
+        }
+
+        /* Scroll Indicator */
         .scroll-indicator {
-            display: none;
+            display: flex;
             align-items: center;
             justify-content: center;
             padding: 0.5rem;
-            color: #666;
+            color: var(--text-light);
             font-size: 0.875rem;
             margin-bottom: 0.5rem;
-        }
-
-        @media (max-width: 768px) {
-            .scroll-indicator {
-                display: flex;
-            }
+            background-color: var(--bg-light);
+            border-radius: 0.25rem;
         }
 
         .scroll-indicator i {
             animation: scrollHint 1.5s infinite;
-            margin: 0 0.25rem;
+            color: var(--primary);
         }
 
         @keyframes scrollHint {
@@ -182,380 +224,302 @@
             50% { transform: translateX(10px); }
         }
 
-        /* Chart responsiveness */
+        /* Chart Styles */
         canvas {
             max-width: 100%;
             height: auto !important;
+        }
+
+        /* Responsive Adjustments */
+        @media (max-width: 768px) {
+            .welcome-section {
+                padding: 1.5rem;
+            }
+
+            .welcome-section h1 {
+                font-size: 1.75rem;
+            }
+
+            .grades-table th,
+            .grades-table td {
+                padding: 0.5rem 0.75rem;
+                min-width: 100px;
+                font-size: 0.9rem;
+            }
+
+            .sticky-column {
+                min-width: 120px;
+            }
+
+            .grade-value {
+                font-size: 0.9rem;
+            }
+
+            .badge {
+                font-size: 0.8rem;
+                padding: 0.25rem 0.5rem;
+            }
+        }
+
+        @media (max-width: 576px) {
+            .welcome-section {
+                padding: 1rem;
+            }
+
+            .welcome-section h1 {
+                font-size: 1.5rem;
+            }
+
+            .grades-table th,
+            .grades-table td {
+                padding: 0.4rem 0.6rem;
+                min-width: 90px;
+                font-size: 0.85rem;
+            }
+
+            .sticky-column {
+                min-width: 100px;
+            }
+
+            .grade-value {
+                font-size: 0.85rem;
+            }
         }
     </style>
 </head>
 <body>
     {% include 'structures/nav.html' %}
 
-    <div class="dashboard-container">
+    <div class="container dashboard-container">
         <!-- Welcome Section -->
-        <div class="text-center mb-8">
-            <h1 class="text-3xl font-bold text-gray-800">Welcome back, {{ student.first_name }}!</h1>
-            <p class="text-gray-600">Here's your academic overview</p>
+        <div class="text-center mb-5">
+            <h1 class="display-4 text-dark">Welcome back, {{ student.first_name }}!</h1>
+            <p class="lead text-muted">Here's your academic overview</p>
         </div>
 
         <!-- School Year Filter -->
-        <div class="flex justify-end mb-6">
-            <form method="GET" class="relative">
-                <div class="flex items-center">
-                    <span class="text-sm text-gray-600 mr-2">School Year:</span>
-                    <select name="school_year" class="border rounded px-3 py-2 text-sm" onchange="this.form.submit()">
-                        {% for year in school_years %}
-                            <option value="{{ year.display_name }}" {% if year.display_name == current_school_year %}selected{% endif %}>
-                                {{ year.display_name }}{% if year.is_active %} (Active){% endif %}
-                            </option>
-                        {% endfor %}
-                    </select>
-                </div>
+        <div class="d-flex justify-content-end mb-4">
+            <form method="GET" class="d-flex align-items-center">
+                <span class="me-2 text-muted">School Year:</span>
+                <select name="school_year" class="form-select form-select-sm" onchange="this.form.submit()">
+                    {% for year in school_years %}
+                        <option value="{{ year.display_name }}" {% if year.display_name == current_school_year %}selected{% endif %}>
+                            {{ year.display_name }}{% if year.is_active %} (Active){% endif %}
+                        </option>
+                    {% endfor %}
+                </select>
             </form>
         </div>
-        
-        <!-- Admin tools -->
-        {% if user.is_staff %}
-        <div class="mb-6">
-            <a href="{% url 'create_test_grades' student.id %}" 
-               class="inline-block bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded mr-2">
-                <i class="fas fa-plus-circle mr-1"></i> Generate Test Grades
-            </a>
-            <a href="{% url 'diagnostics' student.id %}" 
-               class="inline-block bg-green-600 hover:bg-green-700 text-white font-medium py-2 px-4 rounded mr-2">
-                <i class="fas fa-bug mr-1"></i> Student Diagnostics
-            </a>
-            <a href="{% url 'all_grades' %}" 
-               class="inline-block bg-purple-600 hover:bg-purple-700 text-white font-medium py-2 px-4 rounded">
-                <i class="fas fa-database mr-1"></i> All Grades
-            </a>
-            <span class="text-sm text-gray-500 ml-2 block mt-1">Admin only: Tools for troubleshooting</span>
-        </div>
-        {% endif %}
 
-        <!-- No Data Message -->
-        {% if not current_enrollment %}
-        <div class="bg-yellow-50 border-l-4 border-yellow-400 p-4 mb-6 md:mb-8 rounded-md shadow-sm">
-            <div class="flex items-center">
-                <div class="flex-shrink-0">
-                    <i class="fas fa-exclamation-circle text-yellow-400"></i>
-                </div>
-                <div class="ml-3">
-                    <p class="text-sm text-yellow-700">
-                        No enrollment data found for the {{ current_school_year }} school year. 
-                        {% if school_years|length > 1 %}
-                            Try selecting a different school year from the filter above.
-                        {% else %}
-                            Contact your administrator if you believe this is an error.
-                        {% endif %}
-                    </p>
-                </div>
-            </div>
-        </div>
-        {% endif %}
-
-        <!-- Quick Stats -->
-        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 md:gap-6 mb-6 md:mb-8">
-            <div class="stat-card">
-                <div class="text-sm text-gray-600">School Year</div>
-                <div class="text-xl font-bold text-gray-800">{{ current_school_year }}</div>
-                <div class="text-xs text-green-600">
-                    {% if selected_year.is_active %}Active{% else %}Past Year{% endif %}
-                </div>
-            </div>
-            <div class="stat-card">
-                <div class="text-sm text-gray-600">Year Level</div>
-                <div class="text-xl font-bold text-gray-800">
-                    {% if current_enrollment %}
-                        Grade {{ current_enrollment.section.grade_level }}-{{ current_enrollment.section.section_id }}
-                    {% else %}
-                        --
-                    {% endif %}
-                </div>
-            </div>
-            <div class="stat-card">
-                <div class="text-sm text-gray-600">Subjects</div>
-                <div class="text-xl font-bold text-gray-800">{{ subjects|length }}</div>
-                <div class="text-xs text-gray-500">
-                    {% if subjects %}Currently Enrolled{% else %}None{% endif %}
-                </div>
-            </div>
-            <div class="stat-card">
-                <div class="text-sm text-gray-600">Overall Average</div>
-                <div class="text-xl font-bold text-gray-800">
-                    {% if overall_average > 0 %}{{ overall_average }}%{% else %}--{% endif %}
-                </div>
-                <div class="text-xs {% if overall_average >= 85 %}text-green-600{% elif overall_average >= 75 %}text-yellow-600{% else %}text-gray-500{% endif %}">
-                    {% if overall_average >= 85 %}Above Average
-                    {% elif overall_average >= 75 %}Average
-                    {% elif overall_average > 0 %}Below Average
-                    {% else %}No Data
-                    {% endif %}
-                </div>
-            </div>
-        </div>
-
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6 mb-6 md:mb-8">
-            <!-- Grade Analytics -->
-            <div class="dashboard-card">
-                <div class="card-header">
-                    <i class="fas fa-chart-line"></i>
-                    Grade Analytics
-                </div>
-                
-                {% if detailed_grades %}
-                <canvas id="gradeChart" width="400" height="200" class="mb-6"></canvas>
-                
-                <!-- Detailed Grades Table -->
-                <div class="overflow-x-auto mt-6">
-                    <div class="scroll-indicator">
-                        <i class="fas fa-arrow-left"></i>
-                        Swipe to see more
-                        <i class="fas fa-arrow-right"></i>
-                    </div>
-                    <div class="table-container">
-                        <table class="min-w-full">
-                            <thead>
-                                <tr class="text-left border-b border-gray-200">
-                                    <th class="py-3 px-4 text-sm font-semibold text-gray-600">Subject</th>
-                                    <th class="py-3 px-4 text-sm font-semibold text-gray-600">1st Quarter</th>
-                                    <th class="py-3 px-4 text-sm font-semibold text-gray-600">2nd Quarter</th>
-                                    <th class="py-3 px-4 text-sm font-semibold text-gray-600">3rd Quarter</th>
-                                    <th class="py-3 px-4 text-sm font-semibold text-gray-600">4th Quarter</th>
-                                    <th class="py-3 px-4 text-sm font-semibold text-gray-600">Average</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for grade in detailed_grades %}
-                                <tr class="hover:bg-gray-50 {% cycle 'bg-white' 'bg-gray-50' %}">
-                                    <td class="py-3 px-4">
-                                        <div class="font-medium text-gray-800">{{ grade.subject }}</div>
-                                    </td>
-                                    {% for quarter_grade in grade.quarterly_grades %}
-                                    <td class="py-3 px-4">
-                                        {% if quarter_grade > 0 %}
-                                        <span class="inline-flex items-center justify-center px-2.5 py-0.5 rounded-full text-sm
-                                            {% if quarter_grade >= 75 %}
-                                                bg-green-100 text-green-800
-                                            {% else %}
-                                                bg-red-100 text-red-800
-                                            {% endif %}
-                                        ">
-                                            {{ quarter_grade|floatformat:2 }}
-                                        </span>
-                                        {% else %}
-                                        <span class="text-gray-400">--</span>
-                                        {% endif %}
-                                    </td>
-                                    {% endfor %}
-                                    <td class="py-3 px-4">
-                                        {% if grade.average > 0 %}
-                                        <span class="inline-flex items-center justify-center px-2.5 py-0.5 rounded-full text-sm font-medium
-                                            {% if grade.average >= 75 %}
-                                                bg-blue-100 text-blue-800
-                                            {% else %}
-                                                bg-yellow-100 text-yellow-800
-                                            {% endif %}
-                                        ">
-                                            {{ grade.average|floatformat:2 }}
-                                        </span>
-                                        {% else %}
-                                        <span class="text-gray-400">--</span>
-                                        {% endif %}
-                                    </td>
-                                </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-                {% else %}
-                <div class="p-6 text-center text-gray-500">
-                    <div class="text-5xl mb-3 text-gray-300">
-                        <i class="fas fa-chart-line"></i>
-                    </div>
-                    <p>No grades available for {{ current_school_year }}</p>
-                </div>
-                {% endif %}
-            </div>
-
-            <!-- Current Subjects and Grades -->
-            <div class="dashboard-card">
-                <div class="card-header">
-                    <i class="fas fa-book"></i>
-                    Current Subjects
-                </div>
-                <div class="space-y-4">
-                    {% for subject in subjects %}
-                    <div class="flex justify-between items-center p-3 bg-gray-50 rounded hover:bg-gray-100 transition-colors">
-                        <div>
-                            <div class="font-medium text-gray-800">{{ subject.name }}</div>
-                            <div class="text-sm text-gray-500">{{ subject.teacher.full_name }}</div>
-                        </div>
-                        <div class="text-right">
-                            <span class="grade-badge">
-                                {{ subject.current_grade }}
-                            </span>
-                            <div class="text-xs text-gray-500 mt-1">Current Grade</div>
-                        </div>
-                    </div>
-                    {% empty %}
-                    <div class="p-6 text-center text-gray-500">
-                        <div class="text-5xl mb-3 text-gray-300">
-                            <i class="fas fa-book-open"></i>
-                        </div>
-                        <p>No subjects found for {{ current_school_year }}</p>
-                    </div>
-                    {% endfor %}
-                </div>
-            </div>
-        </div>
-
-        <!-- Schedule -->
-        <div class="dashboard-card">
+        <!-- Grade Analytics Section -->
+        <div class="card dashboard-card mb-4">
             <div class="card-header">
-                <i class="fas fa-calendar"></i>
-                Class Schedule
+                <i class="fas fa-chart-line"></i>
+                Grade Analytics
             </div>
-            <div class="scroll-indicator">
-                <i class="fas fa-arrow-left"></i>
-                Swipe to see more
-                <i class="fas fa-arrow-right"></i>
+            
+            {% if error_message %}
+            <div class="text-center text-muted p-4">
+                <div class="display-1 text-muted mb-3">
+                    <i class="fas fa-exclamation-circle"></i>
+                </div>
+                <p>{{ error_message }}</p>
             </div>
-            <div class="table-container">
-                <table class="min-w-full">
-                    <thead>
-                        <tr class="text-left border-b border-gray-200">
-                            <th class="py-3 px-4 text-sm font-semibold text-gray-600">Time</th>
-                            <th class="py-3 px-4 text-sm font-semibold text-gray-600">Subject</th>
-                            <th class="py-3 px-4 text-sm font-semibold text-gray-600">Room</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for slot in schedule %}
-                        <tr class="hover:bg-gray-50 {% cycle 'bg-white' 'bg-gray-50' %}">
-                            <td class="py-3 px-4 text-sm text-gray-500">
-                                {{ slot.start_time|time:"g:i A" }} - {{ slot.end_time|time:"g:i A" }}
-                            </td>
-                            <td class="py-3 px-4">
-                                <div class="font-medium text-gray-800">{{ slot.subject.name }}</div>
-                            </td>
-                            <td class="py-3 px-4 text-sm text-gray-600">Room {{ slot.room }}</td>
-                        </tr>
-                        {% empty %}
-                        <tr>
-                            <td colspan="3" class="py-4 px-4 text-center text-gray-500">
-                                <div class="py-6">
-                                    <div class="text-3xl mb-3 text-gray-300">
-                                        <i class="fas fa-calendar-xmark"></i>
-                                    </div>
-                                    <p>No schedule available for {{ current_school_year }}</p>
-                                </div>
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
+            {% elif detailed_grades %}
+            <canvas id="gradeChart" width="400" height="200" class="mb-4"></canvas>
+            
+            <script>
+                document.addEventListener('DOMContentLoaded', function() {
+                    const ctx = document.getElementById('gradeChart').getContext('2d');
+                    
+                    // Use the JSON-safe data with proper escaping
+                    const quarters = JSON.parse('{{ quarters_json|escapejs }}');
+                    const subjectGradesData = JSON.parse('{{ subject_grades_data_json|escapejs }}');
+                    const subjectGradesMetadata = JSON.parse('{{ subject_grades_metadata|escapejs }}');
+                    
+                    // Debug: Log the data to the console
+                    console.log('Quarters:', quarters);
+                    console.log('Subject Grades:', subjectGradesData);
+                    console.log('Subject Grades Metadata:', subjectGradesMetadata);
+                    
+                    // Generate colors for each subject
+                    function generateColor(index) {
+                        const colors = [
+                            '#e3125b', // Pink (primary)
+                            '#2563eb', // Blue
+                            '#16a34a', // Green
+                            '#ca8a04', // Yellow
+                            '#9333ea', // Purple
+                            '#0891b2', // Cyan
+                            '#ea580c', // Orange
+                            '#be185d'  // Dark Pink
+                        ];
+                        return colors[index % colors.length];
+                    }
+                    
+                    // Prepare datasets for each subject
+                    const datasets = Object.entries(subjectGradesData).map(([subject, grades], index) => {
+                        const color = generateColor(index);
+                        return {
+                            label: subject,
+                            data: grades.map(grade => grade === null ? null : parseFloat(grade)),
+                            borderColor: color,
+                            backgroundColor: `${color}20`,
+                            tension: 0.4,
+                            fill: true,
+                            spanGaps: true // Connect lines over null values
+                        };
+                    });
+                    
+                    new Chart(ctx, {
+                        type: 'line',
+                        data: {
+                            labels: quarters,
+                            datasets: datasets
+                        },
+                        options: {
+                            responsive: true,
+                            plugins: {
+                                legend: {
+                                    display: true,
+                                    position: 'bottom',
+                                    labels: {
+                                        usePointStyle: true,
+                                        padding: 20,
+                                        font: {
+                                            size: 12
+                                        }
+                                    }
+                                },
+                                tooltip: {
+                                    mode: 'index',
+                                    intersect: false,
+                                    callbacks: {
+                                        label: function(context) {
+                                            const label = context.dataset.label || '';
+                                            const value = context.parsed.y;
+                                            const quarter = context.dataIndex;
+                                            const metadata = subjectGradesMetadata[label]?.[quarter + 1];
+                                            
+                                            if (value === null) {
+                                                return `${label}: No grade`;
+                                            }
+                                            
+                                            let tooltipText = `${label}: ${value.toFixed(2)}`;
+                                            if (metadata) {
+                                                if (metadata.status) tooltipText += `\nStatus: ${metadata.status}`;
+                                                if (metadata.remarks) tooltipText += `\nRemarks: ${metadata.remarks}`;
+                                                if (metadata.uploaded_at) tooltipText += `\nUploaded: ${metadata.uploaded_at}`;
+                                            }
+                                            return tooltipText;
+                                        }
+                                    }
+                                }
+                            },
+                            scales: {
+                                y: {
+                                    beginAtZero: false,
+                                    min: 70,
+                                    max: 100,
+                                    ticks: {
+                                        stepSize: 5
+                                    }
+                                }
+                            },
+                            interaction: {
+                                mode: 'nearest',
+                                axis: 'x',
+                                intersect: false
+                            }
+                        }
+                    });
+                });
+            </script>
+            {% else %}
+            <div class="text-center text-muted p-4">
+                <div class="display-1 text-muted mb-3">
+                    <i class="fas fa-chart-line"></i>
+                </div>
+                <p>No grades available for {{ current_school_year }}</p>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Grades Table Section -->
+        <div class="card dashboard-card">
+            <div class="card-header">
+                <i class="fas fa-table"></i>
+                Detailed Grades
+            </div>
+            <div class="table-responsive">
+                <div class="scroll-indicator d-flex align-items-center justify-content-center d-md-none">
+                    <i class="fas fa-arrow-right me-2"></i>
+                    <span>Scroll horizontally to view all grades</span>
+                    <i class="fas fa-arrow-right ms-2"></i>
+                </div>
+                <div class="table-container">
+                    <table class="table table-hover grades-table">
+                        <thead>
+                            <tr>
+                                <th class="sticky-column">Subject</th>
+                                <th>First Quarter</th>
+                                <th>Second Quarter</th>
+                                <th>Third Quarter</th>
+                                <th>Fourth Quarter</th>
+                                <th>Final Grade</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% if subject_grades %}
+                                {% for subject, data in subject_grades.items %}
+                                    <tr>
+                                        <td class="sticky-column">{{ subject }}</td>
+                                        {% for quarter in '1234'|make_list %}
+                                            <td>
+                                                {% with quarter_data=data.quarters|get_item:quarter %}
+                                                    {% if quarter_data and quarter_data.grade %}
+                                                        <span class="grade-value {% if quarter_data.grade >= 75 %}grade-passing{% else %}grade-failing{% endif %}">
+                                                            {{ quarter_data.grade|floatformat:2 }}
+                                                        </span>
+                                                    {% else %}
+                                                        <span class="text-muted">-</span>
+                                                    {% endif %}
+                                                {% endwith %}
+                                            </td>
+                                        {% endfor %}
+                                        <td>
+                                            {% if data.average %}
+                                                <span class="grade-value {% if data.average >= 75 %}grade-passing{% else %}grade-failing{% endif %}">
+                                                    {{ data.average|floatformat:2 }}
+                                                </span>
+                                            {% else %}
+                                                <span class="text-muted">-</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            <span class="badge {% if data.status == 'Passing' %}bg-success{% elif data.status == 'Failing' %}bg-danger{% else %}bg-warning{% endif %}">
+                                                {{ data.status }}
+                                            </span>
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                            {% else %}
+                                <tr>
+                                    <td colspan="7" class="text-center text-muted py-4">
+                                        <i class="fas fa-info-circle me-2"></i>
+                                        No grades available for {{ current_school_year }}
+                                    </td>
+                                </tr>
+                            {% endif %}
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </div>
     </div>
 
-    {% if detailed_grades %}
-    <script>
-        // Grade Analytics Chart with dynamic data
-        const ctx = document.getElementById('gradeChart').getContext('2d');
-        
-        // Safely parse JSON data with fallbacks
-        let quarters = [];
-        let subjectGradesData = {};
-        
-        try {
-            quarters = JSON.parse('{{ quarters|safe|escapejs }}');
-        } catch (e) {
-            console.error("Error parsing quarters data:", e);
-            quarters = ['First Quarter', 'Second Quarter', 'Third Quarter', 'Fourth Quarter'];
-        }
-        
-        try {
-            subjectGradesData = JSON.parse('{{ subject_grades_data|safe|escapejs }}');
-        } catch (e) {
-            console.error("Error parsing subject grades data:", e);
-            // Empty data when no grades are available
-            subjectGradesData = {};
-        }
-        
-        // Generate colors for each subject
-        function generateColor(index) {
-            const colors = [
-                '#e3125b', // Pink (primary)
-                '#2563eb', // Blue
-                '#16a34a', // Green
-                '#ca8a04', // Yellow
-                '#9333ea', // Purple
-                '#0891b2', // Cyan
-                '#ea580c', // Orange
-                '#be185d'  // Dark Pink
-            ];
-            return colors[index % colors.length];
-        }
-        
-        // Prepare datasets for each subject
-        const datasets = Object.entries(subjectGradesData).map(([subject, grades], index) => {
-            const color = generateColor(index);
-            return {
-                label: subject,
-                data: grades,
-                borderColor: color,
-                backgroundColor: `${color}20`,
-                tension: 0.4,
-                fill: true
-            };
-        });
-        
-        new Chart(ctx, {
-            type: 'line',
-            data: {
-                labels: quarters,
-                datasets: datasets
-            },
-            options: {
-                responsive: true,
-                plugins: {
-                    legend: {
-                        display: true,
-                        position: 'bottom',
-                        labels: {
-                            usePointStyle: true,
-                            padding: 20,
-                            font: {
-                                size: 12
-                            }
-                        }
-                    },
-                    tooltip: {
-                        mode: 'index',
-                        intersect: false
-                    }
-                },
-                scales: {
-                    y: {
-                        beginAtZero: false,
-                        min: 70,
-                        max: 100,
-                        ticks: {
-                            stepSize: 5
-                        }
-                    }
-                },
-                interaction: {
-                    mode: 'nearest',
-                    axis: 'x',
-                    intersect: false
-                }
-            }
-        });
-    </script>
-    {% endif %}
+    <!-- Bootstrap JS Bundle with Popper -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>

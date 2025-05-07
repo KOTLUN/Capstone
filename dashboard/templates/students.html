@@ -1,3 +1,4 @@
+{% load custom_filters %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -111,36 +112,16 @@
             <div class="content-container p-4">
                 <div class="d-flex justify-content-between align-items-center mb-4">
                     <h2 class="mb-0">Students Management</h2>
-                    <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addStudentModal">
-                        <i class="fas fa-plus me-2"></i> Add Student
-                    </button>
+                    <div class="d-flex gap-2">
+                        <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#uploadExcelModal">
+                            <i class="fas fa-file-excel me-2"></i> Upload Excel
+                        </button>
+                        <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addStudentModal">
+                            <i class="fas fa-plus me-2"></i> Add Student
+                        </button>
+                    </div>
                 </div>
                 <div class="row mb-4">
-                    <div class="col-md-8">
-                        <form method="GET" action="{% url 'administrator:students' %}" class="d-flex gap-2">
-                            <select name="school_year" class="form-select shadow-sm">
-                                {% if active_school_year %}
-                                    <option value="{{ active_school_year.display_name }}" {% if selected_year == active_school_year.display_name %}selected{% endif %}>
-                                        {{ active_school_year.display_name }} (Active)
-                                    </option>
-                                {% endif %}
-                                {% for year in school_years %}
-                                    {% if not year.is_active %}
-                                        <option value="{{ year.display_name }}" {% if selected_year == year.display_name %}selected{% endif %}>
-                                            {{ year.display_name }}
-                                        </option>
-                                    {% endif %}
-                                {% endfor %}
-                            </select>
-                            <select name="status" class="form-select shadow-sm">
-                                <option value="">All Status</option>
-                                <option value="not_enrolled" {% if status_filter == 'not_enrolled' %}selected{% endif %}>Not Enrolled</option>
-                            </select>
-                            <button type="submit" class="btn btn-primary shadow-sm">
-                                <i class="fas fa-filter me-2"></i> Filter
-                            </button>
-                        </form>
-                    </div>
                     <div class="col-md-4">
                         <div class="input-group shadow-sm">
                             <input type="text" id="student-search" class="form-control" placeholder="Search students...">
@@ -156,12 +137,12 @@
                             <table class="table table-hover mb-0">
                                 <thead class="table-light">
                                     <tr>
-                                        <th class="ps-4">Student ID</th>
-                                        <th>Name</th>
-                                        <th>Gender</th>
-                                        <th>Email</th>
-                                        <th>Mobile</th>
-                                        <th>Status</th>
+                                        <th class="ps-4 sortable" data-sort="student-id">Student ID <i class="fas fa-sort"></i></th>
+                                        <th class="sortable" data-sort="name">Name <i class="fas fa-sort"></i></th>
+                                        <th class="sortable" data-sort="gender">Gender <i class="fas fa-sort"></i></th>
+                                        <th class="sortable" data-sort="email">Email <i class="fas fa-sort"></i></th>
+                                        <th class="sortable" data-sort="mobile">Mobile <i class="fas fa-sort"></i></th>
+                                        <th class="sortable" data-sort="status">Status <i class="fas fa-sort"></i></th>
                                         <th class="text-center">Actions</th>
                                     </tr>
                                 </thead>
@@ -174,14 +155,16 @@
                                         <td>{{ student.email }}</td>
                                         <td>{{ student.mobile_number }}</td>
                                         <td>
-                                            <span class="badge {% if student.display_status == 'Active' %}bg-success
-                                                              {% elif student.display_status == 'Enrolled' %}bg-primary
-                                                              {% elif student.display_status == 'Not Enrolled' %}bg-warning
-                                                              {% elif student.display_status == 'Completed' %}bg-info
-                                                              {% elif student.display_status == 'Dropped' %}bg-danger
-                                                              {% elif student.display_status == 'Transferred' %}bg-secondary
-                                                              {% endif %} rounded-pill">
-                                                {{ student.display_status }}
+                                            <span class="badge 
+                                                {% if student_statuses|get_item:student.id == 'Active' %}bg-success
+                                                {% elif student_statuses|get_item:student.id == 'Enrolled' %}bg-primary
+                                                {% elif student_statuses|get_item:student.id == 'Not Enrolled' %}bg-warning
+                                                {% elif student_statuses|get_item:student.id == 'Completed' %}bg-info
+                                                {% elif student_statuses|get_item:student.id == 'Dropped' %}bg-danger
+                                                {% elif student_statuses|get_item:student.id == 'Transferred' %}bg-secondary
+                                                {% elif student_statuses|get_item:student.id == 'Graduated' %}bg-dark
+                                                {% endif %} rounded-pill">
+                                                {{ student_statuses|get_item:student.id }}
                                             </span>
                                         </td>
                                         <td>
@@ -204,18 +187,6 @@
                                                     data-status="{{ student.display_status }}">
                                                     <i class="fas fa-edit"></i>
                                                 </button>
-                                                {% if not student.has_account %}
-                                                <button class="btn btn-sm btn-outline-primary create-account-btn" data-bs-toggle="modal" data-bs-target="#createAccountModal"
-                                                    data-student-id="{{ student.id }}"
-                                                    data-student-name="{{ student.first_name }} {{ student.last_name }}"
-                                                    data-student-email="{{ student.email }}">
-                                                    <i class="fas fa-user-plus"></i>
-                                                </button>
-                                                {% else %}
-                                                <button class="btn btn-sm btn-outline-success" disabled>
-                                                    <i class="fas fa-check-circle"></i>
-                                                </button>
-                                                {% endif %}
                                             </div>
                                         </td>
                                     </tr>
@@ -247,19 +218,18 @@
                             <span class="badge bg-primary rounded-pill" id="modal-student-id"></span>
                         </div>
                     </div>
-                    
                     <div class="row g-3">
-                        <div class="col-md-6">
-                            <p><i class="fas fa-venus-mars text-secondary me-2"></i> <strong>Gender:</strong> <span id="modal-student-gender"></span></p>
+                        <div class="col-12 col-md-6">
+                            <p class="mb-1"><i class="fas fa-venus-mars text-secondary me-2"></i> <strong>Gender:</strong> <span id="modal-student-gender"></span></p>
                         </div>
-                        <div class="col-md-6">
-                            <p><i class="fas fa-envelope text-secondary me-2"></i> <strong>Email:</strong> <span id="modal-student-email"></span></p>
+                        <div class="col-12 col-md-6">
+                            <p class="mb-1 text-break"><i class="fas fa-envelope text-secondary me-2"></i> <strong>Email:</strong> <span id="modal-student-email"></span></p>
                         </div>
-                        <div class="col-md-6">
-                            <p><i class="fas fa-mobile-alt text-secondary me-2"></i> <strong>Mobile:</strong> <span id="modal-student-mobile"></span></p>
+                        <div class="col-12 col-md-6">
+                            <p class="mb-1"><i class="fas fa-mobile-alt text-secondary me-2"></i> <strong>Mobile:</strong> <span id="modal-student-mobile"></span></p>
                         </div>
-                        <div class="col-md-6">
-                            <p><i class="fas fa-info-circle text-secondary me-2"></i> <strong>Status:</strong> <span id="modal-student-status"></span></p>
+                        <div class="col-12 col-md-6">
+                            <p class="mb-1"><i class="fas fa-info-circle text-secondary me-2"></i> <strong>Status:</strong> <span id="modal-student-status" class="badge bg-info text-dark">Not Enrolled</span></p>
                         </div>
                     </div>
                 </div>
@@ -279,7 +249,7 @@
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
-                    <form id="edit-student-form" method="POST" action="{% url 'administrator:edit_student' %}">
+                    <form id="edit-student-form" method="POST" action="{% url 'dashboard:edit_student' %}">
                         {% csrf_token %}
                         <div class="mb-3">
                             <label for="edit-student-id" class="form-label">Student ID</label>
@@ -326,104 +296,116 @@
 
     <!-- Add Student Modal -->
     <div class="modal fade" id="addStudentModal" tabindex="-1" aria-labelledby="addStudentModalLabel" aria-hidden="true">
-        <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-dialog modal-xl modal-dialog-centered">
             <div class="modal-content">
                 <div class="modal-header bg-primary text-white">
                     <h5 class="modal-title" id="addStudentModalLabel">Add Student</h5>
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
-                <div class="modal-body">
-                    <form id="add-student-form" method="POST" action="{% url 'administrator:add_student' %}">
+                <div class="modal-body" style="max-height: 80vh; overflow-y: auto;">
+                    <form id="add-student-form" method="POST" action="{% url 'dashboard:add_student' %}" enctype="multipart/form-data">
                         {% csrf_token %}
-                        <div class="row g-3">
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label for="student-id" class="form-label">Student ID</label>
-                                    <input type="text" id="student-id" name="student_id" class="form-control" required>
-                                </div>
+                        <div class="row g-2">
+                            <div class="col-md-3">
+                                <label for="student-id" class="form-label">Student ID <span class="text-danger">*</span> <span class="badge bg-danger-subtle text-danger">required</span></label>
+                                <input type="text" id="student-id" name="student_id" class="form-control" required autocomplete="off">
                             </div>
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label for="school-year" class="form-label">School Year</label>
-                                    <select id="school-year" name="school_year" class="form-select" required>
-                                        {% if active_school_year %}
-                                            <option value="{{ active_school_year.display_name }}" selected>
-                                                {{ active_school_year.display_name }} (Active)
-                                            </option>
-                                        {% else %}
-                                            <option value="">No Active School Year</option>
-                                            <div class="form-text text-warning">
-                                                <i class="fas fa-exclamation-triangle"></i> No active school year set. Please set an active school year.
-                                            </div>
+                            <div class="col-md-3">
+                                <label for="first-name" class="form-label">First Name <span class="text-danger">*</span> <span class="badge bg-danger-subtle text-danger">required</span></label>
+                                <input type="text" id="first-name" name="first_name" class="form-control" required autocomplete="given-name">
+                            </div>
+                            <div class="col-md-2">
+                                <label for="middle-name" class="form-label">Middle Name</label>
+                                <input type="text" id="middle-name" name="middle_name" class="form-control" autocomplete="additional-name">
+                            </div>
+                            <div class="col-md-2">
+                                <label for="last-name" class="form-label">Last Name <span class="text-danger">*</span> <span class="badge bg-danger-subtle text-danger">required</span></label>
+                                <input type="text" id="last-name" name="last_name" class="form-control" required autocomplete="family-name">
+                            </div>
+                            <div class="col-md-2">
+                                <label for="suffix" class="form-label">Suffix</label>
+                                <select id="suffix" name="suffix" class="form-select" autocomplete="honorific-suffix">
+                                    <option value="">None</option>
+                                    <option value="Jr.">Jr.</option>
+                                    <option value="Sr.">Sr.</option>
+                                    <option value="II">II</option>
+                                    <option value="III">III</option>
+                                    <option value="IV">IV</option>
+                                    <option value="V">V</option>
+                                    <option value="Other">Other</option>
+                                </select>
+                                <input type="text" id="custom-suffix" name="custom_suffix" class="form-control mt-2" placeholder="Enter custom suffix" style="display:none;" autocomplete="honorific-suffix">
+                            </div>
+                            <div class="col-md-3">
+                                <label for="gender" class="form-label">Gender <span class="text-danger">*</span> <span class="badge bg-danger-subtle text-danger">required</span></label>
+                                <select id="gender" name="gender" class="form-select" required autocomplete="sex">
+                                    <option value="">Select Gender</option>
+                                    <option value="Male">Male</option>
+                                    <option value="Female">Female</option>
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <label for="religion" class="form-label">Religion <span class="text-danger">*</span> <span class="badge bg-danger-subtle text-danger">required</span></label>
+                                <input type="text" id="religion" name="religion" class="form-control" required autocomplete="off">
+                            </div>
+                            <div class="col-md-3">
+                                <label for="date-of-birth" class="form-label">Date of Birth <span class="text-danger">*</span> <span class="badge bg-danger-subtle text-danger">required</span></label>
+                                <input type="date" id="date-of-birth" name="date_of_birth" class="form-control" required autocomplete="bday">
+                            </div>
+                            <div class="col-md-3">
+                                <label for="email" class="form-label">Email <span class="text-danger">*</span> <span class="badge bg-danger-subtle text-danger">required</span></label>
+                                <input type="email" id="email" name="email" class="form-control" required autocomplete="email">
+                                <small class="form-text text-muted">Login credentials will be sent to this email address.</small>
+                            </div>
+                            <div class="col-md-3">
+                                <label for="mobile-number" class="form-label">Mobile Number <span class="text-danger">*</span> <span class="badge bg-danger-subtle text-danger">required</span></label>
+                                <input type="text" id="mobile-number" name="mobile_number" class="form-control" required autocomplete="tel">
+                            </div>
+                            <div class="col-md-9">
+                                <label for="address" class="form-label">Address <span class="text-danger">*</span> <span class="badge bg-danger-subtle text-danger">required</span></label>
+                                <textarea id="address" name="address" class="form-control" rows="1" required autocomplete="street-address"></textarea>
+                            </div>
+                            <div class="col-md-3">
+                                <label for="student-photo" class="form-label">Upload Photo</label>
+                                <input type="file" id="student-photo" name="student_photo" class="form-control" accept="image/*" autocomplete="off">
+                            </div>
+                            <div class="col-md-3">
+                                <label for="student-status" class="form-label">Status <span class="text-danger">*</span> <span class="badge bg-danger-subtle text-danger">required</span></label>
+                                <select id="student-status" name="student_status" class="form-select" required autocomplete="off">
+                                    <option value="">Select Status</option>
+                                    <option value="New Student">New Student</option>
+                                    <option value="Transferee">Transferee</option>
+                                    <option value="Returnee">Returnee</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6" id="enrollment-credentials" style="display:none;">
+                                <label for="enrollment-section" class="form-label">
+                                    Enrollment Credentials (Section)
+                                    <span class="text-danger">*</span>
+                                    <span class="badge bg-danger-subtle text-danger">required</span>
+                                </label>
+                                <select id="enrollment-section" name="enrollment_section" class="form-select" autocomplete="off">
+                                    <option value="">Select Section</option>
+                                    <!-- Grade 7 options -->
+                                    <optgroup label="Grade 7" class="grade7-options">
+                                        {% for section in grade7_sections %}
+                                            <option value="{{ section.id }}">{{ section.section_id }}</option>
+                                        {% endfor %}
+                                    </optgroup>
+                                    <!-- All grades options (hidden by default, shown for Transferee/Returnee) -->
+                                    {% for grade, sections in sections_by_grade.items %}
+                                        {% if grade != 7 %}
+                                        <optgroup label="Grade {{ grade }}" class="allgrades-options" style="display:none;">
+                                            {% for section in sections %}
+                                                <option value="{{ section.id }}">{{ section.section_id }}</option>
+                                            {% endfor %}
+                                        </optgroup>
                                         {% endif %}
-                                    </select>
-                                    {% if not active_school_year %}
-                                        <div class="form-text text-warning">
-                                            <i class="fas fa-exclamation-triangle"></i> No active school year set. Please set an active school year.
-                                        </div>
-                                    {% endif %}
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label for="first-name" class="form-label">First Name</label>
-                                    <input type="text" id="first-name" name="first_name" class="form-control" required>
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label for="middle-name" class="form-label">Middle Name</label>
-                                    <input type="text" id="middle-name" name="middle_name" class="form-control">
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label for="last-name" class="form-label">Last Name</label>
-                                    <input type="text" id="last-name" name="last_name" class="form-control" required>
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label for="gender" class="form-label">Gender</label>
-                                    <select id="gender" name="gender" class="form-select" required>
-                                        <option value="">Select Gender</option>
-                                        <option value="Male">Male</option>
-                                        <option value="Female">Female</option>
-                                    </select>
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label for="religion" class="form-label">Religion</label>
-                                    <input type="text" id="religion" name="religion" class="form-control" required>
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label for="date-of-birth" class="form-label">Date of Birth</label>
-                                    <input type="date" id="date-of-birth" name="date_of_birth" class="form-control" required>
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label for="email" class="form-label">Email</label>
-                                    <input type="email" id="email" name="email" class="form-control" required>
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label for="mobile-number" class="form-label">Mobile Number</label>
-                                    <input type="text" id="mobile-number" name="mobile_number" class="form-control" required>
-                                </div>
-                            </div>
-                            <div class="col-12">
-                                <div class="mb-3">
-                                    <label for="address" class="form-label">Address</label>
-                                    <textarea id="address" name="address" class="form-control" rows="3" required></textarea>
-                                </div>
+                                    {% endfor %}
+                                </select>
                             </div>
                         </div>
-                        <div class="modal-footer px-0 pb-0">
+                        <div class="modal-footer px-0 pb-0 mt-3">
                             <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
                             <button type="submit" class="btn btn-primary">Add Student</button>
                         </div>
@@ -454,7 +436,20 @@
                     document.getElementById("modal-student-gender").textContent = this.getAttribute("data-gender");
                     document.getElementById("modal-student-email").textContent = this.getAttribute("data-email");
                     document.getElementById("modal-student-mobile").textContent = this.getAttribute("data-mobile");
-                    document.getElementById("modal-student-status").textContent = this.getAttribute("data-status");
+                    // Set status, fallback to Not Enrolled if missing
+                    var status = this.getAttribute("data-status") || 'Not Enrolled';
+                    var statusSpan = document.getElementById("modal-student-status");
+                    statusSpan.textContent = status;
+                    // Optionally, set badge color based on status
+                    statusSpan.className = 'badge rounded-pill';
+                    if (status === 'Active') statusSpan.classList.add('bg-success');
+                    else if (status === 'Enrolled') statusSpan.classList.add('bg-primary');
+                    else if (status === 'Not Enrolled') statusSpan.classList.add('bg-warning', 'text-dark');
+                    else if (status === 'Completed') statusSpan.classList.add('bg-info', 'text-dark');
+                    else if (status === 'Dropped') statusSpan.classList.add('bg-danger');
+                    else if (status === 'Transferred') statusSpan.classList.add('bg-secondary');
+                    else if (status === 'Graduated') statusSpan.classList.add('bg-dark');
+                    else statusSpan.classList.add('bg-light', 'text-dark');
                 });
             });
             
@@ -497,106 +492,128 @@
             if (searchButton) {
                 searchButton.addEventListener('click', filterStudents);
             }
+
+            // Add sorting functionality
+            const table = document.querySelector('table');
+            const headers = table.querySelectorAll('th.sortable');
+            let currentSort = {
+                column: 'student-id',
+                direction: 'asc'
+            };
+
+            // Sort table on page load
+            sortTable('student-id', 'asc');
+
+            headers.forEach(header => {
+                header.addEventListener('click', () => {
+                    const column = header.dataset.sort;
+                    const direction = currentSort.column === column && currentSort.direction === 'asc' ? 'desc' : 'asc';
+                    sortTable(column, direction);
+                    currentSort = { column, direction };
+                });
+            });
+
+            function sortTable(column, direction) {
+                const tbody = table.querySelector('tbody');
+                const rows = Array.from(tbody.querySelectorAll('tr'));
+
+                // Update sort indicators
+                headers.forEach(header => {
+                    const icon = header.querySelector('i');
+                    if (header.dataset.sort === column) {
+                        icon.className = direction === 'asc' ? 'fas fa-sort-up' : 'fas fa-sort-down';
+                    } else {
+                        icon.className = 'fas fa-sort';
+                    }
+                });
+
+                // Sort rows
+                rows.sort((a, b) => {
+                    let aValue = a.querySelector(`td:nth-child(${getColumnIndex(column)})`).textContent.trim();
+                    let bValue = b.querySelector(`td:nth-child(${getColumnIndex(column)})`).textContent.trim();
+
+                    // Special handling for student ID (numeric sorting)
+                    if (column === 'student-id') {
+                        aValue = parseInt(aValue) || 0;
+                        bValue = parseInt(bValue) || 0;
+                    }
+
+                    if (direction === 'asc') {
+                        return aValue > bValue ? 1 : -1;
+                    } else {
+                        return aValue < bValue ? 1 : -1;
+                    }
+                });
+
+                // Reorder rows in the table
+                rows.forEach(row => tbody.appendChild(row));
+            }
+
+            function getColumnIndex(column) {
+                const columnMap = {
+                    'student-id': 1,
+                    'name': 2,
+                    'gender': 3,
+                    'email': 4,
+                    'mobile': 5,
+                    'status': 6
+                };
+                return columnMap[column];
+            }
         });
     </script>
     
-    <!-- Create Account Modal -->
-    <div class="modal fade" id="createAccountModal" tabindex="-1" aria-labelledby="createAccountModalLabel" aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered modal-lg">
+    <!-- Excel Upload Modal -->
+    <div class="modal fade" id="uploadExcelModal" tabindex="-1" aria-labelledby="uploadExcelModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content">
-                <div class="modal-header bg-primary text-white">
-                    <h5 class="modal-title" id="createAccountModalLabel">Create Student Account</h5>
+                <div class="modal-header bg-success text-white">
+                    <h5 class="modal-title" id="uploadExcelModalLabel">Upload Students from Excel</h5>
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
-                    <form id="create-account-form" method="POST" action="{% url 'administrator:create_student_account' %}" enctype="multipart/form-data">
+                    <form id="upload-excel-form" method="POST" action="#" enctype="multipart/form-data">
                         {% csrf_token %}
-                        <input type="hidden" id="account-student-id" name="student_id">
-                        
-                        <div class="row">
-                            <div class="col-md-6">
-                                <!-- Student Information Section -->
-                                <h6 class="fw-bold mb-3 border-bottom pb-2">Student Information</h6>
-                                
-                                <div class="mb-3">
-                                    <label for="account-student-name" class="form-label">Student Name</label>
-                                    <input type="text" id="account-student-name" class="form-control" readonly>
-                                </div>
-                                
-                                <div class="mb-3">
-                                    <label for="account-email" class="form-label">Email</label>
-                                    <input type="email" id="account-email" name="email" class="form-control" required>
-                                </div>
-                                
-                                <div class="mb-3">
-                                    <label for="account-contact" class="form-label">Contact Number</label>
-                                    <input type="text" id="account-contact" name="contact_number" class="form-control" required>
-                                </div>
-                                
-                                <div class="mb-3">
-                                    <label for="student-photo" class="form-label">Student Photo</label>
-                                    <input type="file" id="student-photo" name="student_photo" class="form-control" accept="image/*">
-                                    <div class="form-text">Upload a profile photo (optional)</div>
-                                </div>
-                                
-                                <div class="mb-3">
-                                    <label for="account-username" class="form-label">Username</label>
-                                    <input type="text" id="account-username" name="username" class="form-control" required>
-                                    <div class="form-text">Username must be unique and will be used for login.</div>
-                                </div>
-                                
-                                <div class="mb-3">
-                                    <label for="account-password" class="form-label">Password</label>
-                                    <input type="password" id="account-password" name="password" class="form-control" required>
-                                </div>
-                                
-                                <div class="mb-3">
-                                    <label for="account-confirm-password" class="form-label">Confirm Password</label>
-                                    <input type="password" id="account-confirm-password" name="confirm_password" class="form-control" required>
-                                </div>
-                            </div>
-                            
-                            <div class="col-md-6">
-                                <!-- Guardian Information Section -->
-                                <h6 class="fw-bold mb-3 border-bottom pb-2">Guardian Information</h6>
-                                
-                                <div class="mb-3">
-                                    <label for="guardian-first-name" class="form-label">First Name</label>
-                                    <input type="text" id="guardian-first-name" name="guardian_first_name" class="form-control" required>
-                                </div>
-                                
-                                <div class="mb-3">
-                                    <label for="guardian-middle-name" class="form-label">Middle Name</label>
-                                    <input type="text" id="guardian-middle-name" name="guardian_middle_name" class="form-control">
-                                    <div class="form-text">Optional</div>
-                                </div>
-                                
-                                <div class="mb-3">
-                                    <label for="guardian-last-name" class="form-label">Last Name</label>
-                                    <input type="text" id="guardian-last-name" name="guardian_last_name" class="form-control" required>
-                                </div>
-                                
-                                <div class="mb-3">
-                                    <label for="guardian-contact" class="form-label">Contact Number</label>
-                                    <input type="text" id="guardian-contact" name="guardian_contact" class="form-control" required>
-                                </div>
-                                
-                                <div class="mb-3">
-                                    <label for="guardian-relationship" class="form-label">Relationship to Student</label>
-                                    <select id="guardian-relationship" name="guardian_relationship" class="form-select" required>
-                                        <option value="">Select Relationship</option>
-                                        <option value="Parent">Parent</option>
-                                        <option value="Guardian">Guardian</option>
-                                        <option value="Sibling">Sibling</option>
-                                        <option value="Relative">Other Relative</option>
-                                    </select>
-                                </div>
+                        <div class="mb-4">
+                            <div class="alert alert-info">
+                                <h6 class="alert-heading"><i class="fas fa-info-circle me-2"></i>Excel File Requirements:</h6>
+                                <ul class="mb-0">
+                                    <li>File must be in .xlsx or .xls format</li>
+                                    <li>Required columns: Student ID, First Name, Last Name, Gender, Email, Mobile Number</li>
+                                    <li>Optional columns: Middle Name, Religion, Date of Birth, Address</li>
+                                </ul>
                             </div>
                         </div>
                         
-                        <div class="modal-footer px-0 pb-0 mt-3">
+                        <div class="mb-3">
+                            <label for="excel-file" class="form-label">Select Excel File</label>
+                            <input type="file" id="excel-file" name="excel_file" class="form-control" accept=".xlsx,.xls" required>
+                            <div class="form-text">Only .xlsx and .xls files are accepted</div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="school-year-upload" class="form-label">School Year</label>
+                            <select id="school-year-upload" name="school_year" class="form-select" required>
+                                {% if active_school_year %}
+                                    <option value="{{ active_school_year.display_name }}" selected>
+                                        {{ active_school_year.display_name }} (Active)
+                                    </option>
+                                {% else %}
+                                    <option value="">No Active School Year</option>
+                                {% endif %}
+                            </select>
+                            {% if not active_school_year %}
+                                <div class="form-text text-warning">
+                                    <i class="fas fa-exclamation-triangle"></i> No active school year set. Please set an active school year.
+                                </div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="modal-footer px-0 pb-0">
                             <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                            <button type="submit" class="btn btn-primary">Create Account</button>
+                            <button type="submit" class="btn btn-success">
+                                <i class="fas fa-upload me-2"></i>Upload Students
+                            </button>
                         </div>
                     </form>
                 </div>
@@ -606,35 +623,104 @@
     
     <script>
         document.addEventListener("DOMContentLoaded", function() {
-            // Existing scripts...
-            
-            // Account creation modal
-            document.querySelectorAll(".create-account-btn").forEach(button => {
-                button.addEventListener("click", function() {
-                    const studentId = this.getAttribute("data-student-id");
-                    const studentName = this.getAttribute("data-student-name");
-                    const studentEmail = this.getAttribute("data-student-email");
-                    
-                    document.getElementById("account-student-id").value = studentId;
-                    document.getElementById("account-student-name").value = studentName;
-                    document.getElementById("account-email").value = studentEmail;
-                    
-                    // Generate a suggested username from email
-                    const suggestedUsername = studentEmail.split('@')[0];
-                    document.getElementById("account-username").value = suggestedUsername;
+            // Handle student status and enrollment section visibility
+            const statusField = document.getElementById('student-status');
+            const enrollmentCredentials = document.getElementById('enrollment-credentials');
+            const enrollmentSection = document.getElementById('enrollment-section');
+            const allGradeOptgroups = document.querySelectorAll('.allgrades-options');
+            const grade7Optgroup = document.querySelector('.grade7-options');
+
+            if (statusField) {
+                statusField.addEventListener('change', function() {
+                    if (this.value === 'New Student') {
+                        enrollmentCredentials.style.display = '';
+                        enrollmentSection.setAttribute('required', 'required');
+                        grade7Optgroup.style.display = '';
+                        allGradeOptgroups.forEach(optgroup => {
+                            optgroup.style.display = 'none';
+                        });
+                    } else if (this.value === 'Transferee' || this.value === 'Returnee') {
+                        enrollmentCredentials.style.display = '';
+                        enrollmentSection.setAttribute('required', 'required');
+                        grade7Optgroup.style.display = 'none';
+                        allGradeOptgroups.forEach(optgroup => {
+                            optgroup.style.display = '';
+                        });
+                    } else {
+                        enrollmentCredentials.style.display = 'none';
+                        enrollmentSection.removeAttribute('required');
+                    }
                 });
-            });
+            }
+
+            // Handle form submission
+            const addStudentForm = document.getElementById('add-student-form');
+            if (addStudentForm) {
+                addStudentForm.addEventListener('submit', function(e) {
+                    // Validate required fields
+                    const requiredFields = addStudentForm.querySelectorAll('[required]');
+                    let isValid = true;
+                    
+                    requiredFields.forEach(field => {
+                        if (!field.value.trim()) {
+                            isValid = false;
+                            field.classList.add('is-invalid');
+                        } else {
+                            field.classList.remove('is-invalid');
+                        }
+                    });
+
+                    // Validate email format
+                    const emailField = document.getElementById('email');
+                    if (emailField && emailField.value) {
+                        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+                        if (!emailRegex.test(emailField.value)) {
+                            isValid = false;
+                            emailField.classList.add('is-invalid');
+                        }
+                    }
+
+                    // Validate date of birth
+                    const dobField = document.getElementById('date-of-birth');
+                    if (dobField && dobField.value) {
+                        const dob = new Date(dobField.value);
+                        const today = new Date();
+                        if (dob >= today) {
+                            isValid = false;
+                            dobField.classList.add('is-invalid');
+                        }
+                    }
+
+                    // Validate enrollment section if required
+                    const status = document.getElementById('student-status').value;
+                    if ((status === 'New Student' || status === 'Transferee' || status === 'Returnee') && 
+                        (!enrollmentSection.value || enrollmentSection.value.trim() === '')) {
+                        isValid = false;
+                        enrollmentSection.classList.add('is-invalid');
+                    }
+
+                    if (!isValid) {
+                        e.preventDefault();
+                        alert('Please fill in all required fields correctly.');
+                    }
+                });
+            }
+
+            // Handle custom suffix field
+            const suffixSelect = document.getElementById('suffix');
+            const customSuffix = document.getElementById('custom-suffix');
             
-            // Form validation for password matching
-            document.getElementById("create-account-form").addEventListener("submit", function(e) {
-                const password = document.getElementById("account-password").value;
-                const confirmPassword = document.getElementById("account-confirm-password").value;
-                
-                if (password !== confirmPassword) {
-                    e.preventDefault();
-                    alert("Passwords do not match!");
-                }
-            });
+            if (suffixSelect && customSuffix) {
+                suffixSelect.addEventListener('change', function() {
+                    if (this.value === 'Other') {
+                        customSuffix.style.display = '';
+                        customSuffix.setAttribute('required', 'required');
+                    } else {
+                        customSuffix.style.display = 'none';
+                        customSuffix.removeAttribute('required');
+                    }
+                });
+            }
         });
     </script>
     

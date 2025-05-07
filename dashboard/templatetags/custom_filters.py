@@ -2,12 +2,20 @@ from django import template
 import json
 from django.core.serializers.json import DjangoJSONEncoder
 from django.db.models import Q
-
-register = template.Library()
+from django.template.defaultfilters import register
 
 @register.filter
 def get_item(dictionary, key):
-    return dictionary.get(key)
+    """
+    Template filter to get an item from a dictionary using a key.
+    Usage: {{ dictionary|get_item:key }}
+    """
+    if not dictionary:
+        return None
+    try:
+        return dictionary.get(key)
+    except (AttributeError, TypeError):
+        return None
 
 @register.filter(name='safe_json')
 def safe_json(obj):

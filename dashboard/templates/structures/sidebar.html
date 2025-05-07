@@ -9,30 +9,84 @@
         </div>
 
         <nav class="nav flex-column mt-2">
-            <a href="{% url 'administrator:dashboard' %}" class="nav-link {% if request.path == '/administrator/dashboard/' %}active{% endif %}">
-                <i class="fas fa-tachometer-alt"></i> <span>Dashboard</span>
-            </a>
-            <a href="{% url 'administrator:students' %}" class="nav-link {% if request.path == '/administrator/students/' %}active{% endif %}">
-                <i class="fas fa-users"></i> <span>Students</span>
-            </a>
-            <a href="{% url 'administrator:teachers' %}" class="nav-link {% if request.path == '/administrator/teachers/' %}active{% endif %}">
-                <i class="fas fa-user-tie"></i> <span>Teachers</span>
-            </a>
-            <a href="{% url 'administrator:enrollment' %}" class="nav-link {% if request.path == '/administrator/enrollment/' %}active{% endif %}">
-                <i class="fas fa-user-plus"></i> <span>Enrollment</span>
-            </a>
-            <a href="{% url 'administrator:student_grades' %}" class="nav-link {% if request.path == '/administrator/student-grades/' %}active{% endif %}">
-                <i class="fas fa-chart-line"></i> <span>Grades</span>
-            </a>
-            <a href="{% url 'administrator:add_subject' %}" class="nav-link {% if request.path == '/administrator/add-subject/' %}active{% endif %}">
-                <i class="fas fa-book-open"></i> <span>Subjects</span>
-            </a>
-            <a href="{% url 'administrator:sections' %}" class="nav-link {% if request.path == '/administrator/sections/' %}active{% endif %}">
-                <i class="fas fa-puzzle-piece"></i> <span>Sections</span>
-            </a>
-            <a href="{% url 'administrator:schedules' %}" class="nav-link {% if request.path == '/administrator/schedules/' %}active{% endif %}">
-                <i class="fas fa-calendar-alt"></i> <span>Schedules</span>
-            </a>
+            <div class="sidebar-label clickable"><i class="fas fa-bars me-2"></i>Main</div>
+            <div class="sidebar-group active">
+                <li class="nav-item">
+                    <a href="{% url 'dashboard:dashboard' %}" class="nav-link {% if request.path == '/dashboard/dashboard/' %}active{% endif %}">
+                        <i class="fas fa-home me-2"></i>Dashboard
+                    </a>
+                </li>
+            </div>
+            <div class="sidebar-label clickable"><i class="fas fa-tasks me-2"></i>Management</div>
+            <div class="sidebar-group">
+                <li class="nav-item">
+                    <a href="{% url 'dashboard:event' %}" class="nav-link {% if request.path == '/dashboard/event/' %}active{% endif %}">
+                        <i class="fas fa-calendar me-2"></i>Events
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="{% url 'dashboard:announcement' %}" class="nav-link {% if request.path == '/dashboard/announcement/' %}active{% endif %}">
+                        <i class="fas fa-bullhorn me-2"></i>Announcements
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="{% url 'dashboard:students' %}" class="nav-link {% if request.path == '/dashboard/students/' %}active{% endif %}">
+                        <i class="fas fa-user-graduate me-2"></i>Students
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="{% url 'dashboard:teachers' %}" class="nav-link {% if request.path == '/dashboard/teachers/' %}active{% endif %}">
+                        <i class="fas fa-chalkboard-teacher me-2"></i>Teachers
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="{% url 'dashboard:enrollment' %}" class="nav-link {% if request.path == '/dashboard/enrollment/' %}active{% endif %}">
+                        <i class="fas fa-user-plus me-2"></i>Enrollment
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="{% url 'dashboard:allforms' %}" class="nav-link {% if request.path == '/dashboard/allforms/' %}active{% endif %}">
+                        <i class="fas fa-file-alt me-2"></i>Forms
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="{% url 'dashboard:archive_view' %}" class="nav-link {% if request.path == '/dashboard/archive/' %}active{% endif %}">
+                        <i class="fas fa-archive me-2"></i>Archive
+                    </a>
+                </li>
+            </div>
+            <div class="sidebar-label clickable"><i class="fas fa-graduation-cap me-2"></i>Academic</div>
+            <div class="sidebar-group">
+                <li class="nav-item">
+                    <a href="{% url 'dashboard:student_grades' %}" class="nav-link {% if request.path == '/dashboard/student-grades/' %}active{% endif %}">
+                        <i class="fas fa-graduation-cap me-2"></i>Student Grades
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="{% url 'dashboard:subjects' %}" class="nav-link {% if request.path == '/dashboard/subjects/' %}active{% endif %}">
+                        <i class="fas fa-book me-2"></i>Subjects
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="{% url 'dashboard:sections' %}" class="nav-link {% if request.path == '/dashboard/sections/' %}active{% endif %}">
+                        <i class="fas fa-users me-2"></i>Sections
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="{% url 'dashboard:schedules' %}" class="nav-link {% if request.path == '/dashboard/schedules/' %}active{% endif %}">
+                        <i class="fas fa-clock me-2"></i>Schedules
+                    </a>
+                </li>
+            </div>
+            <div class="sidebar-label clickable"><i class="fas fa-cogs me-2"></i>System Configurations</div>
+            <div class="sidebar-group">
+                <li class="nav-item">  
+                    <a href="{% url 'dashboard:school_year_management' %}" class="nav-link {% if request.path == '/dashboard/school-year-management/' %}active{% endif %}">
+                        <i class="fas fa-calendar-alt me-2"></i>School Year Management
+                    </a>
+                </li>
+                
+            </div>
         </nav>
     </div>
 </div>
@@ -43,68 +97,71 @@
     position: fixed;
     top: 0;
     left: 0;
-    background: #e73159;
+    background: #2196f3;
     width: 250px;
     height: 100vh;
-    overflow-y: auto;
     box-shadow: 0 0 15px rgba(0, 0, 0, 0.1);
-    border-radius:5px;
+    border-radius: 5px;
     font-family: 'Poppins', sans-serif;
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
 }
 
 /* Logo area styling */
 .sidebar .logo-area {
-    padding: 1.5rem;
-    border-bottom: 1px solid #eee;
+    padding: 1rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    text-align: center;
 }
 
 .sidebar .logo-img {
-    height: 110px;
+    height: 80px;
     width: auto;
-    margin: 0;
-    padding-left: 40px;
+    margin: 0 auto;
+    display: block;
 }
 
 .sidebar .school-name {
     font-family: 'Quicksand', sans-serif;
-    font-size: 0.9rem;
+    font-size: 0.85rem;
     color: #FFFFF0;
     margin-top: 0.5rem;
-    padding-top: 10px;
     font-weight: 700;
     text-align: center;
     letter-spacing: 0.5px;
+    line-height: 1.2;
 }
 
 /* Sidebar navigation links */
 .sidebar .nav-link {
-    color: #FFFFF0;
-    padding: 0.8rem 1.5rem;
+    color: #e0e7ef;
+    padding: 0.6rem 1.2rem;
     transition: all 0.3s ease;
     display: flex;
     align-items: center;
     border-radius: 0;
     margin: 2px 0;
-    font-size: 0.95rem;
+    font-size: 0.9rem;
     font-weight: 500;
     letter-spacing: 0.3px;
+    white-space: nowrap;
 }
 
-/* Updated hover and active state styling */
 .sidebar .nav-link:hover,
 .sidebar .nav-link.active {
-    background-color: #f8f9e8;
-    color:#e73159;
-    border-left: 3px solid #e73159;
+    background-color: #1769aa;
+    color: #fff;
+    border-left: 3px solid #64b5f6;
     border-radius: 1px;
 }
 
 /* Icon styling */
 .sidebar .nav-link i {
-    margin-right: 12px;
-    width: 20px;
+    margin-right: 10px;
+    width: 18px;
     text-align: center;
-    font-size: 1.1rem;
+    font-size: 1rem;
 }
 
 /* Main content offset */
@@ -130,34 +187,64 @@
         margin-left: 0;
     }
 }
+
+.sidebar-label {
+    font-size: 0.92rem;
+    color: #fff;
+    background: transparent;
+    font-weight: 700;
+    padding: 0.45rem 1.1rem 0.15rem 1.1rem;
+    margin-top: 0.7rem;
+    margin-bottom: 0.15rem;
+    letter-spacing: 1px;
+    opacity: 1;
+    border-left: 4px solid #64b5f6;
+    cursor: pointer;
+    text-shadow: 0 1px 2px rgba(30, 105, 170, 0.15);
+    text-transform: uppercase;
+    display: flex;
+    align-items: center;
+}
+.sidebar-label i {
+    font-size: 1.1em;
+    margin-right: 0.5em;
+    vertical-align: middle;
+}
+.sidebar-group {
+    display: none;
+}
+.sidebar-group.active {
+    display: block;
+}
 </style>
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // Get all nav links
-    const navLinks = document.querySelectorAll('.nav-link');
-    
-    // Add click event listener to each nav link
-    navLinks.forEach(link => {
-        link.addEventListener('click', function() {
-            // Remove active class from all links
-            navLinks.forEach(l => l.classList.remove('active'));
-            
-            // Add active class to clicked link
-            this.classList.add('active');
-            
-            // Store the active link in localStorage
-            localStorage.setItem('activeLink', this.getAttribute('href'));
+    // Accordion/collapsible sidebar: only one group open at a time
+    document.querySelectorAll('.sidebar-label.clickable').forEach(function(label) {
+        label.addEventListener('click', function() {
+            // Close all groups
+            document.querySelectorAll('.sidebar-group').forEach(function(group) {
+                group.classList.remove('active');
+            });
+            // Open the clicked label's group (toggle if already open)
+            const group = label.nextElementSibling;
+            if (!group.classList.contains('active')) {
+                group.classList.add('active');
+            }
         });
     });
-    
-    // Check localStorage on page load and set active class
-    const activeLink = localStorage.getItem('activeLink');
+
+    // On page load, expand the group containing the active nav-link
+    var activeLink = document.querySelector('.nav-link.active');
     if (activeLink) {
-        const link = document.querySelector(`.nav-link[href="${activeLink}"]`);
-        if (link) {
-            link.classList.add('active');
+        var group = activeLink.closest('.sidebar-group');
+        if (group) {
+            group.classList.add('active');
         }
+    } else {
+        // Optionally, open the first group by default if no active link
+        document.querySelectorAll('.sidebar-group')[0].classList.add('active');
     }
 });
 </script>

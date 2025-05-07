@@ -22,11 +22,18 @@ import base64
 from email.mime.text import MIMEText
 from django.utils import timezone
 import logging
+from django.contrib.auth.decorators import login_required
 
 # Set up logging
 logger = logging.getLogger(__name__)
 
 def login_view(request):
+    # Save the next parameter in the session if it exists
+    next_url = request.GET.get('next')
+    if next_url:
+        request.session['next'] = next_url
+        logger.info(f"Saved next URL in session: {next_url}")
+
     if request.method == "POST":
         username = request.POST.get('username')
         password = request.POST.get('password')
@@ -40,7 +47,17 @@ def login_view(request):
             
             # Log user details for debugging
             logger.info(f"User authenticated: {user.username} (ID: {user.id})")
-            logger.info(f"Is superuser: {user.is_superuser}")
+            logger.info(f"User email: {user.email}")
+            logger.info(f"User is active: {user.is_active}")
+            logger.info(f"User is staff: {user.is_staff}")
+            logger.info(f"User is superuser: {user.is_superuser}")
+            
+            # Get the next URL from session
+            next_url = request.session.get('next')
+            if next_url:
+                del request.session['next']
+                logger.info(f"Redirecting to next URL: {next_url}")
+                return redirect(next_url)
             
             # Check if the user is an admin
             if user.is_superuser:
@@ -49,38 +66,27 @@ def login_view(request):
 
             # Check if the user is a teacher
             try:
-                teacher_profile = Teachers.objects.get(user=user)
-                logger.info(f"User is a teacher: {teacher_profile.first_name} {teacher_profile.last_name}")
-                return redirect('profile')
+                teacher = Teachers.objects.get(user=user)
+                logger.info(f"Teacher authenticated: {teacher.first_name} {teacher.last_name}")
+                logger.info(f"Teacher email: {teacher.email}")
+                logger.info(f"Teacher has user account: {teacher.user is not None}")
+                return redirect('TeacherPortal:profile')
             except Teachers.DoesNotExist:
-                logger.info("User is not a teacher")
-                
-                # Check if user has a student profile directly
-                try:
-                    student = Student.objects.get(user=user)
-                    logger.info(f"Found student profile: {student.first_name} {student.last_name} (ID: {student.id})")
-                    
-                    # Redirect to student profile
-                    return redirect('student_profile', student_id=student.id)
-                except Student.DoesNotExist:
-                    logger.info("No direct student profile found")
-                    
-                    # Try to find student through StudentAccount
-                    try:
-                        student_account = StudentAccount.objects.get(user=user)
-                        logger.info(f"Found student account for student ID: {student_account.student.id}")
-                        
-                        # Update last login time
-                        student_account.last_login = timezone.now()
-                        student_account.save(update_fields=['last_login'])
-                        
-                        # Redirect to student profile
-                        return redirect('student_profile', student_id=student_account.student.id)
-                    except StudentAccount.DoesNotExist:
-                        logger.error(f"No student account found for user ID: {user.id}")
-                        messages.error(request, "Access denied. You are not authorized to access this system.")
-                        logout(request)  # Log out the user since they don't have proper access
-                        return redirect('login')
+                logger.info(f"No teacher profile found for user: {user.username}")
+
+            # Check if the user is a student
+            try:
+                student = Student.objects.get(user=user)
+                logger.info(f"Student authenticated: {student.first_name} {student.last_name}")
+                logger.info(f"Student email: {student.email}")
+                logger.info(f"Student has account: {student.has_account}")
+                logger.info(f"Student has user account: {student.user is not None}")
+                return redirect('student_profile', student_id=student.id)
+            except Student.DoesNotExist:
+                logger.error(f"User {username} has no associated teacher or student profile")
+                messages.error(request, "Invalid username or password.")
+                logout(request)
+                return redirect('login')
         else:
             logger.warning(f"Authentication failed for username: {username}")
             messages.error(request, "Invalid username or password.")
@@ -215,5 +221,74 @@ def forgot_password(request):
             messages.error(request, "No user is associated with this email address.")
     
     return render(request, 'login/password_reset_form.html')
+
+@login_required
+def teacher_dashboard(request):
+    try:
+        # Check if user is a teacher
+        teacher = Teachers.objects.get(user=request.user)
+        logger.info(f"Teacher {teacher.first_name} {teacher.last_name} accessing dashboard")
+        return redirect('TeacherPortal:profile')  # Redirect to teacher profile page
+    except Teachers.DoesNotExist:
+        logger.error(f"Non-teacher user {request.user.username} attempted to access teacher dashboard")
+        messages.error(request, "You don't have permission to access the teacher dashboard.")
+        return redirect('login')
+
+@login_required
+def admin_dashboard(request):
+    if not request.user.email.endswith('@admin.stcfi.edu.ph'):
+        return redirect('login')
+    return redirect('dashboard:dashboard')  # Updated namespace
+
+@login_required
+def student_dashboard(request):
+    try:
+        # Check if the user is properly authenticated
+        if not request.user.is_authenticated:
+            logger.error(f"User {request.user.email} is not authenticated")
+            messages.error(request, "Please log in to access your dashboard.")
+            return redirect('login')
+            
+        # Get the student profile associated with the user
+        try:
+            student = Student.objects.get(user=request.user)
+            if not student.has_account:
+                logger.error(f"Student {student.email} does not have an active account")
+                messages.error(request, "Your account is not activated. Please contact the administrator.")
+                return redirect('login')
+                
+            logger.info(f"Found student profile for user {request.user.email} with ID {student.id}")
+            return redirect('student_profile', student_id=student.id)
+            
+        except Student.DoesNotExist:
+            logger.error(f"No student profile found for user {request.user.email}")
+            messages.error(request, "Student profile not found. Please contact the administrator.")
+            return redirect('login')
+            
+    except Exception as e:
+        logger.error(f"Error in student_dashboard: {str(e)}")
+        messages.error(request, "An error occurred. Please try again.")
+        return redirect('login')
+
+def root_view(request):
+    if not request.user.is_authenticated:
+        return render(request, 'login.html')
+    # Redirect authenticated users to their dashboard/profile
+    if request.user.is_superuser:
+        return redirect('dashboard:dashboard')
+    try:
+        teacher = Teachers.objects.get(user=request.user)
+        return redirect('TeacherPortal:profile')
+    except Teachers.DoesNotExist:
+        pass
+    try:
+        student = Student.objects.get(user=request.user)
+        return redirect('student_profile', student_id=student.id)
+    except Student.DoesNotExist:
+        pass
+    # If no profile, log out and show login
+    logout(request)
+    messages.error(request, "No associated profile found. Please contact the administrator.")
+    return render(request, 'login.html')
 
 

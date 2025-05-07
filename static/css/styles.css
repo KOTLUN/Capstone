@@ -1,0 +1,126 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Custom styles */
+body {
+    margin-top: 70px !important;
+    background: #f8f9fa;
+}
+
+.dashboard-card {
+    background: white;
+    border-radius: 0.5rem;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    padding: 1.25rem;
+    height: 100%;
+    width: 100%;
+    overflow-x: auto;
+    max-width: 100%;
+}
+
+.card-header {
+    color: #e3125b;
+    font-size: 1.125rem;
+    font-weight: 600;
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.stat-card {
+    background: #fff6fa;
+    border-left: 4px solid #e3125b;
+    padding: 0.75rem;
+    border-radius: 0.5rem;
+    width: 100%;
+}
+
+.schedule-item {
+    border-left: 4px solid #e3125b;
+    padding: 0.75rem;
+    margin-bottom: 0.5rem;
+    background: #fff6fa;
+    border-radius: 0.25rem;
+}
+
+.grade-badge {
+    background: #e3125b;
+    color: white;
+    padding: 0.25rem 0.5rem;
+    border-radius: 9999px;
+    font-weight: 600;
+    font-size: 0.875rem;
+}
+
+.dashboard-container {
+    width: 100%;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 1rem 0.5rem;
+}
+
+.table-container {
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin;
+    position: relative;
+    margin: 0 -1rem;
+    padding: 0 1rem;
+    max-width: 100%;
+}
+
+.table-container::-webkit-scrollbar {
+    height: 8px;
+}
+
+.table-container::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 3px;
+}
+
+.table-container::-webkit-scrollbar-thumb {
+    background: #e3125b;
+    border-radius: 3px;
+}
+
+.table-container table {
+    min-width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    font-size: 1.05rem;
+}
+
+.table-container td, 
+.table-container th {
+    white-space: nowrap;
+    padding: 0.9rem 1.2rem;
+    min-width: 140px;
+}
+
+.scroll-indicator {
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 0.5rem;
+    color: #666;
+    font-size: 0.875rem;
+    margin-bottom: 0.5rem;
+}
+
+.scroll-indicator i {
+    animation: scrollHint 1.5s infinite;
+    margin: 0 0.25rem;
+}
+
+@keyframes scrollHint {
+    0%, 100% { transform: translateX(0); }
+    50% { transform: translateX(10px); }
+}
+
+canvas {
+    max-width: 100%;
+    height: auto !important;
+} 

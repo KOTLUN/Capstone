@@ -10,6 +10,8 @@
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="{% static 'css/sidebar.css' %}">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css" rel="stylesheet"/>
+
   <style>
    /* Ensure full height for HTML and Body */
 html, body {
@@ -192,22 +194,22 @@ html, body {
             <h3 class="school-name">Santa Catalina Science <br> High School</h3>
           </div>
           <nav class="nav flex-column mt-2">
-            <a href="{% url 'profile' %}" class="nav-link {% if request.path == '/profile/' %}active{% endif %}">
+            <a href="{% url 'TeacherPortal:profile' %}" class="nav-link {% if request.path == '/profile/' %}active{% endif %}">
               <i class="fas fa-user"></i> <span>Profile</span>
             </a>
-            <a href="{% url 'teacher_subjects' %}" class="nav-link {% if request.path == '/teacher_subjects/' %}active{% endif %}">
+            <a href="{% url 'TeacherPortal:teacher_subjects' %}" class="nav-link {% if request.path == '/teacher_subjects/' %}active{% endif %}">
               <i class="fas fa-book"></i> <span>Subjects & Advisory</span>
             </a>  
-            <a href="{% url 'teacher_schedule' %}" class="nav-link {% if request.path == '/teacher_schedule/' %}active{% endif %}">
+            <a href="{% url 'TeacherPortal:teacher_schedule' %}" class="nav-link {% if request.path == '/teacher_schedule/' %}active{% endif %}">
               <i class="fas fa-calendar-alt"></i> <span>Schedule</span>
             </a>
-            <a href="{% url 'grades' %}" class="nav-link {% if request.path == '/grades/' %}active{% endif %}">
+            <a href="{% url 'TeacherPortal:grades' %}" class="nav-link {% if request.path == '/grades/' %}active{% endif %}">
               <i class="fas fa-graduation-cap"></i> <span>Grades</span>
             </a>
-            <a href="{% url 'advisory_enrollment' %}" class="nav-link {% if request.path == '/advisory_enrollment/' %}active{% endif %}">
+            <a href="{% url 'TeacherPortal:advisory_enrollment' %}" class="nav-link {% if request.path == '/advisory_enrollment/' %}active{% endif %}">
               <i class="fas fa-user-plus"></i> <span>Advisory Enrollment</span>
             </a>
-            <a href="{% url 'uploadforms' %}" class="nav-link {% if request.path == '/uploadforms/' %}active{% endif %}">
+            <a href="{% url 'TeacherPortal:forms' %}" class="nav-link {% if request.path == '/forms/' %}active{% endif %}">
               <i class="fas fa-file-upload"></i> <span>Upload Forms</span>
             </a>
             <a href="#" class="nav-link" data-bs-toggle="modal" data-bs-target="#logoutModal">
@@ -219,15 +221,15 @@ html, body {
       
       <!-- Mobile Bottom Navigation -->
       <div class="mobile-nav d-md-none">
-        <a href="{% url 'profile' %}" class="{% if request.path == '/profile/' %}active{% endif %}">
+        <a href="{% url 'TeacherPortal:profile' %}" class="{% if request.path == '/profile/' %}active{% endif %}">
           <i class="fas fa-user"></i>
           <span>Profile</span>
         </a>
-        <a href="{% url 'grades' %}" class="{% if request.path == '/grades/' %}active{% endif %}">
+        <a href="{% url 'TeacherPortal:grades' %}" class="{% if request.path == '/grades/' %}active{% endif %}">
           <i class="fas fa-chart-line"></i>
           <span>Grades</span>
         </a>
-        <a href="{% url 'uploadforms' %}" class="{% if request.path == '/uploadforms/' %}active{% endif %}">
+        <a href="{% url 'TeacherPortal:forms' %}" class="{% if request.path == '/forms/' %}active{% endif %}">
           <i class="fas fa-file-upload"></i>
           <span>Forms</span>
         </a>
@@ -250,7 +252,7 @@ html, body {
         </div>
         <div class="modal-footer">
           <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-          <a href="{% url 'logout' %}" class="btn" style="background: #e73159; color: white;">Yes, Logout</a>
+          <a href="{% url 'TeacherPortal:logout' %}" class="btn" style="background: #e73159; color: white;">Yes, Logout</a>
         </div>
       </div>
     </div>

@@ -42,17 +42,26 @@ urlpatterns = [
     path('advisory-enrollment/', views.advisory_enrollment, name='advisory_enrollment'),
     path('search-students/', views.search_students, name='search_students'),
     path('get-enrolled-students/', views.get_enrolled_students, name='get_enrolled_students'),
+    path('get_sections_for_subject/', views.get_sections_for_subject, name='get_sections_for_subject'),
     path('subject-students/<int:subject_id>/<int:grade_level>/<str:section_id>/', views.subject_students_view, name='subject_students'),
     path('get-subject-students/', views.get_subject_students, name='get_subject_students'),
     
     # Form management
-    path('forms/', form_views.forms_view, name='forms'),
-    path('upload-form/', form_views.upload_form, name='upload_form'),
-    path('uploadforms/', form_views.upload_forms_page, name='uploadforms'),
-    path('download-form/<int:form_id>/', form_views.download_form, name='download_form'),
-    path('delete-form/<int:form_id>/', form_views.delete_form, name='delete_form'),
+    path('forms/', form_views.upload_forms_page, name='forms'),
+    path('forms/upload/', form_views.upload_form, name='upload_form'),
+    path('forms/download/<int:form_id>/', form_views.download_form, name='download_form'),
+    path('forms/delete/<int:form_id>/', form_views.delete_form, name='delete_form'),
     path('view-form/<int:form_id>/', form_views.view_form, name='view_form'),
     path('forms-search-ajax/', form_views.forms_search_ajax, name='forms_search_ajax'),
+    path('api/get_subjects/', views.get_subjects, name='get_subjects'),
+    path('api/get_sections_for_subject/', views.get_sections_for_subject, name='get_sections_for_subject'),
+    path('api/generate_grade_template/', views.generate_grade_template, name='generate_grade_template'),
+    path('api/upload_grades/', views.upload_grades_ajax, name='upload_grades'),
+    path('api/confirm_import_grades/', views.confirm_import_grades_ajax, name='confirm_import_grades'),
+    path('preview_grades/', views.preview_grades, name='preview_grades'),
+    path('api/subjects/', views.get_teacher_subjects, name='get_teacher_subjects'),
+    path('api/sections/', views.get_teacher_sections, name='get_teacher_sections'),
+    path('api/upload-grades/', views.upload_grades, name='upload_grades'),
 ]
 
 

@@ -7,6 +7,7 @@
     {% load static %}
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
         body {
             margin-top: 50px !important; /* Space for fixed navbar */
@@ -99,6 +100,229 @@
                 margin-top: 0.75rem;
             }
         }
+
+        /* Mobile-First Calendar Styles */
+        .calendar-container {
+            background: white;
+            border-radius: 1rem;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+            margin: 1rem 0;
+            overflow: hidden;
+        }
+
+        .calendar-header {
+            background: white;
+            padding: 1rem;
+            text-align: center;
+            position: relative;
+            border-bottom: 1px solid #f0f0f0;
+        }
+
+        .calendar-title {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: #333;
+            margin: 0;
+            display: inline-block;
+        }
+
+        .calendar-nav {
+            position: absolute;
+            right: 1rem;
+            top: 50%;
+            transform: translateY(-50%);
+            display: flex;
+            gap: 1rem;
+        }
+
+        .nav-button {
+            background: none;
+            border: none;
+            color: #e3125b;
+            cursor: pointer;
+            padding: 0.5rem;
+            font-size: 1rem;
+        }
+
+        .calendar-grid {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
+            background: white;
+        }
+
+        .calendar-grid th {
+            padding: 0.75rem 0;
+            text-align: center;
+            font-weight: 500;
+            font-size: 0.8rem;
+            color: #666;
+            text-transform: uppercase;
+            border-bottom: 1px solid #f0f0f0;
+        }
+
+        .calendar-grid td {
+            padding: 0;
+            height: 45px;
+            position: relative;
+            border: none;
+        }
+
+        .calendar-day {
+            padding: 0.25rem;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .day-number {
+            font-size: 0.9rem;
+            font-weight: 400;
+            color: #333;
+            text-align: center;
+            width: 24px;
+            height: 24px;
+            line-height: 24px;
+            border-radius: 50%;
+        }
+
+        .other-month .day-number {
+            color: #ccc;
+        }
+
+        .today .day-number {
+            background: #e3125b;
+            color: white;
+            font-weight: 500;
+        }
+
+        .has-events .day-number {
+            position: relative;
+        }
+
+        .has-events .day-number::after {
+            content: '';
+            position: absolute;
+            bottom: -4px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 4px;
+            height: 4px;
+            border-radius: 50%;
+            background: #e3125b;
+        }
+
+        .event-list {
+            display: none;
+        }
+
+        /* Event Modal Styles */
+        .event-details-modal .modal-content {
+            border-radius: 1rem;
+            border: none;
+        }
+
+        .event-details-modal .modal-header {
+            background: #e3125b;
+            color: white;
+            border: none;
+            border-radius: 1rem 1rem 0 0;
+            padding: 1rem;
+        }
+
+        .event-details-modal .modal-title {
+            font-weight: 600;
+            color: white;
+        }
+
+        .event-details-modal .btn-close {
+            filter: brightness(0) invert(1);
+        }
+
+        .event-details-modal .modal-body {
+            padding: 1.5rem;
+        }
+
+        .event-info p {
+            margin-bottom: 1rem;
+            color: #333;
+        }
+
+        .event-info strong {
+            color: #e3125b;
+            display: block;
+            margin-bottom: 0.25rem;
+            font-size: 0.9rem;
+        }
+
+        /* Section Title */
+        .section-title {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: #e3125b;
+            margin-bottom: 1rem;
+        }
+
+        .section-title i {
+            font-size: 1.2rem;
+        }
+
+        /* Responsive Adjustments */
+        @media (max-width: 768px) {
+            .calendar-container {
+                margin: 0.5rem 0;
+                border-radius: 0.75rem;
+            }
+
+            .calendar-header {
+                padding: 0.75rem;
+            }
+
+            .calendar-grid th {
+                padding: 0.5rem 0;
+                font-size: 0.75rem;
+            }
+
+            .calendar-grid td {
+                height: 40px;
+            }
+
+            .day-number {
+                font-size: 0.85rem;
+                width: 22px;
+                height: 22px;
+                line-height: 22px;
+            }
+        }
+
+        @media (min-width: 769px) {
+            .calendar-grid td {
+                height: 100px;
+            }
+
+            .event-list {
+                display: block;
+                margin-top: 0.25rem;
+                overflow-y: auto;
+                max-height: calc(100% - 30px);
+            }
+
+            .event-item {
+                background: #fff6fa;
+                color: #e3125b;
+                padding: 0.25rem 0.5rem;
+                border-radius: 0.25rem;
+                margin-bottom: 0.25rem;
+                font-size: 0.75rem;
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                cursor: pointer;
+            }
+        }
     </style>
 </head>
 <body>
@@ -119,8 +343,8 @@
                     <div class="text-center md:text-left flex-grow">
                         <h1 class="text-3xl font-bold mb-2">{{ student.first_name }} {{ student.middle_name }} {{ student.last_name }}</h1>
                         <p class="text-lg opacity-90">Student ID: {{ student.student_id }}</p>
-                        <p class="text-lg opacity-90">Grade {{ student.grade_level }} - {{ student.section }}</p>
-                        <p class="text-lg opacity-90">School Year: {{ student.school_year }}</p>
+                        <!-- <p class="text-lg opacity-90">Grade {{ student.grade_level }} - {{ student.section }}</p>
+                        <p class="text-lg opacity-90">School Year: {{ student.school_year }}</p> -->
                         <a href="{% url 'update_profile' student.id %}" class="update-profile-btn">
                             <i class="fas fa-user-edit"></i>
                             Update Profile
@@ -207,9 +431,223 @@
                             <p class="text-gray-500 italic">No guardian information available</p>
                         {% endif %}
                     </div>
+
+                    <!-- Calendar Section -->
+                    <div class="profile-card">
+                        <h2 class="section-title">
+                            <i class="fas fa-calendar"></i>
+                            Event Calendar
+                        </h2>
+                        <div class="calendar-container">
+                            <div class="calendar-header">
+                                <h2 class="calendar-title" id="currentMonth">April 2025</h2>
+                                <div class="calendar-nav">
+                                    <button class="nav-button" onclick="previousMonth()" aria-label="Previous month">
+                                        <i class="fas fa-chevron-left"></i>
+                                    </button>
+                                    <button class="nav-button" onclick="nextMonth()" aria-label="Next month">
+                                        <i class="fas fa-chevron-right"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            <table class="calendar-grid">
+                                <thead>
+                                    <tr>
+                                        <th>Sun</th>
+                                        <th>Mon</th>
+                                        <th>Tue</th>
+                                        <th>Wed</th>
+                                        <th>Thu</th>
+                                        <th>Fri</th>
+                                        <th>Sat</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="calendarDays">
+                                    <!-- Calendar days will be populated by JavaScript -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
     </main>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        let currentDate = new Date();
+        let events = JSON.parse('{{ events_json|escapejs }}');
+
+        document.addEventListener('DOMContentLoaded', function() {
+            updateCalendar();
+        });
+
+        function updateCalendar() {
+            const year = currentDate.getFullYear();
+            const month = currentDate.getMonth();
+            
+            document.getElementById('currentMonth').textContent = 
+                `${currentDate.toLocaleString('default', { month: 'long' })} ${year}`;
+            
+            const firstDay = new Date(year, month, 1);
+            const lastDay = new Date(year, month + 1, 0);
+            
+            let startDay = new Date(firstDay);
+            startDay.setDate(startDay.getDate() - startDay.getDay());
+            
+            const calendarBody = document.getElementById('calendarDays');
+            calendarBody.innerHTML = '';
+            
+            let currentDay = new Date(startDay);
+            
+            while (currentDay <= lastDay || currentDay.getDay() !== 0) {
+                if (currentDay.getDay() === 0) {
+                    var row = calendarBody.insertRow();
+                }
+                
+                const cell = row.insertCell();
+                const isToday = currentDay.toDateString() === new Date().toDateString();
+                const isOtherMonth = currentDay.getMonth() !== month;
+                
+                // Check if there are events for this day
+                const dayEvents = events.filter(event => {
+                    const eventDate = new Date(event.start_date);
+                    return eventDate.toDateString() === currentDay.toDateString();
+                });
+                
+                const hasEvents = dayEvents.length > 0;
+                
+                cell.innerHTML = `
+                    <div class="calendar-day ${isToday ? 'today' : ''} ${isOtherMonth ? 'other-month' : ''} ${hasEvents ? 'has-events' : ''}"
+                         onclick="showEventsForDay('${currentDay.toISOString()}')">
+                        <div class="day-number">${currentDay.getDate()}</div>
+                        <div class="event-list">
+                            ${dayEvents.map(event => `
+                                <div class="event-item" onclick="showEventDetails(${JSON.stringify(event)}, event)">
+                                    ${event.title}
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                `;
+                
+                currentDay.setDate(currentDay.getDate() + 1);
+            }
+        }
+
+        function showEventsForDay(dateString) {
+            const selectedDate = new Date(dateString);
+            const dayEvents = events.filter(event => {
+                const eventDate = new Date(event.start_date);
+                return eventDate.toDateString() === selectedDate.toDateString();
+            });
+
+            if (dayEvents.length > 0) {
+                const formattedDate = selectedDate.toLocaleDateString('default', { 
+                    weekday: 'long', 
+                    year: 'numeric', 
+                    month: 'long', 
+                    day: 'numeric' 
+                });
+
+                const eventsHtml = `
+                    <div class="modal fade event-details-modal" id="dayEventsModal" tabindex="-1">
+                        <div class="modal-dialog">
+                            <div class="modal-content">
+                                <div class="modal-header">
+                                    <h5 class="modal-title">Events for ${formattedDate}</h5>
+                                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                </div>
+                                <div class="modal-body">
+                                    ${dayEvents.map(event => `
+                                        <div class="event-info" style="cursor: pointer" onclick="showEventDetails(${JSON.stringify(event)}, event)">
+                                            <p>
+                                                <strong>${event.title}</strong>
+                                                Time: ${event.start_time}
+                                            </p>
+                                        </div>
+                                    `).join('')}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+
+                // Remove existing modal if any
+                const existingModal = document.getElementById('dayEventsModal');
+                if (existingModal) {
+                    existingModal.remove();
+                }
+
+                // Add new modal to body
+                document.body.insertAdjacentHTML('beforeend', eventsHtml);
+
+                // Show the modal
+                const modal = new bootstrap.Modal(document.getElementById('dayEventsModal'));
+                modal.show();
+            }
+        }
+
+        function showEventDetails(event, e) {
+            if (e) {
+                e.stopPropagation();
+            }
+            
+            const formattedStartDate = new Date(event.start_date + 'T' + event.start_time).toLocaleString();
+            const formattedEndDate = new Date(event.end_date + 'T' + event.end_time).toLocaleString();
+            
+            const detailsHtml = `
+                <div class="modal fade event-details-modal" id="eventDetailsModal" tabindex="-1">
+                    <div class="modal-dialog">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title">${event.title}</h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                            </div>
+                            <div class="modal-body">
+                                <div class="event-info">
+                                    <p>
+                                        <strong>Description</strong>
+                                        ${event.description || 'No description provided'}
+                                    </p>
+                                    <p>
+                                        <strong>Start</strong>
+                                        ${formattedStartDate}
+                                    </p>
+                                    <p>
+                                        <strong>End</strong>
+                                        ${formattedEndDate}
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            // Remove existing modal if any
+            const existingModal = document.getElementById('eventDetailsModal');
+            if (existingModal) {
+                existingModal.remove();
+            }
+            
+            // Add new modal to body
+            document.body.insertAdjacentHTML('beforeend', detailsHtml);
+            
+            // Show the modal
+            const modal = new bootstrap.Modal(document.getElementById('eventDetailsModal'));
+            modal.show();
+        }
+
+        function previousMonth() {
+            currentDate.setMonth(currentDate.getMonth() - 1);
+            updateCalendar();
+        }
+
+        function nextMonth() {
+            currentDate.setMonth(currentDate.getMonth() + 1);
+            updateCalendar();
+        }
+    </script>
 </body>
 </html>

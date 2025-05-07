@@ -9,4 +9,9 @@ urlpatterns = [
     path('dashboard/<int:student_id>/create-test-grades/', views.create_test_grades, name='create_test_grades'),
     path('dashboard/<int:student_id>/diagnostics/', views.diagnostics, name='diagnostics'),
     path('admin/all-grades/', views.all_grades, name='all_grades'),
+    # New URLs for separate views
+    path('grades/<int:student_id>/', views.student_grades, name='student_grades'),
+    path('subjects/<int:student_id>/', views.student_subjects, name='student_subjects'),
+    path('schedule/<int:student_id>/', views.student_schedule, name='student_schedule'),
+    path('analytics/grades/<int:student_id>/', views.get_grade_analytics, name='grade_analytics'),
 ]

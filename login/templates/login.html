@@ -35,7 +35,7 @@
             right: 0;
             bottom: 0;
             /* background: #FFFFF0; */
-            background: linear-gradient(hsla(330, 78%, 56%, 0.941), rgba(102, 92, 92, 0.899));
+            background: linear-gradient(#e3125b, rgba(102, 92, 92, 0.899));
             z-index: 1;
         }
         .login-container {
@@ -83,12 +83,40 @@
             height: auto;
             margin-bottom: 1rem;
         }
+        /* Add SSO button styles */
+        .social-login .btn {
+            padding: 10px;
+            font-size: 16px;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+        }
+        .social-login .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+        .divider {
+            display: flex;
+            align-items: center;
+            text-align: center;
+            margin: 20px 0;
+        }
+        .divider::before,
+        .divider::after {
+            content: '';
+            flex: 1;
+            border-bottom: 1px solid #ddd;
+        }
+        .divider-text {
+            padding: 0 10px;
+            color: #666;
+            font-size: 14px;
+        }
     </style>
 </head>
 <body>
     <div class="login-container" >
         <div class="text-center mb-4">
-            <img class="school-logo" src="{% static 'img/logo.jpg' %}" alt="School Logo">
+            <img class="school-logo" src="{% static 'img/logo1.png' %}" alt="School Logo">
             <h2 class="h4 mb-3">Santa Catalina Science High School</h2>
             
             {% if messages %}
@@ -97,9 +125,23 @@
                 {% endfor %}
             {% endif %}
         </div>
+
+        <!-- Add SSO Login Buttons -->
+        <div class="social-login mb-4">
+            <a href="{% url 'social:begin' 'google-oauth2' %}" class="btn btn-outline-danger w-100 mb-2">
+                <i class="fab fa-google me-2"></i> Login with Google
+            </a>
+        </div>
+
+        <div class="divider mb-4">
+            <span class="divider-text">OR</span>
+        </div>
         
         <form method="post">
             {% csrf_token %}
+            {% if request.GET.next %}
+                <input type="hidden" name="next" value="{{ request.GET.next }}">
+            {% endif %}
             <div class="mb-3">
                 <input type="text" class="form-control" id="username" name="username" 
                        placeholder="Username" autocomplete="off" autocapitalize="none" spellcheck="false">

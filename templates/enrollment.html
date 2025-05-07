@@ -1,0 +1,251 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Enrollment{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">Enrollment List</h3>
+                    <div class="card-tools">
+                        <button type="button" class="btn btn-primary" data-toggle="modal" data-target="#enrollModal">
+                            <i class="fas fa-plus"></i> Enroll Student
+                        </button>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <table id="enrollmentTable" class="table table-bordered table-striped">
+                        <thead>
+                            <tr>
+                                <th>Student</th>
+                                <th>Section</th>
+                                <th>School Year</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for enrollment in enrollments %}
+                            <tr>
+                                <td>{{ enrollment.student.user.get_full_name }}</td>
+                                <td>{{ enrollment.section.name }}</td>
+                                <td>{{ enrollment.school_year }}</td>
+                                <td>
+                                    <span class="badge badge-{{ enrollment.status|lower }}">
+                                        {{ enrollment.status }}
+                                    </span>
+                                </td>
+                                <td>
+                                    <button class="btn btn-sm btn-info view-enrollment" data-id="{{ enrollment.id }}">
+                                        <i class="fas fa-eye"></i>
+                                    </button>
+                                    <button class="btn btn-sm btn-warning edit-enrollment" data-id="{{ enrollment.id }}">
+                                        <i class="fas fa-edit"></i>
+                                    </button>
+                                    <button class="btn btn-sm btn-danger delete-enrollment" data-id="{{ enrollment.id }}">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Enroll Modal -->
+<div class="modal fade" id="enrollModal" tabindex="-1" role="dialog" aria-labelledby="enrollModalLabel" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="enrollModalLabel">Enroll Student</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <form id="enrollForm" method="POST" action="{% url 'dashboard:enroll_student' %}">
+                {% csrf_token %}
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label for="student">Student</label>
+                        <select class="form-control" id="student" name="student" required>
+                            <option value="">Select Student</option>
+                            {% for student in students %}
+                            <option value="{{ student.id }}">{{ student.user.get_full_name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="section">Section</label>
+                        <select class="form-control" id="section" name="section" required>
+                            <option value="">Select Section</option>
+                            {% for section in sections %}
+                            <option value="{{ section.id }}">{{ section.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="school_year">School Year</label>
+                        <input type="text" class="form-control" id="school_year" name="school_year" required>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                    <button type="submit" class="btn btn-primary">Enroll</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- View Modal -->
+<div class="modal fade" id="viewModal" tabindex="-1" role="dialog" aria-labelledby="viewModalLabel" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="viewModalLabel">Enrollment Details</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div id="enrollmentDetails"></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Modal -->
+<div class="modal fade" id="editModal" tabindex="-1" role="dialog" aria-labelledby="editModalLabel" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="editModalLabel">Edit Enrollment</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <form id="editForm" method="POST">
+                {% csrf_token %}
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label for="edit_student">Student</label>
+                        <select class="form-control" id="edit_student" name="student" required>
+                            {% for student in students %}
+                            <option value="{{ student.id }}">{{ student.user.get_full_name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="edit_section">Section</label>
+                        <select class="form-control" id="edit_section" name="section" required>
+                            {% for section in sections %}
+                            <option value="{{ section.id }}">{{ section.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="edit_school_year">School Year</label>
+                        <input type="text" class="form-control" id="edit_school_year" name="school_year" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="edit_status">Status</label>
+                        <select class="form-control" id="edit_status" name="status" required>
+                            <option value="Active">Active</option>
+                            <option value="Inactive">Inactive</option>
+                            <option value="Graduated">Graduated</option>
+                            <option value="Transferred">Transferred</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                    <button type="submit" class="btn btn-primary">Save Changes</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    // Initialize DataTable
+    $('#enrollmentTable').DataTable({
+        "responsive": true,
+        "autoWidth": false,
+    });
+
+    // Handle view enrollment
+    $('.view-enrollment').click(function() {
+        var enrollmentId = $(this).data('id');
+        $.get("{% url 'dashboard:view_enrollment' 0 %}".replace('0', enrollmentId), function(data) {
+            $('#enrollmentDetails').html(data);
+            $('#viewModal').modal('show');
+        });
+    });
+
+    // Handle edit enrollment
+    $('.edit-enrollment').click(function() {
+        var enrollmentId = $(this).data('id');
+        $.get("{% url 'dashboard:get_enrollment' 0 %}".replace('0', enrollmentId), function(data) {
+            $('#edit_student').val(data.student_id);
+            $('#edit_section').val(data.section_id);
+            $('#edit_school_year').val(data.school_year);
+            $('#edit_status').val(data.status);
+            $('#editForm').attr('action', "{% url 'dashboard:update_enrollment' 0 %}".replace('0', enrollmentId));
+            $('#editModal').modal('show');
+        });
+    });
+
+    // Handle delete enrollment
+    $('.delete-enrollment').click(function() {
+        if (confirm('Are you sure you want to delete this enrollment?')) {
+            var enrollmentId = $(this).data('id');
+            $.post("{% url 'dashboard:delete_enrollment' 0 %}".replace('0', enrollmentId), {
+                'csrfmiddlewaretoken': '{{ csrf_token }}'
+            }, function(response) {
+                if (response.success) {
+                    location.reload();
+                } else {
+                    alert('Error deleting enrollment');
+                }
+            });
+        }
+    });
+
+    // Handle form submissions
+    $('#enrollForm').submit(function(e) {
+        e.preventDefault();
+        $.post($(this).attr('action'), $(this).serialize(), function(response) {
+            if (response.success) {
+                location.reload();
+            } else {
+                alert('Error enrolling student');
+            }
+        });
+    });
+
+    $('#editForm').submit(function(e) {
+        e.preventDefault();
+        $.post($(this).attr('action'), $(this).serialize(), function(response) {
+            if (response.success) {
+                location.reload();
+            } else {
+                alert('Error updating enrollment');
+            }
+        });
+    });
+});
+</script>
+{% endblock %} 

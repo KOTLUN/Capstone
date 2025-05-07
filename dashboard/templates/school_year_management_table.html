@@ -1,42 +1,237 @@
-{% if school_years %}
-    {% for year in school_years %}
-    <tr>
-        <td>{{ year.display_name }}</td>
-        <td>
-            {% if year.is_active %}
-            <span class="badge bg-success">Active</span>
-            {% else %}
-            <span class="badge bg-secondary">Inactive</span>
-            {% endif %}
-        </td>
-        <td>{{ year.created_at|date:"M d, Y" }}</td>
-        <td>
-            {% if not year.is_active %}
-            <form method="POST" class="d-inline">
-                {% csrf_token %}
-                <input type="hidden" name="action" value="activate">
-                <input type="hidden" name="school_year_id" value="{{ year.id }}">
-                <button type="submit" class="btn btn-sm btn-success">
-                    <i class="fas fa-check-circle"></i> Set Active
-                </button>
-            </form>
-            <form method="POST" class="d-inline ms-2">
-                {% csrf_token %}
-                <input type="hidden" name="action" value="delete">
-                <input type="hidden" name="school_year_id" value="{{ year.id }}">
-                <button type="submit" class="btn btn-sm btn-danger" 
-                        onclick="return confirm('Are you sure you want to delete {{ year.display_name }}?')">
-                    <i class="fas fa-trash"></i> Delete
-                </button>
-            </form>
-            {% endif %}
-        </td>
-    </tr>
-    {% endfor %}
-{% else %}
-    <tr>
-        <td colspan="4" class="text-center text-muted">
-            <i class="fas fa-info-circle me-2"></i>No school years found
-        </td>
-    </tr>
-{% endif %} 
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>School Year Management</title>
+    <link rel="stylesheet" href="{% static 'css/sidebar.css' %}">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
+    <!-- Toastr CSS -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css">
+    <style>
+        body, .main-content, .add-school-year-form, .school-year-header, .card, .card-header, .card-body, .table, .form-label, .btn, .alert, .messages, .content-container, h1, h3, h5, p, label, input, th, td, tr {
+            font-family: 'Poppins', sans-serif !important;
+        }
+        body {
+            background-color: #f8f9e3;
+        }
+        .page-wrapper {
+            display: flex;
+            min-height: 100vh;
+        }
+        .main-content {
+            margin-left: 250px;
+            flex: 1;
+            padding: 20px;
+            background: #f8f9e3;
+        }
+        .add-school-year-form {
+            background-color: #f8f9fa;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 30px;
+        }
+        .school-year-header {
+            margin-bottom: 30px;
+            border-bottom: 2px solid #dee2e6;
+            padding-bottom: 15px;
+        }
+        /* Toastr Customization */
+        #toast-container > div {
+            opacity: 1;
+            box-shadow: 0 0 12px rgba(0,0,0,0.1);
+        }
+        .toast-success {
+            background-color: #28a745;
+        }
+        .toast-error {
+            background-color: #dc3545;
+        }
+        .toast-info {
+            background-color: #17a2b8;
+        }
+        .toast-warning {
+            background-color: #ffc107;
+            color: #000;
+        }
+    </style>
+</head>
+<body>
+    <div class="page-wrapper">
+        {% include 'structures/sidebar.html' %}
+        <div class="main-content">
+            <div class="content-container p-4">
+                <div class="school-year-header">
+                    <h1 class="text-center mb-4">School Year Management</h1>
+                    <p class="text-center text-muted">Create and manage school years for the academic system</p>
+                </div>
+
+                <!-- Messages -->
+                {% if messages %}
+                <div class="messages">
+                    {% for message in messages %}
+                    <script>
+                        toastr.{{ message.tags }}('{{ message }}');
+                    </script>
+                    {% endfor %}
+                </div>
+                {% endif %}
+
+                <!-- Add School Year Form -->
+                <div class="add-school-year-form">
+                    <h3 class="mb-4"><i class="fas fa-plus-circle me-2"></i>Add New School Year</h3>
+                    <form id="addSchoolYearForm" method="POST">
+                        {% csrf_token %}
+                        <div class="row g-3">
+                            <div class="col-md-4">
+                                <label for="year_start" class="form-label">Start Year</label>
+                                <input type="number" class="form-control" id="year_start" name="year_start" required>
+                            </div>
+                            <div class="col-md-4">
+                                <label for="year_end" class="form-label">End Year</label>
+                                <input type="number" class="form-control" id="year_end" name="year_end" required>
+                            </div>
+                            <div class="col-md-4 d-flex align-items-end">
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="fas fa-save me-2"></i>Create School Year
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- School Years Table -->
+                <div class="card">
+                    <div class="card-header bg-light">
+                        <h5 class="card-title mb-0">School Years</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>School Year</th>
+                                        <th>Status</th>
+                                        <th>Created At</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for school_year in school_years %}
+                                        <tr>
+                                            <td>{{ school_year.display_name }}</td>
+                                            <td>
+                                                {% if school_year.is_active %}
+                                                    <span class="badge bg-success">Active</span>
+                                                {% else %}
+                                                    <span class="badge bg-secondary">Inactive</span>
+                                                {% endif %}
+                                            </td>
+                                            <td>{{ school_year.created_at|date:"F d, Y" }}</td>
+                                            <td>
+                                                {% if not school_year.is_active %}
+                                                    <button type="button" class="btn btn-sm btn-primary set-active-btn" 
+                                                            data-school-year-id="{{ school_year.id }}">
+                                                            <i class="fas fa-check"></i> Set Active
+                                                        </button>
+                                                {% endif %}
+                                            </td>
+                                        </tr>
+                                    {% empty %}
+                                        <tr>
+                                            <td colspan="4" class="text-center">No school years found.</td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- Toastr JS -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
+    <script>
+        // Configure Toastr
+        toastr.options = {
+            "closeButton": true,
+            "debug": false,
+            "newestOnTop": true,
+            "progressBar": true,
+            "positionClass": "toast-top-right",
+            "preventDuplicates": false,
+            "onclick": null,
+            "showDuration": "300",
+            "hideDuration": "1000",
+            "timeOut": "5000",
+            "extendedTimeOut": "1000",
+            "showEasing": "swing",
+            "hideEasing": "linear",
+            "showMethod": "fadeIn",
+            "hideMethod": "fadeOut"
+        };
+
+        document.addEventListener('DOMContentLoaded', function() {
+            // Handle school year form submission
+            $('#addSchoolYearForm').on('submit', function(e) {
+                e.preventDefault();
+                
+                $.ajax({
+                    url: '{% url "dashboard:add_school_year" %}',
+                    type: 'POST',
+                    data: $(this).serialize(),
+                    success: function(response) {
+                        if (response.success) {
+                            toastr.success(response.message);
+                            // Reload the page to show the new school year
+                            setTimeout(() => {
+                                window.location.reload();
+                            }, 1500);
+                        }
+                    },
+                    error: function(xhr) {
+                        const response = xhr.responseJSON;
+                        toastr.error(response.error);
+                    }
+                });
+            });
+
+            // Handle setting active school year
+            $('.set-active-btn').on('click', function() {
+                const schoolYearId = $(this).data('school-year-id');
+                
+                $.ajax({
+                    url: '{% url "dashboard:set_active_school_year" %}',
+                    type: 'POST',
+                    data: {
+                        school_year_id: schoolYearId,
+                        csrfmiddlewaretoken: '{{ csrf_token }}'
+                    },
+                    success: function(response) {
+                        if (response.success) {
+                            toastr.success(response.message);
+                            // Reload the page to show updated status
+                            setTimeout(() => {
+                                window.location.reload();
+                            }, 1500);
+                        } else {
+                            toastr.error(response.message || 'Failed to set active school year');
+                        }
+                    },
+                    error: function(xhr) {
+                        const response = xhr.responseJSON;
+                        toastr.error(response.message || 'An error occurred while setting active school year');
+                    }
+                });
+            });
+        });
+    </script>
+</body>
+</html> 
