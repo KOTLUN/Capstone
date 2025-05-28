@@ -26,6 +26,8 @@
             align-items: center;
             height: 100vh;
             margin: 0;
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
         }
         body::before {
             content: '';
@@ -34,9 +36,10 @@
             left: 0;
             right: 0;
             bottom: 0;
-            /* background: #FFFFF0; */
-            background: linear-gradient(#e3125b, rgba(102, 92, 92, 0.899));
+            background: linear-gradient(135deg, rgba(13, 110, 253, 0.4) 0%, rgba(23, 105, 170, 0.4) 100%);
             z-index: 1;
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
         }
         .login-container {
             position: relative;
@@ -49,16 +52,16 @@
             max-width: 420px;
         }
         .btn-primary {
-            background-color: #e3125b;
-            border-color: #e73990f0;
+            background-color: #0d6efd;
+            border-color: #1769aa;
         }
         .btn-primary:hover {
-            background-color: #555555;
-            border-color: #555555;
+            background-color: #1769aa;
+            border-color: #0d6efd;
         }
         .form-control:focus {
-            border-color: #e73990f0;
-            box-shadow: 0 0 0 0.25rem rgba(231, 57, 144, 0.25);
+            border-color: #0d6efd;
+            box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.15);
         }
         .password-container {
             position: relative;
@@ -76,7 +79,15 @@
             color: #dc3545;
         }
         .forgot-password {
-            color: #555;
+            color: #0d6efd;
+        }
+        .forgot-password.fw-bold {
+            color: #0d6efd !important;
+        }
+        .alert-danger.message {
+            background: #e3f0ff;
+            color: #0d6efd;
+            border: 1px solid #0d6efd;
         }
         .school-logo {
             width: 30%;
@@ -89,10 +100,16 @@
             font-size: 16px;
             border-radius: 8px;
             transition: all 0.3s ease;
+            border: 2px solid #0d6efd;
+            color: #0d6efd;
+            background: #fff;
         }
         .social-login .btn:hover {
             transform: translateY(-2px);
             box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            background: #0d6efd;
+            color: #fff;
+            border-color: #1769aa;
         }
         .divider {
             display: flex;
@@ -104,12 +121,37 @@
         .divider::after {
             content: '';
             flex: 1;
-            border-bottom: 1px solid #ddd;
+            border-bottom: 1px solid #0d6efd;
         }
         .divider-text {
             padding: 0 10px;
-            color: #666;
+            color: #0d6efd;
             font-size: 14px;
+        }
+        @media (max-width: 600px) {
+            .login-container {
+                padding: 1.2rem;
+                max-width: 98vw;
+                min-width: 0;
+            }
+            .school-logo {
+                width: 60%;
+                margin-bottom: 0.7rem;
+            }
+            .btn, .btn-lg, .btn-primary {
+                font-size: 1rem;
+                padding: 0.7rem 1rem;
+            }
+            h2.h4 {
+                font-size: 1.1rem;
+            }
+            .form-control {
+                font-size: 1rem;
+                padding: 0.6rem 0.8rem;
+            }
+            .divider {
+                margin: 12px 0;
+            }
         }
     </style>
 </head>
@@ -126,7 +168,7 @@
             {% endif %}
         </div>
 
-        <!-- Add SSO Login Buttons -->
+        <!-- Add SSO Login Buttons
         <div class="social-login mb-4">
             <a href="{% url 'social:begin' 'google-oauth2' %}" class="btn btn-outline-danger w-100 mb-2">
                 <i class="fab fa-google me-2"></i> Login with Google
@@ -135,7 +177,7 @@
 
         <div class="divider mb-4">
             <span class="divider-text">OR</span>
-        </div>
+        </div> -->
         
         <form method="post">
             {% csrf_token %}
@@ -158,10 +200,10 @@
             </div>
         </form>
         
-        <div class="text-center mt-4">
+        <!-- <div class="text-center mt-4">
             <a href="{% url 'forgot_password' %}" class="forgot-password fw-bold mb-1 text-decoration-underline" style="color: #e3125b; cursor: pointer;">Forgot Password?</a>
             <p class="forgot-password"></p>
-        </div>
+        </div> -->
     </div>
 
     <!-- Bootstrap 5.3 JS Bundle with Popper -->

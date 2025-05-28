@@ -55,7 +55,9 @@ def safe_json(obj):
             'email': obj.email,
             'mobile_number': obj.mobile_number,
             'address': obj.address,
-            'img_url': obj.teacher_photo.url if obj.teacher_photo else None,
+            'teacher_photo': {
+                'url': obj.teacher_photo.url if obj.teacher_photo else None
+            },
             'sections_set': sections_data,
             'schedules_set': schedules_data
         }

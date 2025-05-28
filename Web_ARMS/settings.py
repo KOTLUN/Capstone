@@ -10,8 +10,13 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/4.2/ref/settings/
 """
 
-from pathlib import Path
+
 import os
+from pathlib import Path
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -21,7 +26,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/4.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-79hhusg%blbv%*2qof!+i-n&k)4y@r7*e&&42!r$f8ys7-fbas'
+SECRET_KEY = os.getenv('DJANGO_SECRET_KEY')
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
@@ -44,6 +49,7 @@ INSTALLED_APPS = [
     'StudentProfiles',
     'corsheaders',
     'social_django',
+    'widget_tweaks',
 ]
 STATIC_URL = '/static/'
 STATICFILES_DIRS = [
@@ -89,6 +95,7 @@ TEMPLATES = [
                 'django.contrib.messages.context_processors.messages',
                 'social_django.context_processors.backends',
                 'social_django.context_processors.login_redirect',
+                'TeacherPortal.context_processors.teacher_context',
             ],
         },
     },
@@ -162,12 +169,12 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # Email settings
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-EMAIL_HOST = 'smtp.gmail.com'
+EMAIL_HOST = 'smtp.gmail.com'  # For Gmail
 EMAIL_PORT = 587
 EMAIL_USE_TLS = True
-EMAIL_HOST_USER = 'rombinesalfonsoii.stcfi@gmail.com'  # Replace with your actual Gmail address
-EMAIL_HOST_PASSWORD = 'zpme nakg yawc eqzz'  # Replace with the app password you just generated
-DEFAULT_FROM_EMAIL = 'rombinesalfonsoii.stcfi@gmail.com'  # Replace with your actual Gmail address
+EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER')  # Loaded from .env
+EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD')  # Loaded from .env
+DEFAULT_FROM_EMAIL = os.getenv('EMAIL_HOST_USER')  # Loaded from .env
 
 # Add these new settings
 CORS_ALLOW_ALL_ORIGINS = True
@@ -175,6 +182,7 @@ CORS_ALLOW_CREDENTIALS = True
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:8000",
     "http://127.0.0.1:8000",
+    
 ]
 
 CSRF_TRUSTED_ORIGINS = [
@@ -186,37 +194,30 @@ X_FRAME_OPTIONS = 'SAMEORIGIN'
 SECURE_CROSS_ORIGIN_OPENER_POLICY = None
 
 # Session settings
-SESSION_ENGINE = 'django.contrib.sessions.backends.db'  # Use database for sessions
+SESSION_ENGINE = 'django.contrib.sessions.backends.db'
 SESSION_COOKIE_NAME = 'armsessionid'
-SESSION_COOKIE_SECURE = False  # Set to True in production with HTTPS
+SESSION_COOKIE_SECURE = False
 SESSION_COOKIE_HTTPONLY = True
 SESSION_COOKIE_SAMESITE = 'Lax'
 SESSION_SAVE_EVERY_REQUEST = True
-SESSION_EXPIRE_AT_BROWSER_CLOSE = False
+SESSION_EXPIRE_AT_BROWSER_CLOSE = True
 SESSION_COOKIE_AGE = 86400  # 24 hours in seconds
+SESSION_COOKIE_DOMAIN = None  # Allow cookies for both localhost and 127.0.0.1
 
-# Add these settings at the end of the file
+# Add these settings for authentication
 AUTHENTICATION_BACKENDS = (
-    'social_core.backends.google.GoogleOAuth2',
     'django.contrib.auth.backends.ModelBackend',
+    'social_core.backends.google.GoogleOAuth2',
 )
 
-SOCIAL_AUTH_URL_NAMESPACE = 'social'
 LOGIN_URL = 'login'
-LOGIN_REDIRECT_URL = '/'
+LOGIN_REDIRECT_URL = 'login'
 LOGOUT_URL = 'logout'
 LOGOUT_REDIRECT_URL = 'login'
 
-SOCIAL_AUTH_GOOGLE_OAUTH2_KEY = '895114434737-61km44nq1b2q7s8mc2trmgo9jtghrs2u.apps.googleusercontent.com'
-SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET = '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'
-SOCIAL_AUTH_GOOGLE_OAUTH2_SCOPE = [
-    'https://www.googleapis.com/auth/userinfo.email',
-    'https://www.googleapis.com/auth/userinfo.profile',
-]
-SOCIAL_AUTH_GOOGLE_OAUTH2_AUTH_EXTRA_ARGUMENTS = {
-    'access_type': 'offline',
-    'prompt': 'consent',
-}
+# Google OAuth settings
+GOOGLE_OAUTH_CLIENT_ID = os.getenv('GOOGLE_OAUTH_CLIENT_ID')
+GOOGLE_OAUTH_CLIENT_SECRET = os.getenv('GOOGLE_OAUTH_CLIENT_SECRET')
 
 # Social Auth Pipeline
 SOCIAL_AUTH_PIPELINE = (

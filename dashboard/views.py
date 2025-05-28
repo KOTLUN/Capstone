@@ -5,16 +5,17 @@ from .models import (
     Enrollment, Grade8Enrollment, Grade9Enrollment, 
     Grade10Enrollment, Grade11Enrollment, Grade12Enrollment,
     StudentAccount, Guardian, Grades, DroppedStudent, 
-    TransferredStudent, CompletedStudent, AdminProfile, 
+    CompletedStudent, AdminProfile, 
     AdminActivity, SchoolYear,
     Event, Archive, Announcement,
-    
+    Registrar,
+    Transferee, Returnee, Feedback
 )
-
+from django.contrib.auth.decorators import login_required, user_passes_test
+from .forms import RegistrarAssignmentForm
 from .forms_models import SchoolForm, TeacherForm, FormSubmission
 import pandas as pd
 from django.core.exceptions import ValidationError
-
 from django.contrib.auth.models import User
 from django.contrib.auth.decorators import login_required
 from django.db.models import Count, Avg
@@ -44,6 +45,8 @@ import traceback
 import string
 from django.core.mail import send_mail
 from django.contrib.auth import update_session_auth_hash
+from django.contrib.contenttypes.models import ContentType
+from django.contrib.admin.views.decorators import staff_member_required
 
 logger = logging.getLogger(__name__)
 
@@ -94,10 +97,15 @@ def dashboard_view(request):
             enrollment_stats['total'] += grade_count
             enrollment_stats['by_grade'][f'Grade {grade}'] = grade_count
 
-            # Update gender statistics
+            # Update gender and status statistics safely
             for enrollment in grade_enrollments:
-                enrollment_stats['by_gender'][enrollment.student.gender] += 1
-                enrollment_stats['by_status'][enrollment.status] += 1
+                gender = enrollment.student.gender
+                if gender in enrollment_stats['by_gender']:
+                    enrollment_stats['by_gender'][gender] += 1
+
+                status = enrollment.status
+                if status in enrollment_stats['by_status']:
+                    enrollment_stats['by_status'][status] += 1
 
         print(f"Total enrollments: {enrollment_stats['total']}")
 
@@ -181,28 +189,25 @@ def dashboard_view(request):
             start_date__gte=today
         ).order_by('start_date', 'start_time')[:5]
 
-        # Update context with all statistics
+        # Update context with all the data
         context.update({
             'enrollment_stats': enrollment_stats,
             'teacher_stats': teacher_stats,
             'section_stats': section_stats,
-            'student_growth': round(student_growth, 1),
-            'gender_data': json.dumps(gender_data),
-            'grade_level_data': json.dumps(grade_level_data),
-            'enrollment_trends': json.dumps(enrollment_trends),
+            'gender_data': json.dumps(gender_data),  # Convert to JSON string
+            'grade_level_data': json.dumps(grade_level_data),  # Convert to JSON string
+            'enrollment_trends': json.dumps(enrollment_trends),  # Convert to JSON string
+            'student_growth': student_growth,
             'recent_announcements': recent_announcements,
-            'upcoming_events': upcoming_events,
-            'total_students': enrollment_stats['total'],
-            'total_teachers': teacher_stats['total'],
-            'total_sections': section_stats['total'],
+            'upcoming_events': upcoming_events
         })
 
-        print(f"Context data: {context}")
         return render(request, 'main.html', context)
     except Exception as e:
-        print(f"Error in dashboard_view: {str(e)}")
-        messages.error(request, f"Error loading dashboard: {str(e)}")
-        return render(request, 'main.html', {'error_message': str(e)})
+        logger.error(f"Error in dashboard_view: {str(e)}")
+        logger.error(traceback.format_exc())
+        messages.error(request, "An error occurred while loading the dashboard.")
+        return render(request, 'main.html', {'error': str(e)})
 
 @login_required
 def teachers_view(request):
@@ -380,6 +385,7 @@ def add_student(request):
 
             # ENROLLMENT LOGIC STARTS HERE
             section_id = request.POST.get('enrollment_section')
+            student_status = request.POST.get('student_status', 'New Student')
             if section_id:
                 try:
                     section = Sections.objects.get(id=section_id)
@@ -391,18 +397,35 @@ def add_student(request):
                         track = request.POST.get('track')
                         if not track:
                             raise ValidationError("Track is required for Grades 11 and 12")
-                        
                         enrollment = EnrollmentModel.objects.create(
                             student=student,
                             section=section,
                             school_year=active_school_year.display_name,
-                            track=track
+                            track=track,
+                            status=student_status if student_status in ["Transferee", "Returnee"] else "Active"
                         )
                     else:
                         enrollment = EnrollmentModel.objects.create(
                             student=student,
                             section=section,
-                            school_year=active_school_year.display_name
+                            school_year=active_school_year.display_name,
+                            status=student_status if student_status in ["Transferee", "Returnee"] else "Active"
+                        )
+
+                    # Create Transferee or Returnee record if needed
+                    if student_status == "Transferee":
+                        print("Creating Transferee record")
+                        content_type = ContentType.objects.get_for_model(enrollment)
+                        Transferee.objects.create(
+                            content_type=content_type,
+                            object_id=enrollment.id
+                        )
+                    elif student_status == "Returnee":
+                        print("Creating Returnee record")
+                        content_type = ContentType.objects.get_for_model(enrollment)
+                        Returnee.objects.create(
+                            content_type=content_type,
+                            object_id=enrollment.id
                         )
                 except Sections.DoesNotExist:
                     raise ValidationError(f"Section with ID {section_id} does not exist")
@@ -682,13 +705,40 @@ def add_teacher(request):
                 teacher.teacher_photo = request.FILES['teacher_photo']
                 teacher.save()
             
+            # Send email with credentials
+            subject = 'Your Teacher Portal Login Credentials'
+            message = f"""
+            Hello {first_name} {last_name},
+
+            Your teacher portal account has been created. Here are your login credentials:
+
+            Username: {username}
+            Password: {password}
+
+            For security reasons, you will be required to change your password upon first login.
+
+            Best regards,
+            School Administration
+            """
+
+            try:
+                send_mail(
+                    subject,
+                    message,
+                    settings.DEFAULT_FROM_EMAIL,
+                    [email],
+                    fail_silently=False,
+                )
+            except Exception as e:
+                logger.error(f"Failed to send email to {email}: {str(e)}")
+                messages.warning(request, f"Teacher created but failed to send email: {str(e)}")
+
             messages.success(request, f'Successfully added teacher: {first_name} {last_name}')
             return redirect('dashboard:teachers')
             
         except Exception as e:
             messages.error(request, f'Error adding teacher: {str(e)}')
             return redirect('dashboard:teachers')
-            
     return redirect('dashboard:teachers')
 
 @login_required
@@ -713,10 +763,12 @@ def edit_teacher(request):
                     teacher.middle_name = ' '.join(name_parts[1:-1])
                 else:
                     teacher.middle_name = ''
-            
             teacher.gender = gender
             teacher.email = email
             teacher.mobile_number = mobile_number
+            # Handle photo upload if provided
+            if 'teacher_photo' in request.FILES:
+                teacher.teacher_photo = request.FILES['teacher_photo']
             teacher.save()
             
             log_admin_activity(
@@ -1048,6 +1100,9 @@ def enrollment_view(request):
         sections = Sections.objects.all().order_by('grade_level', 'section_id')
         students = Student.objects.all().order_by('student_id')
 
+        # Add grade_levels for dropdown
+        grade_levels = range(7, 13)  # Grades 7 to 12
+
         # Get enrollments for active school year only
         enrollments = []
         enrollment_models = {
@@ -1140,6 +1195,7 @@ def enrollment_view(request):
             'available_students': available_students,
             'all_students': students,
             'sections_by_grade': sections_by_grade,
+            'grade_levels': grade_levels,  # Added for dropdown
         }
         return render(request, 'enrollment.html', context)
     except Exception as e:
@@ -1158,7 +1214,8 @@ def enrollment_view(request):
             },
             'available_students': [],
             'all_students': [],
-            'sections_by_grade': {}
+            'sections_by_grade': {},
+            'grade_levels': range(7, 13),  # Also add here for fallback
         })
 
 def add_enrollment(request):
@@ -1172,6 +1229,17 @@ def add_enrollment(request):
             # Get the student and section
             student = Student.objects.get(id=student_id)
             section = Sections.objects.get(id=section_id)
+
+            # Restrict: Prevent enrollment in the same grade level more than once (any school year)
+            grade_level = section.grade_level
+            EnrollmentModel = get_enrollment_model(grade_level)
+            previous_enrollment_any_year = EnrollmentModel.objects.filter(
+                student=student,
+                section__grade_level=grade_level
+            ).exists()
+            if previous_enrollment_any_year:
+                messages.error(request, f'⚠️ {student.first_name} {student.last_name} has already been enrolled in Grade {grade_level} in a previous school year.')
+                return redirect('dashboard:enrollment')
 
             # Check if student is already enrolled in this grade level for this school year
             existing_enrollment = Enrollment.objects.filter(
@@ -1206,8 +1274,9 @@ def add_enrollment(request):
                     messages.error(request, f'⚠️ {student.first_name} {student.last_name} has already completed Grade {section.grade_level} in {last_enrollment.school_year}')
                     return redirect('dashboard:enrollment')
 
-            # Create the enrollment
-            enrollment = Enrollment.objects.create(
+            # Create the enrollment in the correct model
+            EnrollmentModel = get_enrollment_model(section.grade_level)
+            enrollment = EnrollmentModel.objects.create(
                 student=student,
                 section=section,
                 school_year=school_year,
@@ -2005,6 +2074,27 @@ def schedule_view(request):
                 'schedules': schedules.filter(section=section)
             }
         
+        # Build teacher_subjects: {teacher.id: [subject, ...]}
+        teacher_subjects = {}
+        for teacher in teachers:
+            subject_ids = Schedules.objects.filter(teacher_id=teacher).values_list('subject_id', flat=True).distinct()
+            subjects_list = Subject.objects.filter(id__in=subject_ids)
+            teacher_subjects[teacher.id] = list(subjects_list)
+        
+        # Build teacher_roles: {teacher.id: {'role': ..., 'section': ...}}
+        teacher_roles = {}
+        for teacher in teachers:
+            adviser_sections = Sections.objects.filter(adviser=teacher)
+            if adviser_sections.exists():
+                teacher_roles[teacher.id] = {
+                    'role': 'adviser',
+                    'section': adviser_sections.first().section_id
+                }
+            else:
+                teacher_roles[teacher.id] = {
+                    'role': 'subject'
+                }
+        
         context = {
             'active_school_year': active_school_year,
             'sections': sections,
@@ -2013,11 +2103,12 @@ def schedule_view(request):
             'schedules': schedules,
             'time_slots': time_slots,
             'section_schedules': section_schedules,
-            'days': ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday']
+            'days': ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'],
+            'teacher_subjects': teacher_subjects,
+            'teacher_roles': teacher_roles,
         }
         
         return render(request, 'schedules.html', context)
-        
     except Exception as e:
         messages.error(request, f'Error loading schedules: {str(e)}')
         return render(request, 'schedules.html', {
@@ -2028,7 +2119,9 @@ def schedule_view(request):
             'schedules': [],
             'time_slots': [],
             'section_schedules': {},
-            'days': ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday']
+            'days': ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'],
+            'teacher_subjects': {},
+            'teacher_roles': {},
         })
 
 @login_required
@@ -2565,7 +2658,7 @@ def admin_profile(request):
         
         # Get recent activities
         recent_activities = AdminActivity.objects.filter(
-            user=request.user
+            admin=request.user
         ).order_by('-timestamp')[:10]
         
         context = {
@@ -3082,54 +3175,47 @@ def set_active_school_year(request):
 
 @login_required
 def add_school_year(request):
-    """API endpoint to add a new school year"""
+    """View to add a new school year"""
     if request.method == 'POST':
         try:
             # Get form data
             year_start = request.POST.get('year_start')
             year_end = request.POST.get('year_end')
-            is_active = request.POST.get('is_active') == 'true'
             
             # Validate required fields
             if not all([year_start, year_end]):
-                return JsonResponse({
-                    'success': False,
-                    'message': 'Start date and end date are required'
-                }, status=400)
+                messages.error(request, 'Start year and end year are required')
+                return redirect('dashboard:school_year_management')
             
-            # Validate dates
             try:
-                start_date = datetime.strptime(year_start, '%Y-%m-%d').date()
-                end_date = datetime.strptime(year_end, '%Y-%m-%d').date()
+                # Convert to integers
+                year_start = int(year_start)
+                year_end = int(year_end)
                 
-                if start_date >= end_date:
-                    return JsonResponse({
-                        'success': False,
-                        'message': 'End date must be after start date'
-                    }, status=400)
+                if year_end != year_start + 1:
+                    messages.error(request, 'End year must be the next year after start year')
+                    return redirect('dashboard:school_year_management')
                 
                 # Check for overlapping school years
+                # A school year overlaps if:
+                # 1. The new start year is less than an existing end year
+                # 2. The new end year is greater than an existing start year
+                # AND they are not consecutive years
                 overlapping = SchoolYear.objects.filter(
-                    (Q(year_start__lte=start_date) & Q(year_end__gte=start_date)) |
-                    (Q(year_start__lte=end_date) & Q(year_end__gte=end_date))
+                    Q(year_start__lt=year_end) & Q(year_end__gt=year_start) &  # Check for any overlap
+                    ~(Q(year_end=year_start) | Q(year_start=year_end))  # Exclude consecutive years
                 ).exists()
                 
                 if overlapping:
-                    return JsonResponse({
-                        'success': False,
-                        'message': 'School year dates overlap with existing school year'
-                    }, status=400)
+                    messages.error(request, 'School year dates overlap with existing school year')
+                    return redirect('dashboard:school_year_management')
                 
                 # Create new school year
                 school_year = SchoolYear.objects.create(
-                    year_start=start_date,
-                    year_end=end_date,
-                    is_active=is_active
+                    year_start=year_start,
+                    year_end=year_end,
+                    is_active=False
                 )
-                
-                # If this is set as active, deactivate other school years
-                if is_active:
-                    SchoolYear.objects.exclude(id=school_year.id).update(is_active=False)
                 
                 # Log the activity
                 log_admin_activity(
@@ -3138,34 +3224,18 @@ def add_school_year(request):
                     "school_year"
                 )
                 
-                return JsonResponse({
-                    'success': True,
-                    'message': f'Successfully created school year {school_year.display_name}',
-                    'school_year': {
-                        'id': school_year.id,
-                        'display_name': school_year.display_name,
-                        'year_start': school_year.year_start.strftime('%Y-%m-%d'),
-                        'year_end': school_year.year_end.strftime('%Y-%m-%d'),
-                        'is_active': school_year.is_active
-                    }
-                })
+                messages.success(request, f'Successfully created school year {school_year.display_name}')
+                return redirect('dashboard:school_year_management')
                 
             except ValueError:
-                return JsonResponse({
-                    'success': False,
-                    'message': 'Invalid date format'
-                }, status=400)
+                messages.error(request, 'Invalid year format')
+                return redirect('dashboard:school_year_management')
             
         except Exception as e:
-            return JsonResponse({
-                'success': False,
-                'message': str(e)
-            }, status=500)
+            messages.error(request, f'Error creating school year: {str(e)}')
+            return redirect('dashboard:school_year_management')
     
-    return JsonResponse({
-        'success': False,
-        'message': 'Invalid request method'
-    }, status=405)
+    return redirect('dashboard:school_year_management')
 
 @login_required
 def get_teacher_schedule(request):
@@ -3224,6 +3294,11 @@ def get_teacher_schedule(request):
             'message': str(e)
         }, status=500)
 
+def safe_strftime(value, fmt):
+    if isinstance(value, (date, datetime)):
+        return value.strftime(fmt)
+    return str(value)  # or return '' if you want blank for non-dates
+
 @login_required
 def get_dashboard_data(request):
     """API endpoint to get comprehensive dashboard data"""
@@ -3264,10 +3339,16 @@ def get_dashboard_data(request):
             enrollment_stats['total'] += grade_count
             enrollment_stats['by_grade'][f'Grade {grade}'] = grade_count
 
-            # Update gender and status statistics
+            # Update gender and status statistics safely
             for enrollment in grade_enrollments:
-                enrollment_stats['by_gender'][enrollment.student.gender] += 1
-                enrollment_stats['by_status'][enrollment.status] += 1
+                gender = enrollment.student.gender
+                if gender in enrollment_stats['by_gender']:
+                    enrollment_stats['by_gender'][gender] += 1
+
+                status = enrollment.status
+                if status in enrollment_stats['by_status']:
+                    enrollment_stats['by_status'][status] += 1
+                # else: skip unknown statuses to avoid KeyError
 
         # Get teacher statistics
         teacher_stats = {
@@ -3275,15 +3356,8 @@ def get_dashboard_data(request):
             'by_gender': {
                 'Male': Teachers.objects.filter(gender='Male').count(),
                 'Female': Teachers.objects.filter(gender='Female').count()
-            },
-            'by_department': {}
+            }
         }
-
-        # Calculate department statistics
-        departments = Teachers.objects.values_list('department', flat=True).distinct()
-        for dept in departments:
-            if dept:  # Skip empty department names
-                teacher_stats['by_department'][dept] = Teachers.objects.filter(department=dept).count()
 
         # Get section statistics
         section_stats = {
@@ -3300,8 +3374,8 @@ def get_dashboard_data(request):
             'id': activity.id,
             'action': activity.action,
             'action_type': activity.action_type,
-            'timestamp': activity.timestamp.strftime('%Y-%m-%d %H:%M:%S'),
-            'user': f"{activity.user.first_name} {activity.user.last_name}"
+            'timestamp': safe_strftime(activity.timestamp, '%Y-%m-%d %H:%M:%S'),
+            'user': f"{activity.admin.first_name} {activity.admin.last_name}"
         } for activity in recent_activities]
 
         # Get upcoming events (next 7 days)
@@ -3313,10 +3387,10 @@ def get_dashboard_data(request):
             'id': event.id,
             'title': event.title,
             'description': event.description,
-            'start_date': event.start_date.strftime('%Y-%m-%d'),
-            'end_date': event.end_date.strftime('%Y-%m-%d') if event.end_date else None,
-            'start_time': event.start_time.strftime('%H:%M') if event.start_time else None,
-            'end_time': event.end_time.strftime('%H:%M') if event.end_time else None
+            'start_date': safe_strftime(event.start_date, '%Y-%m-%d'),
+            'end_date': safe_strftime(event.end_date, '%Y-%m-%d') if event.end_date else None,
+            'start_time': safe_strftime(event.start_time, '%H:%M') if event.start_time else None,
+            'end_time': safe_strftime(event.end_time, '%H:%M') if event.end_time else None
         } for event in upcoming_events]
 
         # Get recent announcements (last 5)
@@ -3325,6 +3399,7 @@ def get_dashboard_data(request):
             'id': announcement.id,
             'title': announcement.title,
             'content': announcement.content,
+            'created_at': safe_strftime(announcement.created_at, '%Y-%m-%d %H:%M:%S'),
             'created_at': announcement.created_at.strftime('%Y-%m-%d %H:%M:%S'),
             'created_by': f"{announcement.created_by.first_name} {announcement.created_by.last_name}"
         } for announcement in recent_announcements]
@@ -3416,48 +3491,27 @@ def event_calendar(request):
     try:
         # Get all events
         events = Event.objects.all().order_by('start_date', 'start_time')
-        
-        # Get active school year
-        active_school_year = SchoolYear.get_active()
-        
-        # Format events for calendar display
-        calendar_events = []
+        # Prepare a list of event dicts for the calendar
+        events_list = []
         for event in events:
-            # Create calendar event object
-            calendar_event = {
+            events_list.append({
                 'id': event.id,
                 'title': event.title,
                 'description': event.description,
-                'start': event.start_date.strftime('%Y-%m-%d'),
-                'end': event.end_date.strftime('%Y-%m-%d') if event.end_date else event.start_date.strftime('%Y-%m-%d'),
-                'allDay': not event.start_time,  # If no start time, treat as all-day event
-                'color': self.get_event_color(event),  # You can implement this method to assign colors based on event type
-                'textColor': '#ffffff',  # White text for better contrast
-                'borderColor': '#000000',  # Black border
-                'url': reverse('dashboard:event_detail', args=[event.id])  # URL for event details
-            }
-            
-            # Add time information if available
-            if event.start_time:
-                calendar_event['start'] += f"T{event.start_time.strftime('%H:%M:%S')}"
-            if event.end_time:
-                calendar_event['end'] += f"T{event.end_time.strftime('%H:%M:%S')}"
-            
-            calendar_events.append(calendar_event)
-        
+                'start_date': event.start_date.strftime('%Y-%m-%d'),
+                'end_date': event.end_date.strftime('%Y-%m-%d') if event.end_date else event.start_date.strftime('%Y-%m-%d'),
+                'start_time': event.start_time.strftime('%H:%M') if event.start_time else '',
+                'end_time': event.end_time.strftime('%H:%M') if event.end_time else '',
+            })
         context = {
-            'events': events,
-            'calendar_events': json.dumps(calendar_events),
-            'active_school_year': active_school_year
+            'events_json': json.dumps(events_list),
+            'active_school_year': SchoolYear.get_active(),
         }
-        
-        return render(request, 'event_calendar.html', context)
-        
+        return render(request, 'event.html', context)
     except Exception as e:
         messages.error(request, f'Error loading event calendar: {str(e)}')
-        return render(request, 'event_calendar.html', {
-            'events': [],
-            'calendar_events': '[]',
+        return render(request, 'event.html', {
+            'events_json': '[]',
             'active_school_year': None
         })
 
@@ -3487,44 +3541,59 @@ def event_detail(request, event_id):
         messages.error(request, f'Error loading event details: {str(e)}')
         return redirect('dashboard:event_calendar')
 
+def create_event_from_post(request):
+    """
+    Helper to create an Event from POST data.
+    Returns (event, error_message) tuple.
+    """
+    title = request.POST.get('title')
+    description = request.POST.get('description')
+    start_date = request.POST.get('start_date')
+    end_date = request.POST.get('end_date')
+    start_time = request.POST.get('start_time')
+    end_time = request.POST.get('end_time')
+
+    # Validate required fields
+    if not all([title, start_date, start_time, end_date, end_time]):
+        return None, 'All fields are required.'
+
+    # Parse dates and times with error handling
+    try:
+        start_date_obj = datetime.strptime(start_date, '%Y-%m-%d').date()
+        end_date_obj = datetime.strptime(end_date, '%Y-%m-%d').date()
+        start_time_obj = datetime.strptime(start_time, '%H:%M').time()
+        end_time_obj = datetime.strptime(end_time, '%H:%M').time()
+    except ValueError:
+        return None, 'Invalid date or time format. Please use the date and time pickers.'
+
+    # Create new event
+    event = Event.objects.create(
+        title=title,
+        description=description,
+        start_date=start_date_obj,
+        end_date=end_date_obj,
+        start_time=start_time_obj,
+        end_time=end_time_obj,
+        created_by=request.user
+    )
+    return event, None
+
 @login_required
 def add_event(request):
     """API endpoint to add a new event"""
     if request.method == 'POST':
         try:
-            # Get form data
-            title = request.POST.get('title')
-            description = request.POST.get('description')
-            start_date = request.POST.get('start_date')
-            end_date = request.POST.get('end_date')
-            start_time = request.POST.get('start_time')
-            end_time = request.POST.get('end_time')
-            
-            # Validate required fields
-            if not all([title, start_date]):
-                return JsonResponse({
-                    'success': False,
-                    'message': 'Title and start date are required'
-                }, status=400)
-            
-            # Create new event
-            event = Event.objects.create(
-                title=title,
-                description=description,
-                start_date=datetime.strptime(start_date, '%Y-%m-%d').date(),
-                end_date=datetime.strptime(end_date, '%Y-%m-%d').date() if end_date else None,
-                start_time=datetime.strptime(start_time, '%H:%M').time() if start_time else None,
-                end_time=datetime.strptime(end_time, '%H:%M').time() if end_time else None,
-                created_by=request.user
-            )
-            
+            event, error = create_event_from_post(request)
+            if error:
+                return JsonResponse({'success': False, 'message': error}, status=400)
+
             # Log the activity
             log_admin_activity(
                 request.user,
                 f"Created new event: {event.title}",
                 "event"
             )
-            
+
             return JsonResponse({
                 'success': True,
                 'message': 'Event created successfully',
@@ -3538,18 +3607,13 @@ def add_event(request):
                     'end_time': event.end_time.strftime('%H:%M') if event.end_time else None
                 }
             })
-            
-        except ValueError as e:
-            return JsonResponse({
-                'success': False,
-                'message': f'Invalid date/time format: {str(e)}'
-            }, status=400)
+
         except Exception as e:
             return JsonResponse({
                 'success': False,
                 'message': str(e)
             }, status=500)
-    
+
     return JsonResponse({
         'success': False,
         'message': 'Invalid request method'
@@ -3852,3 +3916,255 @@ def archive_data(request):
         'success': False,
         'message': 'Invalid request method'
     }, status=405)
+
+
+@login_required
+@user_passes_test(lambda u: u.is_superuser or u.is_staff)  # Optional: restrict to admin/staff
+def assign_registrar(request):
+    if request.method == 'POST':
+        form = RegistrarAssignmentForm(request.POST)
+        if form.is_valid():
+            # Get the active school year
+            active_school_year = SchoolYear.get_active()
+            if not active_school_year:
+                messages.error(request, "No active school year found. Please set an active school year first.")
+                return redirect('dashboard:assign_registrar')
+            
+            # Deactivate any existing registrar for the same school year
+            Registrar.objects.filter(school_year=active_school_year).delete()
+            
+            # Create new assignment with active school year
+            registrar = form.save(commit=False)
+            registrar.school_year = active_school_year
+            registrar.assigned_by = request.user
+            registrar.save()
+            
+            messages.success(request, "Registrar assigned successfully!")
+            return redirect('dashboard:assign_registrar')
+    else:
+        form = RegistrarAssignmentForm()
+    
+    # Get active school year for display
+    active_school_year = SchoolYear.get_active()
+    if not active_school_year:
+        messages.warning(request, "No active school year found. Please set an active school year first.")
+    
+    # Show current assignments
+    assignments = Registrar.objects.select_related('teacher', 'school_year').all().order_by('-created_at')
+    
+    return render(request, 'assign_registrar.html', {
+        'form': form, 
+        'assignments': assignments,
+        'active_school_year': active_school_year
+    })
+
+@login_required
+@user_passes_test(lambda u: u.is_superuser or u.is_staff)
+def remove_registrar(request, registrar_id):
+    try:
+        registrar = Registrar.objects.get(id=registrar_id)
+        teacher_name = f"{registrar.teacher.first_name} {registrar.teacher.last_name}"
+        registrar.delete()
+        messages.success(request, f"Registrar role removed from {teacher_name}")
+    except Registrar.DoesNotExist:
+        messages.error(request, "Registrar assignment not found")
+    except Exception as e:
+        messages.error(request, f"Error removing registrar: {str(e)}")
+    
+    return redirect('dashboard:assign_registrar')
+
+
+@login_required
+def students_enrollment_report(request):
+    # Get all grade levels (adjust as needed)
+    grade_levels = [7, 8, 9, 10, 11, 12]
+    status_list = ['Active', 'Withdrawn', 'Completed', 'Dropped', 'Transferred']
+
+    # Get selected grade and status from GET params
+    selected_grade = request.GET.get('grade_level')
+    selected_status = request.GET.get('status')
+    active_school_year = SchoolYear.get_active()
+    school_year = active_school_year.display_name if active_school_year else None
+
+    # Map grade to model
+    enrollment_models = {
+        7: Enrollment,
+        8: Grade8Enrollment,
+        9: Grade9Enrollment,
+        10: Grade10Enrollment,
+        11: Grade11Enrollment,
+        12: Grade12Enrollment,
+    }
+
+    # Prepare report data
+    report_data = {status: {'male': 0, 'female': 0, 'total': 0} for status in status_list}
+    total_male = total_female = total_students = 0
+
+    # Get all transferees and returnees for the school year
+    transferees = Transferee.objects.filter(
+        content_type__model__in=['enrollment', 'grade8enrollment', 'grade9enrollment', 
+                               'grade10enrollment', 'grade11enrollment', 'grade12enrollment']
+    )
+    returnees = Returnee.objects.filter(
+        content_type__model__in=['enrollment', 'grade8enrollment', 'grade9enrollment', 
+                               'grade10enrollment', 'grade11enrollment', 'grade12enrollment']
+    )
+
+    for grade in grade_levels:
+        if selected_grade and str(grade) != str(selected_grade):
+            continue
+            
+        model = enrollment_models[grade]
+        enrollments = model.objects.filter(school_year=school_year)
+        
+        # Apply status filter if selected
+        if selected_status:
+            enrollments = enrollments.filter(status__iexact=selected_status)
+            
+        for enrollment in enrollments:
+            status = enrollment.status
+            # Treat 'Transferee' and 'Returnee' as 'Active' for the main report
+            if status in ['Transferee', 'Returnee']:
+                status = 'Active'
+            if status not in report_data:
+                continue
+                
+            gender = enrollment.student.gender
+            
+            # Check if student is a transferee or returnee
+            is_transferee = transferees.filter(object_id=enrollment.id).exists()
+            is_returnee = returnees.filter(object_id=enrollment.id).exists()
+            
+            # Update counts
+            if gender == 'Male':
+                report_data[status]['male'] += 1
+                total_male += 1
+            elif gender == 'Female':
+                report_data[status]['female'] += 1
+                total_female += 1
+            report_data[status]['total'] += 1
+            total_students += 1
+
+    # Add transferee and returnee counts to the report data
+    transferee_count = transferees.count()
+    returnee_count = returnees.count()
+
+    @login_required
+    def get_transferee_details(request):
+        active_school_year = SchoolYear.get_active()
+        school_year = active_school_year.display_name if active_school_year else None
+
+        # Get all transferees for the current school year
+        transferees = Transferee.objects.filter(
+            content_type__model__in=['enrollment', 'grade8enrollment', 'grade9enrollment', 
+                                   'grade10enrollment', 'grade11enrollment', 'grade12enrollment']
+        ).select_related('content_type')
+
+        # Organize transferees by grade level
+        transferee_by_grade = {}
+        for grade in range(7, 13):  # Grades 7-12
+            transferee_by_grade[grade] = []
+
+        for transferee in transferees:
+            try:
+                # Get the actual enrollment object using the generic relation
+                enrollment = transferee.enrollment
+                if enrollment and enrollment.school_year == school_year:
+                    grade_level = enrollment.section.grade_level
+                    student_data = {
+                        'student_id': enrollment.student.student_id,
+                        'name': f"{enrollment.student.first_name} {enrollment.student.last_name}",
+                        'gender': enrollment.student.gender,
+                        'section': enrollment.section.section_id,
+                        'enrollment_date': enrollment.enrollment_date,
+                        'status': enrollment.status,
+                        'created_at': transferee.created_at
+                    }
+                    transferee_by_grade[grade_level].append(student_data)
+            except Exception as e:
+                print(f"Error processing transferee: {e}")
+                continue
+
+        return transferee_by_grade
+
+    @login_required
+    def get_returnee_details(request):
+        active_school_year = SchoolYear.get_active()
+        school_year = active_school_year.display_name if active_school_year else None
+
+        # Get all returnees for the current school year
+        returnees = Returnee.objects.filter(
+            content_type__model__in=['enrollment', 'grade8enrollment', 'grade9enrollment', 
+                                   'grade10enrollment', 'grade11enrollment', 'grade12enrollment']
+        ).select_related('content_type')
+
+        # Organize returnees by grade level
+        returnee_by_grade = {}
+        for grade in range(7, 13):  # Grades 7-12
+            returnee_by_grade[grade] = []
+
+        for returnee in returnees:
+            try:
+                # Get the actual enrollment object using the generic relation
+                enrollment = returnee.enrollment
+                if enrollment and enrollment.school_year == school_year:
+                    grade_level = enrollment.section.grade_level
+                    student_data = {
+                        'student_id': enrollment.student.student_id,
+                        'name': f"{enrollment.student.first_name} {enrollment.student.last_name}",
+                        'gender': enrollment.student.gender,
+                        'section': enrollment.section.section_id,
+                        'enrollment_date': enrollment.enrollment_date,
+                        'status': enrollment.status,
+                        'created_at': returnee.created_at
+                    }
+                    returnee_by_grade[grade_level].append(student_data)
+            except Exception as e:
+                print(f"Error processing returnee: {e}")
+                continue
+
+        return returnee_by_grade
+
+    # Get transferee details
+    transferee_by_grade = get_transferee_details(request)
+    returnee_by_grade = get_returnee_details(request)
+
+    # Build all_students_by_grade for printing per-grade tables
+    all_students_by_grade = {}
+    for grade in grade_levels:
+        model = enrollment_models[grade]
+        enrollments = model.objects.filter(school_year=school_year)
+        students_list = []
+        for enrollment in enrollments:
+            students_list.append({
+                'student_id': enrollment.student.student_id,
+                'name': f"{enrollment.student.first_name} {enrollment.student.last_name}",
+                'gender': enrollment.student.gender,
+                'section': enrollment.section.section_id,
+                'enrollment_date': enrollment.enrollment_date,
+                'status': enrollment.status,
+            })
+        all_students_by_grade[grade] = students_list
+
+    context = {
+        'grade_levels': grade_levels,
+        'selected_grade': selected_grade,
+        'selected_status': selected_status,
+        'status_list': status_list,
+        'report_data': report_data,
+        'total_male': total_male,
+        'total_female': total_female,
+        'total_students': total_students,
+        'school_year': school_year,
+        'transferee_count': transferee_count,
+        'returnee_count': returnee_count,
+        'transferee_by_grade': transferee_by_grade,
+        'returnee_by_grade': returnee_by_grade,  # Add this line
+        'all_students_by_grade': all_students_by_grade,
+    }
+    return render(request, 'reports.html', context)
+
+@staff_member_required
+def view_feedbacks(request):
+    feedbacks = Feedback.objects.select_related('student').order_by('-created_at')
+    return render(request, 'admin_view_feedbacks.html', {'feedbacks': feedbacks})

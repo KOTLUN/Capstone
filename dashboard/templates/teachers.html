@@ -422,7 +422,7 @@
                                                  class="profile-img" 
                                                  alt="{{ teacher.first_name }}'s photo">
                                         {% else %}
-                                            <img src="{% static 'images/default-profile.png' %}" 
+                                            <img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjNjY2IiBzdHJva2Utd2lkdGg9IjIiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCI+PHBhdGggZD0iTTIwIDIxdi0yYTQgNCAwIDAgMC00LTRINGE0IDQgMCAwIDAtNCA0djIiPjwvcGF0aD48Y2lyY2xlIGN4PSIxMiIgY3k9IjciIHI9IjQiPjwvY2lyY2xlPjwvc3ZnPg==" 
                                                  class="profile-img" 
                                                  alt="Default profile photo">
                                         {% endif %}
@@ -522,6 +522,7 @@
                             <!-- Personal Information -->
                             <div class="col-12">
                                 <h6 class="fw-bold text-primary mb-3">Personal Information</h6>
+                                <small class="text-muted mb-3 d-block"><span class="text-danger">(*)</span> means required</small>
                                 <div class="row g-3">
                                     <div class="col-6">
                                         <label class="text-muted small d-block">Gender</label>
@@ -703,13 +704,17 @@
                             <div class="modal-body">
                                 <form method="POST" action="{% url 'dashboard:add_teacher' %}" enctype="multipart/form-data">
                                     {% csrf_token %}
+
                                     <div class="row g-2">
+                                        <h6 class="fw-bold text-primary mb-3">Personal Information</h6>
+                                        <small class="text-muted mb-3 d-block"><span class="text-danger">*</span> means required</small>
+                                        
                                         <div class="col-md-3">
-                                            <label for="teacher_id" class="form-label">Teacher ID <span class="text-danger">*</span> <span class="badge bg-danger-subtle text-danger">required</span></label>
+                                            <label for="teacher_id" class="form-label">Teacher ID <span class="text-danger">*</span> 
                                             <input type="text" class="form-control" id="teacher_id" name="teacher_id" required>
                                         </div>
                                         <div class="col-md-3">
-                                            <label for="first_name" class="form-label">First Name <span class="text-danger">*</span> <span class="badge bg-danger-subtle text-danger">required</span></label>
+                                            <label for="first_name" class="form-label">First Name <span class="text-danger">*</span> 
                                             <input type="text" class="form-control" id="first_name" name="first_name" required>
                                         </div>
                                         <div class="col-md-3">
@@ -717,11 +722,11 @@
                                             <input type="text" class="form-control" id="middle_name" name="middle_name">
                                         </div>
                                         <div class="col-md-3">
-                                            <label for="last_name" class="form-label">Last Name <span class="text-danger">*</span> <span class="badge bg-danger-subtle text-danger">required</span></label>
+                                            <label for="last_name" class="form-label">Last Name <span class="text-danger">*</span> 
                                             <input type="text" class="form-control" id="last_name" name="last_name" required>
                                         </div>
                                         <div class="col-md-3">
-                                            <label for="gender" class="form-label">Gender <span class="text-danger">*</span> <span class="badge bg-danger-subtle text-danger">required</span></label>
+                                            <label for="gender" class="form-label">Gender <span class="text-danger">*</span> 
                                             <select class="form-select" id="gender" name="gender" required>
                                                 <option value="">Select Gender</option>
                                                 <option value="Male">Male</option>
@@ -729,24 +734,24 @@
                                             </select>
                                         </div>
                                         <div class="col-md-3">
-                                            <label for="religion" class="form-label">Religion <span class="text-danger">*</span> <span class="badge bg-danger-subtle text-danger">required</span></label>
+                                            <label for="religion" class="form-label">Religion <span class="text-danger">*</span> 
                                             <input type="text" class="form-control" id="religion" name="religion" required>
                                         </div>
                                         <div class="col-md-3">
-                                            <label for="date_of_birth" class="form-label">Date of Birth <span class="text-danger">*</span> <span class="badge bg-danger-subtle text-danger">required</span></label>
+                                            <label for="date_of_birth" class="form-label">Date of Birth <span class="text-danger">*</span> 
                                             <input type="date" class="form-control" id="date_of_birth" name="date_of_birth" required>
                                         </div>
                                         <div class="col-md-3">
-                                            <label for="email" class="form-label">Email <span class="text-danger">*</span> <span class="badge bg-danger-subtle text-danger">required</span></label>
+                                            <label for="email" class="form-label">Email <span class="text-danger">*</span> 
                                             <input type="email" class="form-control" id="email" name="email" required>
                                             <small class="form-text text-muted">Login credentials will be sent to this email address.</small>
                                         </div>
                                         <div class="col-md-3">
-                                            <label for="mobile_number" class="form-label">Mobile Number <span class="text-danger">*</span> <span class="badge bg-danger-subtle text-danger">required</span></label>
+                                            <label for="mobile_number" class="form-label">Mobile Number <span class="text-danger">*</span> 
                                             <input type="tel" class="form-control" id="mobile_number" name="mobile_number" required>
                                         </div>
                                         <div class="col-md-9">
-                                            <label for="address" class="form-label">Address <span class="text-danger">*</span> <span class="badge bg-danger-subtle text-danger">required</span></label>
+                                            <label for="address" class="form-label">Address <span class="text-danger">*</span> 
                                             <textarea class="form-control" id="address" name="address" rows="1" required></textarea>
                                         </div>
                                         <div class="col-md-3">
@@ -797,7 +802,9 @@
 
                     // Update photo
                     let imgElement = document.getElementById("view-teacher-photo");
-                    imgElement.src = teacher.img_url || "{% static 'images/default-profile.png' %}";
+                    imgElement.src = teacher.teacher_photo && teacher.teacher_photo.url ? 
+                        teacher.teacher_photo.url : 
+                        'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjNjY2IiBzdHJva2Utd2lkdGg9IjIiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCI+PHBhdGggZD0iTTIwIDIxdi0yYTQgNCAwIDAgMC00LTRINGE0IDQgMCAwIDAtNCA0djIiPjwvcGF0aD48Y2lyY2xlIGN4PSIxMiIgY3k9IjciIHI9IjQiPjwvY2lyY2xlPjwvc3ZnPg==';
 
                     // Update advisory class - Minimal version
                     let advisoryDiv = document.getElementById("view-teacher-advisory");
@@ -935,7 +942,9 @@
                 const teacher = JSON.parse(this.getAttribute('data-teacher'));
                 
                 // Update modal content
-                document.getElementById('view-teacher-photo').src = teacher.img_url || "{% static 'images/default-profile.png' %}";
+                document.getElementById('view-teacher-photo').src = teacher.teacher_photo && teacher.teacher_photo.url ? 
+                    teacher.teacher_photo.url : 
+                    'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjNjY2IiBzdHJva2Utd2lkdGg9IjIiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCI+PHBhdGggZD0iTTIwIDIxdi0yYTQgNCAwIDAgMC00LTRINGE0IDQgMCAwIDAtNCA0djIiPjwvcGF0aD48Y2lyY2xlIGN4PSIxMiIgY3k9IjciIHI9IjQiPjwvY2lyY2xlPjwvc3ZnPg==';
                 document.getElementById('view-teacher-name').textContent = `${teacher.first_name} ${teacher.middle_name || ''} ${teacher.last_name}`;
                 document.getElementById('view-teacher-email').textContent = teacher.email;
                 document.getElementById('view-teacher-id').textContent = teacher.teacher_id;
@@ -963,7 +972,9 @@
                 
                 // Show current photo
                 const photoPreview = document.getElementById('edit-teacher-photo-preview');
-                photoPreview.src = teacher.img_url || "{% static 'images/default-profile.png' %}";
+                photoPreview.src = teacher.teacher_photo && teacher.teacher_photo.url ? 
+                    teacher.teacher_photo.url : 
+                    'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjNjY2IiBzdHJva2Utd2lkdGg9IjIiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCI+PHBhdGggZD0iTTIwIDIxdi0yYTQgNCAwIDAgMC00LTRINGE0IDQgMCAwIDAtNCA0djIiPjwvcGF0aD48Y2lyY2xlIGN4PSIxMiIgY3k9IjciIHI9IjQiPjwvY2lyY2xlPjwvc3ZnPg==';
             });
         });
 

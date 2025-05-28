@@ -120,11 +120,32 @@
         }
 
         .modal {
-            z-index: 1050;
+            z-index: 1050 !important;
         }
 
         .modal-backdrop {
-            z-index: 1040;
+            z-index: 1040 !important;
+        }
+
+        .modal-open {
+            overflow: hidden;
+        }
+
+        .modal-open .modal {
+            overflow-x: hidden;
+            overflow-y: auto;
+        }
+
+        /* Ensure table is properly contained within modal */
+        .modal .table-responsive {
+            position: relative;
+            z-index: 1;
+        }
+
+        /* Hide any duplicate tables */
+        .dataTables_wrapper {
+            position: relative;
+            z-index: 1;
         }
 
         @media (max-width: 768px) {
@@ -183,6 +204,13 @@
         .alert {
             display: none !important;
         }
+
+        #gradeLevelDropdown.form-select {
+            padding-right: 2.5rem; /* Make space for the arrow */
+            font-size: 1rem;
+            min-width: 180px;      /* Adjust as needed */
+            background-position: right 1rem center; /* Move arrow to the right */
+        }
     </style>
 </head>
 <body>
@@ -195,9 +223,9 @@
                 <div class="d-sm-flex align-items-center justify-content-between mb-4">
                     <h1 class="h3 mb-0 text-gray-800">Student Enrollment</h1>
                     <div class="d-flex gap-2">
-                        <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#uploadEnrollmentModal">
+                        <!-- <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#uploadEnrollmentModal">
                             <i class="fas fa-file-excel me-2"></i> Upload Excel
-                        </button>
+                        </button> -->
                     </div>
                 </div>
 
@@ -239,9 +267,6 @@
                                             </option>
                                         {% else %}
                                             <option value="">No Active School Year</option>
-                                            <div class="form-text text-warning">
-                                                <i class="fas fa-exclamation-triangle"></i> No active school year set. Please set an active school year.
-                                            </div>
                                         {% endif %}
                                     </select>
                                 </div>
@@ -268,14 +293,20 @@
                         <h6 class="m-0 fw-bold text-primary">Current Enrollments</h6>
                         <div class="d-flex align-items-center gap-2">
                             <div class="form-group mb-0">
-                                <select class="form-select" id="schoolYearFilter" name="school_year">
-                                    <option value="all">All School Years</option>
-                                    {% for year in school_years %}
-                                        <option value="{{ year.display_name }}" 
-                                                {% if year.display_name == selected_year %}selected{% endif %}>
-                                            {{ year.display_name }}
-                                            {% if year.is_active %}(Active){% endif %}
+                                <!-- <select class="form-select" id="gradeLevelDropdown" name="grade_level">
+                                    <option value="" {% if not selected_grade_level %}selected{% endif %}>All Grade Levels</option>
+                                    {% for grade in grade_levels %}
+                                        <option value="{{ grade }}" {% if grade|stringformat:"s" == selected_grade_level|stringformat:"s" %}selected{% endif %}>
+                                            Grade {{ grade }}
                                         </option>
+                                    {% endfor %}
+                                </select> -->
+                            </div>
+                            <div class="form-group mb-0">
+                                <select class="form-select" id="sectionDropdown" name="section">
+                                    <option value="">All Sections</option>
+                                    {% for section in sections %}
+                                        <option value="{{ section.section_id }}">{{ section.section_id }} - Grade {{ section.grade_level }}</option>
                                     {% endfor %}
                                 </select>
                             </div>
@@ -348,16 +379,8 @@
 
                     {% for grade, sections in sections_by_grade.items %}
                     <div class="card shadow-sm mb-4">
-                        <div class="card-header bg-white py-3">
-                            <div class="d-flex justify-content-between align-items-center">
-                                <h5 class="mb-0 fw-bold text-primary">Grade {{ grade }}</h5>
-                                <div>
-                                    <span class="badge bg-primary rounded-pill me-2">Total Sections: {{ sections|length }}</span>
-                                    <button class="btn btn-sm btn-outline-primary" type="button" data-bs-toggle="modal" data-bs-target="#gradeModal{{ grade }}">
-                                        <i class="fas fa-table me-1"></i>View All Students
-                                    </button>
-                                </div>
-                            </div>
+                        <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+                            <h5 class="mb-0 fw-bold text-primary">Grade {{ grade }}</h5>
                         </div>
                         <div class="card-body">
                             <!-- Section Summary Cards -->
@@ -365,7 +388,7 @@
                                 {% for section_data in sections %}
                                 <div class="col-xl-3 col-lg-4 col-md-6 mb-4">
                                     <div class="card h-100 border">
-                                        <div class="card-header bg-light py-3">
+                                        <div class="card-header bg-light py-3 d-flex justify-content-between align-items-center">
                                             <h6 class="m-0 fw-bold text-primary">Section {{ section_data.section.section_id }}</h6>
                                         </div>
                                         <div class="card-body">
@@ -384,87 +407,6 @@
                                     </div>
                                 </div>
                                 {% endfor %}
-                            </div>
-
-                            <!-- Grade Level Students Modal -->
-                            <div class="modal fade" id="gradeModal{{ grade }}" tabindex="-1" aria-labelledby="gradeModalLabel{{ grade }}" aria-hidden="true">
-                                <div class="modal-dialog modal-xl">
-                                    <div class="modal-content">
-                                        <div class="modal-header">
-                                            <h5 class="modal-title" id="gradeModalLabel{{ grade }}">Grade {{ grade }} - All Students</h5>
-                                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                                        </div>
-                                        <div class="modal-body">
-                                            <div class="d-flex justify-content-between align-items-center mb-3">
-                                                <div class="form-group mb-0">
-                                                    <select class="form-select grade-year-filter" data-grade="{{ grade }}">
-                                                        <option value="all">All School Years</option>
-                                                        {% for year in school_years %}
-                                                            <option value="{{ year.display_name }}" 
-                                                                    {% if year.display_name == selected_year %}selected{% endif %}>
-                                                                {{ year.display_name }}
-                                                                {% if year.is_active %}(Active){% endif %}
-                                                            </option>
-                                                        {% endfor %}
-                                                    </select>
-                                                </div>
-                                            </div>
-                                            <div class="table-responsive">
-                                                <table class="table" id="gradeTable{{ grade }}">
-                                                    <thead>
-                                                        <tr>
-                                                            <th>Student ID</th>
-                                                            <th>Name</th>
-                                                            <th>Section</th>
-                                                            <th>Year Level</th>
-                                                            <th>School Year</th>
-                                                            <th>Status</th>
-                                                            <th>Actions</th>
-                                                        </tr>
-                                                    </thead>
-                                                    <tbody>
-                                                        {% for section_data in sections %}
-                                                            {% for student in section_data.students %}
-                                                            <tr>
-                                                                <td>{{ student.student_id }}</td>
-                                                                <td>{{ student.name }}</td>
-                                                                <td>{{ student.section }}</td>
-                                                                <td>{{ student.grade_level }}</td>
-                                                                <td>{{ student.school_year }}</td>
-                                                                <td>
-                                                                    <span class="badge {% if student.status == 'Active' %}bg-success
-                                                                      {% elif student.status == 'Completed' %}bg-info
-                                                                      {% elif student.status == 'Dropped' %}bg-danger
-                                                                      {% else %}bg-secondary{% endif %}">
-                                                                        {{ student.status }}
-                                                                    </span>
-                                                                </td>
-                                                                <td>
-                                                                    <button class="btn btn-sm btn-info edit-enrollment" 
-                                                                            data-bs-toggle="modal" 
-                                                                            data-bs-target="#editEnrollmentModal"
-                                                                            data-id="{{ student.enrollment_id }}"
-                                                                            data-student="{{ student.student_id }}"
-                                                                            data-section="{{ student.section }}"
-                                                                            data-status="{{ student.status }}"
-                                                                            data-school-year="{{ student.school_year }}">
-                                                                        <i class="fas fa-edit"></i>
-                                                                    </button>
-                                                                    <button class="btn btn-sm btn-danger delete-enrollment"
-                                                                            data-id="{{ student.enrollment_id }}"
-                                                                            data-student-name="{{ student.name }}">
-                                                                        <i class="fas fa-trash"></i>
-                                                                    </button>
-                                                                </td>
-                                                            </tr>
-                                                            {% endfor %}
-                                                        {% endfor %}
-                                                    </tbody>
-                                                </table>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
                             </div>
                         </div>
                     </div>
@@ -611,53 +553,116 @@
     <script src="https://cdn.datatables.net/1.11.5/js/dataTables.bootstrap5.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 
-    <!-- Fix for blinking DataTables inside grade modals -->
-<script>
+    <script>
     document.addEventListener('DOMContentLoaded', function () {
-        const initializedTables = new Set();
+        // Initialize DataTables for grade level tables
+        const gradeTables = document.querySelectorAll('.grade-level-table');
+        let dataTableInstances = new Map();
 
-        // When any grade modal is shown
-        $('[id^=gradeModal]').on('shown.bs.modal', function () {
-            const table = $(this).find('table');
-
-            if (table.length && !initializedTables.has(table.attr('id'))) {
-                const tableId = table.attr('id');
-
-                $('#' + tableId).DataTable({
-                    responsive: true,
-                    pageLength: 10,
-                    lengthChange: false,
-                    autoWidth: false,
-                    ordering: true,
-                    columnDefs: [
-                        { orderable: false, targets: -1 }
-                    ],
-                    language: {
-                        emptyTable: "No students enrolled in this grade level",
-                        info: "Showing _START_ to _END_ of _TOTAL_ entries",
-                        infoEmpty: "Showing 0 to 0 of 0 entries",
-                        paginate: {
-                            first: "First",
-                            last: "Last",
-                            next: "Next",
-                            previous: "Previous"
-                        }
+        gradeTables.forEach(table => {
+            const tableId = table.id;
+            
+            // Initialize DataTable
+            const dataTable = $('#' + tableId).DataTable({
+                responsive: true,
+                pageLength: 10,
+                lengthChange: false,
+                autoWidth: false,
+                ordering: true,
+                columnDefs: [
+                    { orderable: false, targets: -1 }
+                ],
+                language: {
+                    emptyTable: "No students enrolled in this grade level",
+                    info: "Showing _START_ to _END_ of _TOTAL_ entries",
+                    infoEmpty: "Showing 0 to 0 of 0 entries",
+                    paginate: {
+                        first: "First",
+                        last: "Last",
+                        next: "Next",
+                        previous: "Previous"
                     }
-                });
+                },
+                drawCallback: function() {
+                    // Reattach event handlers after table redraw
+                    attachEventHandlers();
+                }
+            });
 
-                initializedTables.add(tableId);
+            // Store the instance
+            dataTableInstances.set(tableId, dataTable);
+        });
+
+        // Handle modal events
+        $('[id^=gradeModal]').on('show.bs.modal', function () {
+            const tableId = $(this).find('table').attr('id');
+            const dataTable = dataTableInstances.get(tableId);
+            if (dataTable) {
+                dataTable.columns.adjust().responsive.recalc();
             }
         });
+
+        // Handle modal hidden event
+        $('[id^=gradeModal]').on('hidden.bs.modal', function () {
+            const tableId = $(this).find('table').attr('id');
+            const dataTable = dataTableInstances.get(tableId);
+            if (dataTable) {
+                dataTable.clear().draw();
+            }
+        });
+
+        // Clean up on page unload
+        window.addEventListener('beforeunload', function() {
+            dataTableInstances.forEach((dataTable) => {
+                dataTable.destroy();
+            });
+            dataTableInstances.clear();
+        });
     });
-</script>
-    
+    </script>
+
+    <!-- Toastr message handling for Django messages (place just before </body>) -->
+    {% if messages %}
+        {% for message in messages %}
+            {% if message.tags == 'success' %}
+                <script>toastr.options = {"closeButton": true, "debug": false, "newestOnTop": true, "progressBar": true, "positionClass": "toast-top-right", "preventDuplicates": false, "onclick": null, "showDuration": "300", "hideDuration": "1000", "timeOut": "5000", "extendedTimeOut": "1000", "showEasing": "swing", "hideEasing": "linear", "showMethod": "fadeIn", "hideMethod": "fadeOut"}; toastr.success("{{ message|escapejs }}");</script>
+            {% elif message.tags == 'error' %}
+                <script>toastr.options = {"closeButton": true, "debug": false, "newestOnTop": true, "progressBar": true, "positionClass": "toast-top-right", "preventDuplicates": false, "onclick": null, "showDuration": "300", "hideDuration": "1000", "timeOut": "5000", "extendedTimeOut": "1000", "showEasing": "swing", "hideEasing": "linear", "showMethod": "fadeIn", "hideMethod": "fadeOut"}; toastr.error("{{ message|escapejs }}");</script>
+            {% elif message.tags == 'warning' %}
+                <script>toastr.options = {"closeButton": true, "debug": false, "newestOnTop": true, "progressBar": true, "positionClass": "toast-top-right", "preventDuplicates": false, "onclick": null, "showDuration": "300", "hideDuration": "1000", "timeOut": "5000", "extendedTimeOut": "1000", "showEasing": "swing", "hideEasing": "linear", "showMethod": "fadeIn", "hideMethod": "fadeOut"}; toastr.warning("{{ message|escapejs }}");</script>
+            {% elif message.tags == 'info' %}
+                <script>toastr.options = {"closeButton": true, "debug": false, "newestOnTop": true, "progressBar": true, "positionClass": "toast-top-right", "preventDuplicates": false, "onclick": null, "showDuration": "300", "hideDuration": "1000", "timeOut": "5000", "extendedTimeOut": "1000", "showEasing": "swing", "hideEasing": "linear", "showMethod": "fadeIn", "hideMethod": "fadeOut"}; toastr.info("{{ message|escapejs }}");</script>
+            {% endif %}
+        {% endfor %}
+    {% endif %}
+
     <script>
         $(document).ready(function() {
             // Initialize DataTable
-            $('#enrollmentsTable').DataTable({
+            const enrollmentsTable = $('#enrollmentsTable').DataTable({
                 "pageLength": 10,
-                "order": [[1, "asc"]], // Sort by name by default
+                "order": [[0, "asc"]], // Sort by student ID in ascending order
                 "responsive": true
+            });
+            
+            // Filter by grade level
+            $('#gradeLevelDropdown').on('change', function() {
+                var grade = $(this).val();
+                if (grade) {
+                    enrollmentsTable.column(3).search('Grade ' + grade).draw();
+                } else {
+                    enrollmentsTable.column(3).search('').draw();
+                }
+            });
+
+            // Filter by section
+            $('#sectionDropdown').on('change', function() {
+                var section = $(this).val();
+                if (section) {
+                    enrollmentsTable.column(2).search(section).draw();
+                } else {
+                    enrollmentsTable.column(2).search('').draw();
+                }
             });
             
             // Function to update available students based on section and school year
@@ -695,6 +700,11 @@
                                     student.id
                                 ));
                             });
+                        }
+
+                        // Check if student has already taken this grade level
+                        if (response.previous_enrollment) {
+                            toastr.warning(`This student has already completed Grade ${gradeLevel} in a previous school year.`);
                         }
                         
                         // Restore previous selection if it's still valid
@@ -955,72 +965,16 @@
                 window.location.href = url.toString();
             });
 
-            // Remove the old initialization code
-            let gradeTables = {};
-
-            $(document).ready(function() {
-                // Initialize all grade tables on page load
-                $('[id^=gradeTable]').each(function() {
-                    const tableId = $(this).attr('id');
-                    const gradeNumber = tableId.replace('gradeTable', '');
-                    
-                    const table = $(this).DataTable({
-                        pageLength: 10,
-                        searching: true,
-                        info: true,
-                        ordering: true,
-                        autoWidth: false,
-                        scrollX: false,
-                        columnDefs: [
-                            { orderable: false, targets: 6 }
-                        ],
-                        order: [[1, 'asc']],
-                        dom: '<"row"<"col-sm-12"tr>><"row"<"col-sm-12 col-md-5"i><"col-sm-12 col-md-7"p>>',
-                        language: {
-                            emptyTable: "No students enrolled in this grade level",
-                            info: "Showing _START_ to _END_ of _TOTAL_ entries",
-                            infoEmpty: "Showing 0 to 0 of 0 entries",
-                            paginate: {
-                                first: "First",
-                                last: "Last",
-                                next: "Next",
-                                previous: "Previous"
-                            }
-                        }
-                    });
-
-                    // Store the table instance
-                    gradeTables[gradeNumber] = table;
-
-                    // Handle year filter for this table
-                    $(`.grade-year-filter[data-grade="${gradeNumber}"]`).on('change', function() {
-                        const selectedYear = $(this).val();
-                        if (selectedYear === 'all') {
-                            table.column(4).search('').draw();
-                        } else {
-                            table.column(4).search(selectedYear).draw();
-                        }
-                    });
+            // Add this JavaScript
+            document.addEventListener('DOMContentLoaded', function() {
+                // Set default end year
+                document.getElementById('year_start').addEventListener('change', function() {
+                    const yearStart = parseInt(this.value);
+                    document.getElementById('year_end').value = yearStart + 1;
                 });
-
-                // Handle modal events
-                $('[id^=gradeModal]').on('shown.bs.modal', function() {
-                    const gradeNumber = this.id.replace('gradeModal', '');
-                    const table = gradeTables[gradeNumber];
-                    if (table) {
-                        table.columns.adjust();
-                    }
-                });
-
-                // No need to destroy tables on modal hide anymore
-                // Just adjust columns when shown
             });
         });
     </script>
-
-    
-
-  
 
     <!-- Add this JavaScript -->
     <script>
@@ -1168,44 +1122,6 @@
         </div>
     </div>
 
-    <!-- Add Toastr JS -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
-    <script>
-        // Configure Toastr
-        toastr.options = {
-            "closeButton": true,
-            "debug": false,
-            "newestOnTop": true,
-            "progressBar": true,
-            "positionClass": "toast-top-right",
-            "preventDuplicates": false,
-            "onclick": null,
-            "showDuration": "300",
-            "hideDuration": "1000",
-            "timeOut": "5000",
-            "extendedTimeOut": "1000",
-            "showEasing": "swing",
-            "hideEasing": "linear",
-            "showMethod": "fadeIn",
-            "hideMethod": "fadeOut"
-        };
-
-        // Handle Django messages with Toastr
-        {% if messages %}
-            {% for message in messages %}
-                {% if message.tags == 'success' %}
-                    toastr.success("{{ message }}");
-                {% elif message.tags == 'error' %}
-                    toastr.error("{{ message }}");
-                {% elif message.tags == 'warning' %}
-                    toastr.warning("{{ message }}");
-                {% elif message.tags == 'info' %}
-                    toastr.info("{{ message }}");
-                {% endif %}
-            {% endfor %}
-        {% endif %}
-    </script>
-
     <!-- Load section students -->
     <script>
     function loadSectionStudents(sectionId) {
@@ -1236,5 +1152,24 @@
                                         <i class="fas fa-edit"></i>
                                     </button>
                                     <button class="btn btn-sm btn-danger delete-enrollment"
+                                            data-id="${student.enrollment_id}"
+                                            data-student-name="${student.name}">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                        `;
+                    });
+                    $('#sectionStudentsTable tbody').html(html);
+                }
+            },
+            error: function(xhr, status, error) {
+                console.error('Error loading section students:', error);
+                // Show error message to user
+                toastr.error('Error loading section students. Please try again.');
+            }
+        });
+    }
+    </script>
 </body>
 </html>

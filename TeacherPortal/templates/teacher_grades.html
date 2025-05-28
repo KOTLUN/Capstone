@@ -2,6 +2,7 @@
 {% load static %}
 
 {% block content %}
+{% csrf_token %}
 <style>
     .content-container {
         padding: 20px;
@@ -104,87 +105,46 @@
     <!-- Messages -->
     <div id="messages"></div>
 
-    <!-- Grade Management Section -->
-    <div class="card">
+    <!-- Manual Grade Entry Section -->
+    <div class="card mt-4">
         <div class="card-header d-flex justify-content-between align-items-center">
             <div>
-                <h5 class="mb-0">Grade Management</h5>
-                <small class="text-muted">School Year: {{ active_school_year.display_name }}</small>
+                <h5 class="mb-0">Student Grades</h5>
+                <small class="text-muted">View and edit student grades</small>
             </div>
-            <div>
-                <button class="btn btn-outline-primary" id="exportGrades">
-                    <i class="fas fa-download"></i> Export
-                </button>
-                <button class="btn btn-outline-primary" id="printGrades">
-                    <i class="fas fa-print"></i> Print
-                </button>
+            <div class="d-flex gap-2">
+                <select class="form-select" id="grade_school_year" style="width: auto;">
+                    <option value="">Select School Year</option>
+                    {% for year in school_years %}
+                        <option value="{{ year.id }}" {% if year.id == active_school_year.id %}selected{% endif %}>
+                            {{ year.display_name }} {% if year.is_active %}(Active){% endif %}
+                        </option>
+                    {% endfor %}
+                </select>
+                <select class="form-select" id="grade_quarter" style="width: auto;">
+                    <option value="">Select Quarter</option>
+                    <option value="1">First Quarter</option>
+                    <option value="2">Second Quarter</option>
+                    <option value="3">Third Quarter</option>
+                    <option value="4">Fourth Quarter</option>
+                </select>
+                <select class="form-select" id="grade_subject" style="width: auto;">
+                    <option value="">Select Subject</option>
+                    {% for subject in teacher_subjects %}
+                        <option value="{{ subject.id }}">{{ subject.name }}</option>
+                    {% endfor %}
+                </select>
+                <select class="form-select" id="grade_section" style="width: auto;">
+                    <option value="">Select Section</option>
+                    {% for section in teacher_sections %}
+                        <option value="{{ section.id }}">{{ section.name }}</option>
+                    {% endfor %}
+                </select>
             </div>
         </div>
         <div class="card-body">
-            <form id="gradeFilterForm" method="get">
-                <div class="row mb-3">
-                    <div class="col-md-6">
-                        <select class="form-select" id="grade_school_year_filter" name="school_year" required>
-                            <option value="">Select School Year</option>
-                            {% for year in school_years %}
-                                <option value="{{ year.id }}" {% if year.id == active_school_year.id %}selected{% endif %}>
-                                    {{ year.display_name }} {% if year.is_active %}(Active){% endif %}
-                                </option>
-                            {% endfor %}
-                        </select>
-                    </div>
-                    <div class="col-md-6">
-                        <select class="form-select" id="grade_quarter_filter" name="quarter" required>
-                            <option value="">Select Quarter</option>
-                            <option value="1">First Quarter</option>
-                            <option value="2">Second Quarter</option>
-                            <option value="3">Third Quarter</option>
-                            <option value="4">Fourth Quarter</option>
-                        </select>
-                    </div>
-                </div>
-                <div class="row mb-3">
-                    <div class="col-md-6">
-                        <select class="form-select" id="grade_subject_filter" name="subject" required>
-                            <option value="">Select Subject</option>
-                            {% for subject in teacher_subjects %}
-                                <option value="{{ subject.id }}">{{ subject.name }}</option>
-                            {% endfor %}
-                        </select>
-                    </div>
-                    <div class="col-md-6">
-                        <select class="form-select" id="grade_section_filter" name="section" required>
-                            <option value="">Select Section</option>
-                            {% for section in teacher_sections %}
-                                <option value="{{ section.id }}">{{ section.name }}</option>
-                            {% endfor %}
-                        </select>
-                    </div>
-                </div>
-                <div class="row">
-                    <div class="col-12">
-                        <button type="submit" class="btn btn-primary" id="filterGradesBtn">
-                            <i class="fas fa-filter"></i> Filter Grades
-                        </button>
-                    </div>
-                </div>
-            </form>
-
-            <div class="table-responsive mt-4">
-                <table class="table table-bordered" id="gradesTable">
-                    <thead>
-                        <tr>
-                            <th>Student ID</th>
-                            <th>Name</th>
-                            <th>Grade</th>
-                            <th>Remarks</th>
-                            <th>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <!-- Grades will be populated dynamically -->
-                    </tbody>
-                </table>
+            <div id="studentGradesContainer" class="row g-4">
+                <!-- Student cards will be loaded here -->
             </div>
         </div>
     </div>
@@ -196,108 +156,55 @@
                 <h5 class="mb-0">Upload Grades from Excel</h5>
                 <small class="text-muted">School Year: {{ active_school_year.display_name }}</small>
             </div>
-            <button type="button" class="btn btn-outline-primary" id="toggleUpload">
+            <!-- <button type="button" class="btn btn-outline-primary" id="toggleUpload">
                 <i class="fas fa-upload"></i> Show/Hide Upload Section
-            </button>
+            </button> -->
         </div>
         <div class="card-body" id="uploadSection">
             <!-- Template Generation -->
             <div class="mb-4">
                 <h6>Download Grade Template</h6>
-                <form id="templateForm">
-                    <div class="row mb-3">
-                        <div class="col-md-3">
-                            <label for="template_school_year_select" class="form-label">School Year</label>
-                            <select class="form-select" id="template_school_year_select" name="school_year" required>
-                                <option value="">Select School Year</option>
-                                {% for year in school_years %}
-                                    <option value="{{ year.id }}" {% if year.id == active_school_year.id %}selected{% endif %}>
-                                        {{ year.display_name }} {% if year.is_active %}(Active){% endif %}
-                                    </option>
-                                {% endfor %}
-                            </select>
-                        </div>
-                        <div class="col-md-3">
-                            <label for="template_quarter_select" class="form-label">Quarter</label>
-                            <select class="form-select" id="template_quarter_select" name="quarter" required>
-                                <option value="">Select Quarter</option>
-                                <option value="1">First Quarter</option>
-                                <option value="2">Second Quarter</option>
-                                <option value="3">Third Quarter</option>
-                                <option value="4">Fourth Quarter</option>
-                            </select>
-                        </div>
-                        <div class="col-md-3">
-                            <label for="template_subject_select" class="form-label">Subject</label>
-                            <select class="form-select" id="template_subject_select" name="subject" required>
-                                <option value="">Select Subject</option>
-                                {% for subject in teacher_subjects %}
-                                    <option value="{{ subject.id }}">{{ subject.name }}</option>
-                                {% endfor %}
-                            </select>
-                        </div>
-                        <div class="col-md-3">
-                            <label for="template_section_select" class="form-label">Section</label>
-                            <select class="form-select" id="template_section_select" name="section" required>
-                                <option value="">Select Section</option>
-                                {% for section in teacher_sections %}
-                                    <option value="{{ section.id }}">{{ section.name }}</option>
-                                {% endfor %}
-                            </select>
+                <div class="alert alert-info mb-3">
+                    <i class="fas fa-info-circle"></i> Select the quarter for grade template generation for the current school year ({{ active_school_year.display_name }}).
+                </div>
+                <div class="row mb-3">
+                    <div class="col-md-12">
+                        <div class="btn-group w-100" role="group" aria-label="Quarter Selection">
+                            <input type="radio" class="btn-check" name="quarterSelect" id="quarter1" value="1" checked>
+                            <label class="btn btn-outline-primary" for="quarter1">First Quarter</label>
+                            
+                            <input type="radio" class="btn-check" name="quarterSelect" id="quarter2" value="2">
+                            <label class="btn btn-outline-primary" for="quarter2">Second Quarter</label>
+                            
+                            <input type="radio" class="btn-check" name="quarterSelect" id="quarter3" value="3">
+                            <label class="btn btn-outline-primary" for="quarter3">Third Quarter</label>
+                            
+                            <input type="radio" class="btn-check" name="quarterSelect" id="quarter4" value="4">
+                            <label class="btn btn-outline-primary" for="quarter4">Fourth Quarter</label>
                         </div>
                     </div>
-                    <button type="submit" class="btn btn-success" id="generateTemplateBtn">
-                        <i class="fas fa-file-excel"></i> Download Template
+                </div>
+                <div class="d-flex gap-2 mb-3">
+                    <!-- <button type="button" class="btn btn-success" id="quickTemplateBtn">
+                        <i class="fas fa-bolt"></i> Quick Template (Current Filters)
+                    </button> -->
+                    <button type="button" class="btn btn-primary" id="generateAllTemplatesBtn">
+                        <i class="fas fa-file-export"></i> Generate All Templates
                     </button>
-                </form>
+                    <!-- <small class="text-muted align-self-center">Press <kbd>Ctrl</kbd> + <kbd>T</kbd> for quick template</small> -->
+                </div>
             </div>
 
             <!-- Upload Form -->
             <div class="upload-section">
                 <h6>Upload Grades</h6>
+                <div class="alert alert-info mb-3">
+                    <i class="fas fa-info-circle"></i> The system will automatically detect the quarter, subject, and section from your uploaded template.
+                </div>
                 <form id="uploadForm" method="post" enctype="multipart/form-data">
                     {% csrf_token %}
-                    <div class="row mb-3">
-                        <div class="col-md-3">
-                            <label for="upload_school_year_select" class="form-label">School Year</label>
-                            <select class="form-select" id="upload_school_year_select" name="school_year" required>
-                                <option value="">Select School Year</option>
-                                {% for year in school_years %}
-                                    <option value="{{ year.id }}" {% if year.id == active_school_year.id %}selected{% endif %}>
-                                        {{ year.display_name }} {% if year.is_active %}(Active){% endif %}
-                                    </option>
-                                {% endfor %}
-                            </select>
-                        </div>
-                        <div class="col-md-3">
-                            <label for="upload_quarter_select" class="form-label">Quarter</label>
-                            <select class="form-select" id="upload_quarter_select" name="quarter" required>
-                                <option value="">Select Quarter</option>
-                                <option value="1">First Quarter</option>
-                                <option value="2">Second Quarter</option>
-                                <option value="3">Third Quarter</option>
-                                <option value="4">Fourth Quarter</option>
-                            </select>
-                        </div>
-                        <div class="col-md-3">
-                            <label for="upload_subject_select" class="form-label">Subject</label>
-                            <select class="form-select" id="upload_subject_select" name="subject" required>
-                                <option value="">Select Subject</option>
-                                {% for subject in teacher_subjects %}
-                                    <option value="{{ subject.id }}">{{ subject.name }}</option>
-                                {% endfor %}
-                            </select>
-                        </div>
-                        <div class="col-md-3">
-                            <label for="upload_section_select" class="form-label">Section</label>
-                            <select class="form-select" id="upload_section_select" name="section" required>
-                                <option value="">Select Section</option>
-                                {% for section in teacher_sections %}
-                                    <option value="{{ section.id }}">{{ section.name }}</option>
-                                {% endfor %}
-                            </select>
-                        </div>
-                    </div>
+                    <!-- Add hidden school year field -->
+                    <input type="hidden" name="school_year" id="uploadSchoolYear" value="{{ active_school_year.id }}">
                     <!-- File Upload Area -->
                     <div class="row mb-3">
                         <div class="col-12">
@@ -326,67 +233,55 @@
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title" id="previewModalLabel">Preview Grades</h5>
+                <h5 class="modal-title" id="previewModalLabel">Grade Upload Preview</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
                 <div id="previewContent">
-                    <div class="table-responsive">
-                        <table class="table table-bordered">
-                            <thead class="table-light">
-                                <tr>
-                                    <th>Student ID</th>
-                                    <th>Student Name</th>
-                                    <th>Grade</th>
-                                    <th>Remarks</th>
-                                    <th>Status</th>
-                                </tr>
-                            </thead>
-                            <tbody id="previewTableBody">
-                            </tbody>
-                        </table>
-                    </div>
+                    <!-- Preview content will be loaded here -->
                 </div>
-                <div id="previewError" class="alert alert-danger" style="display: none;"></div>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <button type="button" class="btn btn-primary" id="confirmUploadBtn">
-                    <i class="fas fa-check"></i> Confirm Import
-                </button>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-primary" id="confirmUpload">Confirm Upload</button>
             </div>
         </div>
     </div>
 </div>
 
 <!-- Edit Grade Modal -->
-<div class="modal fade" id="editGradeModal" tabindex="-1" aria-labelledby="editGradeModalLabel" aria-hidden="true">
+<div class="modal fade" id="editGradeModal" tabindex="-1">
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title" id="editGradeModalLabel">Edit Grade</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                <h5 class="modal-title">Edit Grade</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
                 <form id="editGradeForm">
+                    <input type="hidden" id="studentId" name="student_id">
+                    <input type="hidden" id="editSubjectId" name="subject">
+                    <input type="hidden" id="editSchoolYearId" name="school_year">
+                    <input type="hidden" id="editSectionId" name="section">
+                    <input type="hidden" id="editQuarter" name="quarter">
+                    
                     <div class="mb-3">
-                        <label for="studentNameDisplay" class="form-label">Student Name</label>
-                        <p id="studentNameDisplay" class="fw-bold"></p>
+                        <label class="form-label">Student</label>
+                        <p id="studentNameDisplay" class="form-control-static"></p>
                     </div>
                     <div class="mb-3">
                         <label for="gradeInput" class="form-label">Grade</label>
                         <input type="number" class="form-control" id="gradeInput" name="grade" min="0" max="100" step="0.01" required>
-                        <div class="form-text">Enter a grade between 0 and 100.</div>
                     </div>
                     <div class="mb-3">
                         <label for="remarksInput" class="form-label">Remarks</label>
                         <textarea class="form-control" id="remarksInput" name="remarks" rows="3"></textarea>
                     </div>
-                    <input type="hidden" id="studentId" name="student_id">
-                    <input type="hidden" name="subject_id" id="editSubjectId">
-                    <input type="hidden" name="school_year_id" id="editSchoolYearId">
-                    <input type="hidden" name="section_id" id="editSectionId">
-                    <input type="hidden" name="quarter" id="editQuarter">
+                    <div class="mb-3">
+                        <label for="reasonInput" class="form-label">Reason for Change</label>
+                        <textarea class="form-control" id="reasonInput" name="reason" rows="3" required></textarea>
+                        <small class="text-muted">Please provide a reason for changing the grade</small>
+                    </div>
                 </form>
             </div>
             <div class="modal-footer">
@@ -409,163 +304,194 @@
 
 <script>
     $(document).ready(function() {
-        // Initialize DataTable
-        if ($('#gradesTable').length) {
-            $('#gradesTable').DataTable({
-                "pageLength": 25,
-                "lengthMenu": [[10, 25, 50, -1], [10, 25, 50, "All"]],
-                "order": [[1, "asc"]]
-            });
+        // Function to determine remarks based on grade
+        function getRemarks(grade) {
+            if (!grade) return '';
+            const numericGrade = parseFloat(grade);
+            if (isNaN(numericGrade)) return '';
+            return numericGrade >= 75 ? 'PASSED' : 'FAILED';
         }
 
-        // Initialize dropdowns with Select2
-        $('.form-select').select2({
-            width: '100%',
-            placeholder: 'Select an option'
+        // Handle edit grade button click
+        $(document).on('click', '.edit-grade', function() {
+            const button = $(this);
+            $('#studentNameDisplay').text(button.data('student-name'));
+            $('#gradeInput').val(button.data('grade'));
+            $('#remarksInput').val(button.data('remarks'));
+            $('#studentId').val(button.data('student-id'));
+            $('#editSubjectId').val(button.data('subject-id'));
+            $('#editSchoolYearId').val(button.data('school-year-id'));
+            $('#editSectionId').val(button.data('section-id'));
+            $('#editQuarter').val(button.data('quarter'));
+            $('#reasonInput').val(''); // Clear previous reason
+            
+            $('#editGradeModal').modal('show');
         });
 
-        // Function to load subjects for a school year
-        function loadSubjects(schoolYearId) {
-            if (!schoolYearId) return;
-            
-            $.ajax({
-                url: '/teacher/api/get_subjects/',
-                data: { school_year: schoolYearId },
-                success: function(response) {
-                    if (response.success) {
-                        const subjectSelects = [
-                            '#grade_subject_filter', 
-                            '#template_subject_select', 
-                            '#upload_subject_select'
-                        ];
-                        subjectSelects.forEach(function(selectId) {
-                            const select = $(selectId);
-                            select.empty().append('<option value="">Select Subject</option>');
-                            response.subjects.forEach(function(subject) {
-                                select.append(`<option value="${subject.id}">${subject.name}</option>`);
-                            });
-                        });
-                    }
-                },
-                error: function(xhr, status, error) {
-                    console.error('Error loading subjects:', error);
-                }
-            });
-        }
+        // Update remarks when grade changes
+        $('#gradeInput').on('input', function() {
+            const grade = $(this).val();
+            const remarks = getRemarks(grade);
+            $('#remarksInput').val(remarks);
+        });
 
-        // Function to load sections for a subject
-        function loadSections(schoolYearId, subjectId) {
-            if (!schoolYearId || !subjectId) {
-                console.log('Missing required parameters for loadSections:', { schoolYearId, subjectId });
+        // Handle save grade button click
+        $('#saveGradeBtn').on('click', function() {
+            const form = $('#editGradeForm');
+            const reason = $('#reasonInput').val().trim();
+            
+            if (!reason) {
+                toastr.error('Please provide a reason for changing the grade');
                 return;
             }
             
+            const formData = form.serialize();
+            
             $.ajax({
-                url: '/teacher/api/get_sections_for_subject/',
-                data: { 
-                    school_year: schoolYearId,
-                    subject_id: subjectId 
-                },
+                url: '/teacher/api/update_grade/',
+                method: 'POST',
+                data: formData,
                 success: function(response) {
                     if (response.success) {
-                        const sectionSelects = [
-                            '#grade_section_filter', 
-                            '#template_section_select', 
-                            '#upload_section_select'
-                        ];
-                        sectionSelects.forEach(function(selectId) {
-                            const select = $(selectId);
-                            select.empty().append('<option value="">Select Section</option>');
-                            response.sections.forEach(function(section) {
-                                select.append(`<option value="${section.id}">${section.name} (${section.student_count} students)</option>`);
-                            });
-                            select.trigger('change');
-                        });
+                        $('#editGradeModal').modal('hide');
+                        toastr.success('Grade updated successfully!');
+                        // Refresh the grades
+                        loadStudentGrades();
+                    } else {
+                        toastr.error(response.error || 'Error updating grade');
                     }
                 },
                 error: function(xhr, status, error) {
-                    console.error('Error loading sections:', error);
+                    console.error('Error updating grade:', error);
+                    toastr.error('Error updating grade. Please try again.');
                 }
             });
+        });
+
+        // Get selected quarter
+        function getSelectedQuarter() {
+            return $('input[name="quarterSelect"]:checked').val();
         }
 
-        // Handle school year change
-        [
-            '#grade_school_year_filter', 
-            '#template_school_year_select', 
-            '#upload_school_year_select'
-        ].forEach(function(selectId) {
-            $(selectId).change(function() {
-                const schoolYearId = $(this).val();
-                if (schoolYearId) {
-                    loadSubjects(schoolYearId);
-                    // Reset subject and section dropdowns
-                    const formPrefix = selectId.split('_')[0].replace('#', '');
-                    const subjectSelect = formPrefix === 'grade' ? 
-                        '#grade_subject_filter' : 
-                        `#${formPrefix}_subject_select`;
-                    const sectionSelect = formPrefix === 'grade' ? 
-                        '#grade_section_filter' : 
-                        `#${formPrefix}_section_select`;
-                    
-                    $(subjectSelect).empty().append('<option value="">Select Subject</option>');
-                    $(sectionSelect).empty().append('<option value="">Select Section</option>');
-                }
-            });
-        });
+        // Generate All Templates Function
+        function generateAllTemplates() {
+            const schoolYear = $('#schoolYearsData').data('active-year');
+            const quarter = getSelectedQuarter();
+            
+            if (!schoolYear) {
+                toastr.error('No active school year found');
+                return;
+            }
 
-        // Handle subject change
-        [
-            '#grade_subject_filter', 
-            '#template_subject_select', 
-            '#upload_subject_select'
-        ].forEach(function(selectId) {
-            $(selectId).change(function() {
-                const subjectId = $(this).val();
-                const formPrefix = selectId.split('_')[0].replace('#', '');
-                const schoolYearSelect = formPrefix === 'grade' ? 
-                    '#grade_school_year_filter' : 
-                    `#${formPrefix}_school_year_select`;
-                const schoolYearId = $(schoolYearSelect).val();
-                
-                if (subjectId && schoolYearId) {
-                    loadSections(schoolYearId, subjectId);
-                } else {
-                    const sectionSelect = formPrefix === 'grade' ? 
-                        '#grade_section_filter' : 
-                        `#${formPrefix}_section_select`;
-                    $(sectionSelect).empty().append('<option value="">Select Section</option>');
-                    $(sectionSelect).trigger('change');
-                }
-            });
-        });
+            // Show loading state
+            const $button = $('#generateAllTemplatesBtn');
+            const originalText = $button.text();
+            $button.prop('disabled', true).text('Generating...');
 
-        // Template Generation
+            // Create a form and submit it to download the zip file
+            const form = document.createElement('form');
+            form.method = 'GET';
+            form.action = '/teacher/api/generate_all_templates/';
+            
+            // Add school year and quarter parameters
+            const schoolYearInput = document.createElement('input');
+            schoolYearInput.type = 'hidden';
+            schoolYearInput.name = 'school_year';
+            schoolYearInput.value = schoolYear;
+            form.appendChild(schoolYearInput);
+
+            const quarterInput = document.createElement('input');
+            quarterInput.type = 'hidden';
+            quarterInput.name = 'quarter';
+            quarterInput.value = quarter;
+            form.appendChild(quarterInput);
+
+            // Add form to document and submit
+            document.body.appendChild(form);
+            form.submit();
+            document.body.removeChild(form);
+
+            // Reset button state after a delay
+            setTimeout(() => {
+                $button.prop('disabled', false).text(originalText);
+                toastr.success('Templates generated successfully!');
+            }, 2000);
+        }
+
+        // Generate All Templates Button Click
+        $('#generateAllTemplatesBtn').on('click', generateAllTemplates);
+
+        // Quick Template Generation
+        function generateQuickTemplate() {
+            const schoolYear = $('#schoolYearsData').data('active-year');
+            const quarter = getSelectedQuarter();
+            const subject = $('#grade_subject').val();
+            const section = $('#grade_section').val();
+
+            if (!schoolYear) {
+                toastr.error('No active school year found');
+                return;
+            }
+
+            if (!subject || !section) {
+                toastr.warning('Please select Subject and Section first');
+                return;
+            }
+
+            window.location.href = `/teacher/api/generate_grade_template/?school_year=${schoolYear}&quarter=${quarter}&subject=${subject}&section=${section}`;
+        }
+
+        // Template Form Submission
         $('#templateForm').on('submit', function(e) {
             e.preventDefault();
-            const schoolYear = $('#template_school_year_select').val();
-            const quarter = $('#template_quarter_select').val();
+            const schoolYear = $('#schoolYearsData').data('active-year');
+            const quarter = getSelectedQuarter();
             const subject = $('#template_subject_select').val();
             const section = $('#template_section_select').val();
 
-            if (!schoolYear || !quarter || !subject || !section) {
-                alert('Please fill in all fields');
+            if (!schoolYear) {
+                toastr.error('No active school year found');
+                return;
+            }
+
+            if (!subject || !section) {
+                toastr.warning('Please select Subject and Section');
                 return;
             }
 
             window.location.href = `/teacher/api/generate_grade_template/?school_year=${schoolYear}&quarter=${quarter}&subject=${subject}&section=${section}`;
         });
 
-        // Handle file upload form submission
+        // Update button text based on selected quarter
+        $('input[name="quarterSelect"]').on('change', function() {
+            const quarter = $(this).val();
+            const quarterText = $(this).next('label').text();
+            $('#quickTemplateBtn').html(`<i class="fas fa-bolt"></i> Quick Template for ${quarterText}`);
+            $('#generateAllTemplatesBtn').html(`<i class="fas fa-file-export"></i> Generate All Templates for ${quarterText}`);
+        });
+
+        // Update the hidden school year field when school year changes
+        $('#grade_school_year').on('change', function() {
+            $('#uploadSchoolYear').val($(this).val());
+        });
+
+        // Handle file upload
         $('#uploadForm').on('submit', function(e) {
             e.preventDefault();
             
             // Show loading state
-            const submitBtn = $('#uploadGradesBtn');
-            const originalText = submitBtn.html();
+            var submitBtn = $('#uploadGradesBtn');
+            var originalText = submitBtn.html();
             submitBtn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Uploading...');
             
-            const formData = new FormData(this);
+            var formData = new FormData(this);
+            
+            // Ensure school year is included
+            if (!formData.get('school_year')) {
+                toastr.error('Please select a school year first');
+                submitBtn.prop('disabled', false).html(originalText);
+                return;
+            }
             
             $.ajax({
                 url: '/teacher/api/upload-grades/',
@@ -575,13 +501,56 @@
                 contentType: false,
                 success: function(response) {
                     if (response.success) {
-                        toastr.success('Grades uploaded successfully!','Success');
-                        alert('Grades uploaded successfully!');
-                        window.location.reload();
+                        // Show preview modal
+                        var previewContent = $('#previewContent');
+                        previewContent.empty();
+                        
+                        // Add success message
+                        previewContent.append('<div class="alert alert-success mb-3">' + response.message + '</div>');
+                        
+                        // Add warnings if any
+                        if (response.warnings && response.warnings.length > 0) {
+                            var warningsHtml = '<div class="alert alert-warning mb-3"><h6>Warnings:</h6><ul>';
+                            response.warnings.forEach(function(warning) {
+                                warningsHtml += '<li>' + warning + '</li>';
+                            });
+                            warningsHtml += '</ul></div>';
+                            previewContent.append(warningsHtml);
+                        }
+                        
+                        // Add errors if any
+                        if (response.errors && response.errors.length > 0) {
+                            var errorsHtml = '<div class="alert alert-danger mb-3"><h6>Errors:</h6><ul>';
+                            response.errors.forEach(function(error) {
+                                errorsHtml += '<li>' + error + '</li>';
+                            });
+                            errorsHtml += '</ul></div>';
+                            previewContent.append(errorsHtml);
+                        }
+                        
+                        // Add preview table
+                        if (response.preview_data && response.preview_data.length > 0) {
+                            var tableHtml = '<div class="table-responsive"><table class="table table-bordered table-striped">';
+                            tableHtml += '<thead><tr><th>Student ID</th><th>Student Name</th><th>Grade</th><th>Remarks</th></tr></thead>';
+                            tableHtml += '<tbody>';
+                            response.preview_data.forEach(function(row) {
+                                tableHtml += '<tr>';
+                                tableHtml += '<td>' + row.student_id + '</td>';
+                                tableHtml += '<td>' + row.student_name + '</td>';
+                                tableHtml += '<td>' + row.grade + '</td>';
+                                tableHtml += '<td>' + (row.remarks || '') + '</td>';
+                                tableHtml += '</tr>';
+                            });
+                            tableHtml += '</tbody></table></div>';
+                            previewContent.append(tableHtml);
+                        }
+                        
+                        // Show modal
+                        $('#previewModal').modal('show');
                     } else if (response.error) {
-                        alert('Error: ' + response.error);
+                        toastr.error('Error: ' + response.error);
                     } else {
-                        alert('Error uploading grades. Please check the file format and try again.');
+                        toastr.error('Error uploading grades. Please check the file format and try again.');
                     }
                 },
                 error: function(xhr, status, error) {
@@ -595,13 +564,25 @@
                     } catch (e) {
                         errorMessage += 'Please try again.';
                     }
-                    alert(errorMessage);
+                    toastr.error(errorMessage);
                 },
                 complete: function() {
                     // Restore button state
                     submitBtn.prop('disabled', false).html(originalText);
                 }
             });
+        });
+
+        // Handle confirm upload
+        $('#confirmUpload').on('click', function() {
+            // Close the modal
+            $('#previewModal').modal('hide');
+            
+            // Refresh the student grades table
+            loadStudentGrades();
+            
+            // Show success message
+            toastr.success('Grades uploaded successfully!', 'Success');
         });
 
         // Add drag and drop functionality
@@ -621,71 +602,196 @@
             e.preventDefault();
             $(this).removeClass('drag-active');
             
-            const files = e.originalEvent.dataTransfer.files;
+            var files = e.originalEvent.dataTransfer.files;
             if (files.length > 0) {
                 $('#gradeFile').prop('files', files);
             }
         });
 
-        // Initialize with active school year data
-        const activeYearId = $('#schoolYearsData').data('active-year');
-        if (activeYearId) {
-            loadSubjects(activeYearId);
+        // Card-based Grade Management
+        function loadStudentGrades() {
+            const schoolYear = $('#grade_school_year').val();
+            const quarter = $('#grade_quarter').val();
+            const subject = $('#grade_subject').val();
+            const section = $('#grade_section').val();
+
+            if (!schoolYear || !quarter || !subject || !section) {
+                return;
+            }
+
+            // Show loading state
+            $('#studentGradesContainer').html('<div class="col-12 text-center"><div class="spinner-border text-primary" role="status"></div></div>');
+
+            $.ajax({
+                url: '/teacher/api/get_section_grades/',
+                method: 'GET',
+                data: {
+                    school_year: schoolYear,
+                    quarter: quarter,
+                    subject: subject,
+                    section: section
+                },
+                success: function(response) {
+                    if (response.success) {
+                        const container = $('#studentGradesContainer');
+                        container.empty();
+
+                        if (response.students && response.students.length > 0) {
+                            // Create table
+                            const table = `
+                                <div class="table-responsive">
+                                    <table class="table table-bordered table-hover">
+                                        <thead class="table-light">
+                                            <tr>
+                                                <th>Student ID</th>
+                                                <th>Name</th>
+                                                <th>Grade</th>
+                                                <th>Remarks</th>
+                                                <th>Actions</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            ${response.students.map(student => createStudentRow(student)).join('')}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            `;
+                            container.html(table);
+                        } else {
+                            container.html('<div class="col-12 text-center"><p class="text-muted">No students found</p></div>');
+                        }
+                    } else {
+                        toastr.error(response.error || 'Error loading student grades');
+                    }
+                },
+                error: function(xhr, status, error) {
+                    console.error('Error loading student grades:', error);
+                    toastr.error('Error loading student grades. Please try again.');
+                    $('#studentGradesContainer').html('<div class="col-12 text-center"><p class="text-danger">Error loading grades</p></div>');
+                }
+            });
         }
 
-        // Handle school year change
-        $('#school_year').change(function() {
-            const schoolYear = $(this).val();
-            if (schoolYear) {
-                // Load subjects for selected school year
-                $.ajax({
-                    url: '/teacher/api/subjects/',
-                    data: { school_year: schoolYear },
-                    success: function(response) {
-                        const subjectSelect = $('#subject');
-                        subjectSelect.empty();
-                        subjectSelect.append('<option value="">Select Subject</option>');
-                        response.subjects.forEach(function(subject) {
-                            subjectSelect.append(`<option value="${subject}">${subject}</option>`);
-                        });
-                        // Clear sections when school year changes
-                        $('#section').empty().append('<option value="">Select Section</option>');
-                    },
-                    error: function(xhr) {
-                        console.error('Error loading subjects:', xhr.responseText);
-                        alert('Error loading subjects. Please try again.');
-                    }
-                });
+        function createStudentRow(student) {
+            const remarks = student.grade ? getRemarks(student.grade) : '';
+            return `
+                <tr data-student-id="${student.id}">
+                    <td>${student.student_id}</td>
+                    <td>${student.first_name} ${student.last_name}</td>
+                    <td>
+                        <input type="number" 
+                               class="form-control grade-input" 
+                               value="${student.grade || ''}" 
+                               min="0" 
+                               max="100" 
+                               step="0.01"
+                               data-original-value="${student.grade || ''}">
+                    </td>
+                    <td>
+                        <input type="text" 
+                               class="form-control remarks-input" 
+                               value="${remarks}" 
+                               readonly>
+                    </td>
+                    <td>
+                        <button class="btn btn-primary btn-sm save-grade" style="display: none;">
+                            <i class="fas fa-save"></i> Save
+                        </button>
+                        <button class="btn btn-secondary btn-sm cancel-edit" style="display: none;">
+                            <i class="fas fa-times"></i> Cancel
+                        </button>
+                    </td>
+                </tr>
+            `;
+        }
+
+        // Handle grade input changes
+        $(document).on('input', '.grade-input', function() {
+            const row = $(this).closest('tr');
+            const grade = $(this).val();
+            const remarks = getRemarks(grade);
+            row.find('.remarks-input').val(remarks);
+            
+            // Show save/cancel buttons if grade has changed
+            const originalValue = $(this).data('original-value');
+            if (grade !== originalValue) {
+                row.find('.save-grade, .cancel-edit').show();
+            } else {
+                row.find('.save-grade, .cancel-edit').hide();
             }
         });
 
-        // Handle subject change
-        $('#subject').change(function() {
-            const schoolYear = $('#school_year').val();
-            const subject = $(this).val();
-            if (schoolYear && subject) {
-                // Load sections for selected school year and subject
-                $.ajax({
-                    url: '/teacher/api/sections/',
-                    data: { 
-                        school_year: schoolYear,
-                        subject: subject
-                    },
-                    success: function(response) {
-                        const sectionSelect = $('#section');
-                        sectionSelect.empty();
-                        sectionSelect.append('<option value="">Select Section</option>');
-                        response.sections.forEach(function(section) {
-                            sectionSelect.append(`<option value="${section}">${section}</option>`);
-                        });
-                    },
-                    error: function(xhr) {
-                        console.error('Error loading sections:', xhr.responseText);
-                        alert('Error loading sections. Please try again.');
+        // Handle save grade
+        $(document).on('click', '.save-grade', function() {
+            const row = $(this).closest('tr');
+            const studentId = row.data('student-id');
+            const grade = row.find('.grade-input').val();
+            const remarks = row.find('.remarks-input').val();
+
+            const data = {
+                student_id: studentId,
+                school_year: $('#grade_school_year').val(),
+                quarter: $('#grade_quarter').val(),
+                subject: $('#grade_subject').val(),
+                section: $('#grade_section').val(),
+                grade: grade,
+                remarks: remarks,
+                reason: 'Grade updated via table view'  // Add default reason
+            };
+
+            // Show loading state
+            const saveBtn = $(this);
+            const originalText = saveBtn.html();
+            saveBtn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>');
+
+            $.ajax({
+                url: '/teacher/api/update_grade/',
+                method: 'POST',
+                data: data,
+                headers: {
+                    'X-CSRFToken': $('input[name="csrfmiddlewaretoken"]').val()
+                },
+                success: function(response) {
+                    if (response.success) {
+                        toastr.success('Grade saved successfully!');
+                        // Update original value
+                        row.find('.grade-input').data('original-value', grade);
+                        // Hide save/cancel buttons
+                        row.find('.save-grade, .cancel-edit').hide();
+                    } else {
+                        toastr.error(response.error || 'Error saving grade');
                     }
-                });
-            }
+                },
+                error: function(xhr, status, error) {
+                    console.error('Error saving grade:', error);
+                    toastr.error('Error saving grade. Please try again.');
+                },
+                complete: function() {
+                    // Restore button state
+                    saveBtn.prop('disabled', false).html(originalText);
+                }
+            });
         });
+
+        // Handle cancel edit
+        $(document).on('click', '.cancel-edit', function() {
+            const row = $(this).closest('tr');
+            const originalValue = row.find('.grade-input').data('original-value');
+            row.find('.grade-input').val(originalValue);
+            row.find('.remarks-input').val(getRemarks(originalValue));
+            row.find('.save-grade, .cancel-edit').hide();
+        });
+
+        // Load grades when filters change
+        $('#grade_school_year, #grade_quarter, #grade_subject, #grade_section').on('change', function() {
+            loadStudentGrades();
+        });
+
+        // Initial load if all filters are selected
+        if ($('#grade_school_year').val() && $('#grade_quarter').val() && 
+            $('#grade_subject').val() && $('#grade_section').val()) {
+            loadStudentGrades();
+        }
     });
 </script>
 {% endblock %}

@@ -226,7 +226,7 @@
             </div>
 
             <!-- Filter Section -->
-            <div class="card border-0 rounded-4 shadow-sm mb-4">
+            <!-- <div class="card border-0 rounded-4 shadow-sm mb-4">
                 <div class="card-body p-4">
                     <div class="d-flex justify-content-between align-items-center mb-3">
                         <h5 class="card-title mb-0">Dashboard Filters</h5>
@@ -263,7 +263,7 @@
                         </div>
                     </form>
                 </div>
-            </div>
+            </div> -->
 
             <!-- Stats Cards Row -->
             <div class="row mb-4 g-4">
@@ -273,8 +273,8 @@
                         <div class="card-body p-4">
                             <div class="d-flex justify-content-between align-items-start">
                                 <div>
-                                    <h6 class="card-subtitle mb-2 text-white-50">Total Students</h6>
-                                    <h2 class="card-title display-5 fw-bold mb-0">{{ total_students }}</h2>
+                                    <h6 class="card-subtitle mb-2 text-white-50">Total Enrolled Students</h6>
+                                    <h2 class="card-title display-5 fw-bold mb-0">{{ enrollment_stats.total }}</h2>
                                     <div class="mt-3">
                                         <p class="card-text mb-1">
                                             <span class="badge {% if student_growth >= 0 %}bg-white text-primary{% else %}bg-danger text-white{% endif %} px-3 py-2">
@@ -291,12 +291,12 @@
                             </div>
                         </div>
                         <div class="card-footer bg-primary-dark border-0 py-3">
-                            <a href="#" class="text-white text-decoration-none d-flex align-items-center">
+                            <a href="{% url 'dashboard:enrollment' %}" class="text-white text-decoration-none d-flex align-items-center">
                                 <span class="flex-grow-1">View Details</span>
                                 <i class="fas fa-arrow-right"></i>
                             </a>
                         </div>
-                        <div class="position-absolute top-0 end-0 mt-2 me-2">
+                        <!-- <div class="position-absolute top-0 end-0 mt-2 me-2">
                             <div class="dropdown">
                                 <button class="btn text-white btn-sm" type="button" data-bs-toggle="dropdown">
                                     <i class="fas fa-ellipsis-v"></i>
@@ -306,7 +306,7 @@
                                     <li><a class="dropdown-item" href="#"><i class="fas fa-sync me-2"></i>Refresh</a></li>
                                 </ul>
                             </div>
-                        </div>
+                        </div> -->
                     </div>
                 </div>
 
@@ -317,7 +317,7 @@
                             <div class="d-flex justify-content-between align-items-start">
                                 <div>
                                     <h6 class="card-subtitle mb-2 text-white-50">Total Teachers</h6>
-                                    <h2 class="card-title display-5 fw-bold mb-0">{{ total_teachers }}</h2>
+                                    <h2 class="card-title display-5 fw-bold mb-0">{{ teacher_stats.total }}</h2>
                                     <div class="mt-3">
                                         <small class="text-white-50">
                                             <i class="fas fa-clock me-1"></i>Last updated today
@@ -330,12 +330,12 @@
                             </div>
                         </div>
                         <div class="card-footer bg-success-dark border-0 py-3">
-                            <a href="#" class="text-white text-decoration-none d-flex align-items-center">
+                            <a href="{% url 'dashboard:teachers' %}" class="text-white text-decoration-none d-flex align-items-center">
                                 <span class="flex-grow-1">View Details</span>
                                 <i class="fas fa-arrow-right"></i>
                             </a>
                         </div>
-                        <div class="position-absolute top-0 end-0 mt-2 me-2">
+                        <!-- <div class="position-absolute top-0 end-0 mt-2 me-2">
                             <div class="dropdown">
                                 <button class="btn text-white btn-sm" type="button" data-bs-toggle="dropdown">
                                     <i class="fas fa-ellipsis-v"></i>
@@ -345,7 +345,7 @@
                                     <li><a class="dropdown-item" href="#"><i class="fas fa-sync me-2"></i>Refresh</a></li>
                                 </ul>
                             </div>
-                        </div>
+                        </div> -->
                     </div>
                 </div>
 
@@ -356,7 +356,7 @@
                             <div class="d-flex justify-content-between align-items-start">
                                 <div>
                                     <h6 class="card-subtitle mb-2 text-white-50">Total Sections</h6>
-                                    <h2 class="card-title display-5 fw-bold mb-0">{{ total_sections }}</h2>
+                                    <h2 class="card-title display-5 fw-bold mb-0">{{ section_stats.total }}</h2>
                                     <div class="mt-3">
                                         <small class="text-white-50">
                                             <i class="fas fa-clock me-1"></i>Last updated today
@@ -369,12 +369,12 @@
                             </div>
                         </div>
                         <div class="card-footer bg-warning-dark border-0 py-3">
-                            <a href="#" class="text-white text-decoration-none d-flex align-items-center">
+                            <a href="{% url 'dashboard:sections'%}" class="text-white text-decoration-none d-flex align-items-center">
                                 <span class="flex-grow-1">View Details</span>
                                 <i class="fas fa-arrow-right"></i>
                             </a>
                         </div>
-                        <div class="position-absolute top-0 end-0 mt-2 me-2">
+                        <!-- <div class="position-absolute top-0 end-0 mt-2 me-2">
                             <div class="dropdown">
                                 <button class="btn text-white btn-sm" type="button" data-bs-toggle="dropdown">
                                     <i class="fas fa-ellipsis-v"></i>
@@ -384,7 +384,7 @@
                                     <li><a class="dropdown-item" href="#"><i class="fas fa-sync me-2"></i>Refresh</a></li>
                                 </ul>
                             </div>
-                        </div>
+                        </div> -->
                     </div>
                 </div>
             </div>
@@ -650,7 +650,7 @@
 
         document.addEventListener('DOMContentLoaded', function() {
             // Gender Distribution Chart
-            const genderData = JSON.parse('{{ gender_data|safe }}');
+            const genderData = {{ gender_data|safe }};
             const genderCtx = document.getElementById('genderChart').getContext('2d');
             const genderChart = new Chart(genderCtx, {
                 type: 'doughnut',
@@ -718,7 +718,7 @@
             });
 
             // Grade Level Distribution Chart
-            const gradeLevelData = JSON.parse('{{ grade_level_data|safe }}');
+            const gradeLevelData = {{ grade_level_data|safe }};
             const gradeLevelCtx = document.getElementById('gradeLevelChart').getContext('2d');
             const gradeLevelChart = new Chart(gradeLevelCtx, {
                 type: 'bar',
@@ -804,12 +804,6 @@
                     .then(response => response.json())
                     .then(data => {
                         if (!data.error) {
-                            // Update total students
-                            document.querySelector('.card.bg-primary .display-5').textContent = data.total_students;
-                            // Update total teachers
-                            document.querySelector('.card.bg-success .display-5').textContent = data.total_teachers;
-                            // Update total sections
-                            document.querySelector('.card.bg-warning .display-5').textContent = data.total_sections;
                             // Update student growth if available
                             if (data.student_growth !== undefined) {
                                 const growthBadge = document.querySelector('.card.bg-primary .badge');

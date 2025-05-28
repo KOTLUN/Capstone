@@ -8,6 +8,8 @@ from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import redirect
+from django.contrib.contenttypes.fields import GenericForeignKey
+from django.contrib.contenttypes.models import ContentType
 
 
 # Create your models here.
@@ -132,6 +134,7 @@ class Teachers(models.Model):
     address = models.TextField()
     class_sched = models.CharField(max_length=50)
     teacher_photo = models.ImageField(upload_to='teacher_photos/', null=True, blank=True)
+    force_password_change = models.BooleanField(default=True)
 
     def __str__(self):
         return f"{self.first_name} {self.last_name}"
@@ -297,16 +300,6 @@ class DroppedStudent(models.Model):
     
     def __str__(self):
         return f"{self.enrollment.student} - Dropped on {self.drop_date}"
-
-class TransferredStudent(models.Model):
-    enrollment = models.OneToOneField(Enrollment, on_delete=models.CASCADE, related_name='transfer_details')
-    transfer_date = models.DateField(auto_now_add=True)
-    transfer_school = models.CharField(max_length=255)
-    reason = models.TextField()
-    remarks = models.TextField(blank=True, null=True)
-    
-    def __str__(self):
-        return f"{self.enrollment.student} - Transferred to {self.transfer_school}"
 
 class CompletedStudent(models.Model):
     enrollment = models.OneToOneField(Enrollment, on_delete=models.CASCADE, related_name='completion_details')
@@ -521,6 +514,11 @@ class Grades(models.Model):
 class AdminProfile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE)
     profile_photo = models.ImageField(upload_to='admin_photos/', null=True, blank=True)
+    first_name = models.CharField(max_length=100, blank=True)
+    last_name = models.CharField(max_length=100, blank=True)
+    email = models.EmailField(blank=True)
+    phone = models.CharField(max_length=20, blank=True)
+    address = models.TextField(blank=True)
     
     def __str__(self):
         return f"Profile of {self.user.username}"
@@ -674,6 +672,8 @@ class Grade12Enrollment(models.Model):
     
     
 
+
+
 class Event(models.Model):
     title = models.CharField(max_length=200)
     description = models.TextField(blank=True)
@@ -683,6 +683,7 @@ class Event(models.Model):
     end_time = models.TimeField()
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    created_by = models.ForeignKey(User, on_delete=models.CASCADE, null=True, blank=True)
 
     def __str__(self):
         return self.title
@@ -753,3 +754,73 @@ def get_enrollment_model(grade_level):
     }
     return enrollment_models.get(grade_level)
 
+
+class Registrar(models.Model):
+    teacher = models.ForeignKey(
+        'Teachers',
+        on_delete=models.CASCADE,
+        related_name='registrar_role'
+    )
+    school_year = models.ForeignKey(
+        'SchoolYear',
+        on_delete=models.CASCADE
+    )
+    is_active = models.BooleanField(default=True)
+    assigned_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True
+        
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"{self.teacher} - {self.school_year}"
+
+
+class Transferee(models.Model):
+    content_type = models.ForeignKey(ContentType, on_delete=models.CASCADE)
+    object_id = models.PositiveIntegerField()
+    enrollment = GenericForeignKey('content_type', 'object_id')
+    created_at = models.DateTimeField(auto_now_add=True)
+    # Add extra fields if needed
+
+    def __str__(self):
+        return f"Transferee: {self.enrollment.student} ({self.enrollment.school_year})"
+
+class Returnee(models.Model):
+    content_type = models.ForeignKey(ContentType, on_delete=models.CASCADE)
+    object_id = models.PositiveIntegerField()
+    enrollment = GenericForeignKey('content_type', 'object_id')
+    created_at = models.DateTimeField(auto_now_add=True)
+    # Add extra fields if needed
+
+    def __str__(self):
+        return f"Returnee: {self.enrollment.student} ({self.enrollment.school_year})"
+
+
+class Feedback(models.Model):
+    student = models.ForeignKey(Student, on_delete=models.CASCADE)
+    message = models.TextField()
+    created_at = models.DateTimeField(auto_now_add=True)
+    is_read = models.BooleanField(default=False)
+
+    def __str__(self):
+        return f"Feedback from {self.student} to {self.teacher}"
+
+class GradeChangeLog(models.Model):
+    """Model to track changes to grades"""
+    grade = models.ForeignKey(Grades, on_delete=models.CASCADE, related_name='change_logs')
+    old_grade = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
+    new_grade = models.DecimalField(max_digits=5, decimal_places=2)
+    changed_by = models.ForeignKey(Teachers, on_delete=models.SET_NULL, null=True)
+    reason = models.TextField()
+    changed_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-changed_at']
+
+    def __str__(self):
+        return f"Grade change for {self.grade.student} - {self.old_grade} to {self.new_grade}"

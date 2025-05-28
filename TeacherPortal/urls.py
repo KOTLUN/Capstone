@@ -18,6 +18,8 @@ from django.urls import path
 from . import views
 from . import form_views
 
+app_name = 'TeacherPortal'
+
 urlpatterns = [
     path('profile/', views.profile_view, name='profile'),
     path('edit_profile/', views.update_profile, name='edit_profile'),
@@ -27,7 +29,7 @@ urlpatterns = [
     
     # Grade management
     path('grades/', views.grades_view, name='grades'),
-    path('update-grade/', views.update_grade, name='update_grade'),
+    path('api/update_grade/', views.update_grade, name='update_grade'),
     path('import-grades/', views.import_grades_view, name='import_grades'),
     path('upload-grades/', views.upload_grades, name='upload_grades'),
     path('upload-grades-ajax/', views.upload_grades_ajax, name='upload_grades_ajax'),
@@ -62,6 +64,17 @@ urlpatterns = [
     path('api/subjects/', views.get_teacher_subjects, name='get_teacher_subjects'),
     path('api/sections/', views.get_teacher_sections, name='get_teacher_sections'),
     path('api/upload-grades/', views.upload_grades, name='upload_grades'),
+    path('api/events/', views.teacher_events_api, name='teacher_events_api'),
+    path('api/get_grades/', views.get_grades, name='get_grades'),
+    path('api/get_section_grades/', views.get_section_grades, name='get_section_grades'),
+    # New URL for account settings
+    path('account/', views.account_settings, name='account_settings'),
+    path('registrar/', views.registrar, name='registrar'),
+    path('registrar/get_student_grades/', views.get_student_grades, name='get_student_grades'),
+    path('calendar/', views.teacher_calendar_view, name='teacher_calendar'),
+    path('api/generate_grade_template/', views.generate_grade_template, name='generate_grade_template'),
+    path('api/get_all_subjects_sections/', views.get_all_subjects_sections, name='get_all_subjects_sections'),
+    path('api/generate_all_templates/', views.generate_all_templates, name='generate_all_templates'),
 ]
 
 

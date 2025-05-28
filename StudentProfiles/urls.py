@@ -14,4 +14,6 @@ urlpatterns = [
     path('subjects/<int:student_id>/', views.student_subjects, name='student_subjects'),
     path('schedule/<int:student_id>/', views.student_schedule, name='student_schedule'),
     path('analytics/grades/<int:student_id>/', views.get_grade_analytics, name='grade_analytics'),
+    path('student/<int:student_id>/change-password/', views.change_password, name='change_password'),
+    path('feedback/send/', views.send_feedback, name='send_feedback'),
 ]

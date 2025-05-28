@@ -9,6 +9,11 @@ from django.contrib.auth.views import (
     PasswordResetConfirmView,
     PasswordResetCompleteView
 )
+
+from django.contrib.auth import authenticate, login, logout
+from django.contrib import messages
+from django.shortcuts import render, redirect
+from dashboard.models import Teachers, Student
 from django.urls import reverse_lazy, reverse
 from django.contrib.auth.models import User
 from django.core.mail import send_mail
@@ -23,81 +28,85 @@ from email.mime.text import MIMEText
 from django.utils import timezone
 import logging
 from django.contrib.auth.decorators import login_required
+from django.contrib.auth.password_validation import validate_password
+from django.core.exceptions import ValidationError
 
 # Set up logging
 logger = logging.getLogger(__name__)
 
-def login_view(request):
-    # Save the next parameter in the session if it exists
-    next_url = request.GET.get('next')
-    if next_url:
-        request.session['next'] = next_url
-        logger.info(f"Saved next URL in session: {next_url}")
 
+def login_view(request):
+    """Handle login and root URL access"""
+    # If user is already authenticated, redirect to appropriate dashboard
+    if request.user.is_authenticated:
+        if request.user.is_superuser:
+            return redirect('dashboard:dashboard')
+        try:
+            teacher = Teachers.objects.get(user=request.user)
+            return redirect('TeacherPortal:profile')
+        except Teachers.DoesNotExist:
+            try:
+                student = Student.objects.get(user=request.user)
+                return redirect('student_profile', student_id=student.id)
+            except Student.DoesNotExist:
+                logout(request)
+                request.session.flush()
+                messages.error(request, "No associated profile found. Please contact the administrator.")
+                return render(request, 'login.html')
+
+    # Handle login form submission
     if request.method == "POST":
         username = request.POST.get('username')
         password = request.POST.get('password')
-        
-        # Add debug logging
-        logger.info(f"Login attempt for username: {username}")
-
         user = authenticate(request, username=username, password=password)
-        if user is not None:
+        
+        if user is not None and user.is_active:
             login(request, user)
             
-            # Log user details for debugging
-            logger.info(f"User authenticated: {user.username} (ID: {user.id})")
-            logger.info(f"User email: {user.email}")
-            logger.info(f"User is active: {user.is_active}")
-            logger.info(f"User is staff: {user.is_staff}")
-            logger.info(f"User is superuser: {user.is_superuser}")
-            
-            # Get the next URL from session
-            next_url = request.session.get('next')
-            if next_url:
-                del request.session['next']
-                logger.info(f"Redirecting to next URL: {next_url}")
-                return redirect(next_url)
-            
-            # Check if the user is an admin
-            if user.is_superuser:
-                logger.info("User is superuser, redirecting to dashboard")
-                return redirect('dashboard:dashboard')
-
-            # Check if the user is a teacher
+            # Check if user needs to change password
             try:
                 teacher = Teachers.objects.get(user=user)
-                logger.info(f"Teacher authenticated: {teacher.first_name} {teacher.last_name}")
-                logger.info(f"Teacher email: {teacher.email}")
-                logger.info(f"Teacher has user account: {teacher.user is not None}")
+                if teacher.force_password_change:
+                    return redirect('force_password_change')
+            except Teachers.DoesNotExist:
+                try:
+                    student = Student.objects.get(user=user)
+                    if student.force_password_change:
+                        return redirect('force_password_change')
+                except Student.DoesNotExist:
+                    pass
+            
+            # Redirect to appropriate dashboard
+            if user.is_superuser:
+                return redirect('dashboard:dashboard')
+            try:
+                teacher = Teachers.objects.get(user=user)
                 return redirect('TeacherPortal:profile')
             except Teachers.DoesNotExist:
-                logger.info(f"No teacher profile found for user: {user.username}")
-
-            # Check if the user is a student
-            try:
-                student = Student.objects.get(user=user)
-                logger.info(f"Student authenticated: {student.first_name} {student.last_name}")
-                logger.info(f"Student email: {student.email}")
-                logger.info(f"Student has account: {student.has_account}")
-                logger.info(f"Student has user account: {student.user is not None}")
-                return redirect('student_profile', student_id=student.id)
-            except Student.DoesNotExist:
-                logger.error(f"User {username} has no associated teacher or student profile")
-                messages.error(request, "Invalid username or password.")
-                logout(request)
-                return redirect('login')
+                try:
+                    student = Student.objects.get(user=user)
+                    return redirect('student_profile', student_id=student.id)
+                except Student.DoesNotExist:
+                    logout(request)
+                    request.session.flush()
+                    messages.error(request, "No associated profile found. Please contact the administrator.")
+                    return render(request, 'login.html')
         else:
-            logger.warning(f"Authentication failed for username: {username}")
             messages.error(request, "Invalid username or password.")
-
+    
+    # For GET requests or failed login attempts, show the login page
     return render(request, 'login.html')
 
 
 
-
 def logout_view(request):
-    logout(request)
+    """Handle user logout and redirect to login page"""
+    if request.user.is_authenticated:
+        # Clear the session
+        request.session.flush()
+        # Logout the user
+        logout(request)
+        messages.success(request, "You have been successfully logged out.")
     return redirect('login')
 
 
@@ -236,7 +245,7 @@ def teacher_dashboard(request):
 
 @login_required
 def admin_dashboard(request):
-    if not request.user.email.endswith('@admin.stcfi.edu.ph'):
+    if not request.user.is_superuser:
         return redirect('login')
     return redirect('dashboard:dashboard')  # Updated namespace
 
@@ -271,8 +280,12 @@ def student_dashboard(request):
         return redirect('login')
 
 def root_view(request):
+    """Handle root URL access and redirect appropriately"""
     if not request.user.is_authenticated:
-        return render(request, 'login.html')
+        # Clear any existing session data
+        request.session.flush()
+        return redirect('login')
+    
     # Redirect authenticated users to their dashboard/profile
     if request.user.is_superuser:
         return redirect('dashboard:dashboard')
@@ -286,9 +299,87 @@ def root_view(request):
         return redirect('student_profile', student_id=student.id)
     except Student.DoesNotExist:
         pass
-    # If no profile, log out and show login
+    
+    # If no profile found, log out and show login
     logout(request)
+    request.session.flush()  # Clear session data
     messages.error(request, "No associated profile found. Please contact the administrator.")
-    return render(request, 'login.html')
+    return redirect('login')
+
+@login_required
+def force_password_change(request):
+    if request.method == 'POST':
+        current_password = request.POST.get('current_password')
+        new_password = request.POST.get('new_password')
+        confirm_password = request.POST.get('confirm_password')
+        
+        # Verify current password
+        if not request.user.check_password(current_password):
+            messages.error(request, 'Current password is incorrect.')
+            return render(request, 'login/force_password_change.html')
+        
+        # Check if new passwords match
+        if new_password != confirm_password:
+            messages.error(request, 'New passwords do not match.')
+            return render(request, 'login/force_password_change.html')
+        
+        # Validate new password
+        try:
+            validate_password(new_password, request.user)
+        except ValidationError as e:
+            messages.error(request, '\n'.join(e.messages))
+            return render(request, 'login/force_password_change.html')
+        
+        # Update password in User model
+        request.user.set_password(new_password)
+        request.user.save()
+        
+        # Update password and force_password_change flag in Teacher/Student model
+        try:
+            teacher = Teachers.objects.get(user=request.user)
+            teacher.password = request.user.password  # Sync with User model's password
+            teacher.force_password_change = False
+            teacher.save()
+            logger.info(f"Teacher {teacher.username} changed password successfully")
+            messages.success(request, 'Password changed successfully.')
+            return redirect('/teacher/profile/')  # Redirect to teacher profile
+        except Teachers.DoesNotExist:
+            try:
+                student = Student.objects.get(user=request.user)
+                student.password = request.user.password  # Sync with User model's password
+                student.force_password_change = False
+                student.save()
+                logger.info(f"Student {student.username} changed password successfully")
+                messages.success(request, 'Password changed successfully.')
+                return redirect(f'/student-profile/{student.id}/')  # Redirect to student profile
+            except Student.DoesNotExist:
+                logger.error(f"No Teacher or Student profile found for user {request.user.username}")
+                messages.error(request, "No associated profile found. Please contact the administrator.")
+                return redirect('login')
+    
+    return render(request, 'login/force_password_change.html')
+
+@login_required
+def proceed_to_login(request):
+    """Handle the proceed to login action, keeping the generated password"""
+    try:
+        # Check if user is a teacher
+        teacher = Teachers.objects.get(user=request.user)
+        if teacher.force_password_change:
+            # Keep the force_password_change flag as True
+            return redirect('TeacherPortal:profile')
+    except Teachers.DoesNotExist:
+        try:
+            # Check if user is a student
+            student = Student.objects.get(user=request.user)
+            if student.force_password_change:
+                # Keep the force_password_change flag as True
+                return redirect('student_profile', student_id=student.id)
+        except Student.DoesNotExist:
+            pass
+    
+    # If no profile found or not forced to change password, redirect to login
+    messages.error(request, "No associated profile found. Please contact the administrator.")
+    return redirect('login')
 
 

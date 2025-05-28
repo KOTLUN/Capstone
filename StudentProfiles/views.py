@@ -8,7 +8,7 @@ from dashboard.models import (
     Schedules, SchoolYear, Grade8Enrollment,
     Grade9Enrollment, Grade10Enrollment,
     Grade11Enrollment, Grade12Enrollment,Grades,
-    Announcement
+    Announcement, Feedback
 )
 import json
 from decimal import Decimal
@@ -16,6 +16,9 @@ from django.utils import timezone
 from django.http import HttpResponse
 from random import randint
 from django.db import connection
+from django.contrib.auth.hashers import check_password
+from django.contrib.auth.password_validation import validate_password
+from django.contrib.auth import update_session_auth_hash
 
 @login_required
 def student_profile(request, student_id):
@@ -93,23 +96,25 @@ def student_dashboard(request, student_id):
     current_school_year_display = f"{active_school_year.year_start}-{active_school_year.year_end} (Active)"
     current_enrollment = get_current_enrollment(student, current_school_year)
 
-    subject_grades = {}
     quarters_display = ['First Quarter', 'Second Quarter', 'Third Quarter', 'Fourth Quarter']
 
-    # Initialize structure for all subjects
-    subjects = Subject.objects.all()
-    for subject in subjects:
+    # Get all grades for this student in the current school year
+    grades = Grades.objects.select_related('subject').filter(
+        student=student,
+        school_year=current_school_year
+    ).order_by('subject__name', 'quarter')
+
+    # Build a set of subjects that have grades
+    subjects_with_grades = set(grade.subject for grade in grades)
+
+    # Only build subject_grades for these subjects
+    subject_grades = {}
+    for subject in subjects_with_grades:
         subject_grades[subject.name] = {
             'quarters': {},
             'average': None,
             'status': 'No Grades'
         }
-
-    # Fetch Grades using Django ORM
-    grades = Grades.objects.select_related('subject').filter(
-        student=student,
-        school_year=current_school_year
-    ).order_by('subject__name', 'quarter')
 
     # Fill in grade data
     for grade in grades:
@@ -174,8 +179,6 @@ def student_dashboard(request, student_id):
 
     return render(request, 'mydashboard.html', context)
 
-
-
 @login_required
 def student_grades(request, student_id):
     try:
@@ -197,43 +200,32 @@ def student_grades(request, student_id):
             messages.error(request, "No active school year found.")
             return redirect('login')
     
-        # Get current enrollment
-        current_enrollment = None
-        for grade_level in range(7, 13):
-            enrollment_model = get_enrollment_model(grade_level)
-            if enrollment_model:
-                enrollment = enrollment_model.objects.filter(
-                    student=student,
-                    school_year=current_school_year,
-                    status='Active'
-                ).first()
-                if enrollment:
-                    current_enrollment = enrollment
-                    break
-        
-        # Initialize subject grades dictionary
-        subject_grades = {}
-        
-        # Get grades from TeacherPortal Grade model
+        # Get all grades for this student in the current school year
         from dashboard.models import Grades as TeacherGrade
         grades = TeacherGrade.objects.filter(
             student=student_id,
             school_year=current_school_year
         )
-        
+    
+        # Build a set of subjects that have grades
+        subjects_with_grades = set(Subject.objects.get(subject_id=grade.course) for grade in grades)
+    
+        # Only build subject_grades for these subjects
+        subject_grades = {}
+        for subject in subjects_with_grades:
+            subject_grades[subject.name] = {
+                'grades': {'1': None, '2': None, '3': None, '4': None},
+                'final_grade': None,
+                'status': 'No Grades'
+            }
+    
         # Process grades by subject
         for grade in grades:
             try:
                 subject = Subject.objects.get(subject_id=grade.course)
                 if subject.name not in subject_grades:
-                    subject_grades[subject.name] = {
-                        'grades': {'1': None, '2': None, '3': None, '4': None},
-                        'final_grade': None,
-                        'status': 'No Grades'
-                    }
-                
+                    continue  # Only process grades for subjects with grades
                 subject_grades[subject.name]['grades'][grade.quarter] = grade.grade
-                
                 # Calculate final grade for available quarters
                 valid_grades = [g for g in subject_grades[subject.name]['grades'].values() if g is not None]
                 if valid_grades:
@@ -245,7 +237,6 @@ def student_grades(request, student_id):
     
         context = {
             'student': student,
-            'current_enrollment': current_enrollment,
             'current_school_year': current_school_year,
             'school_years': school_years,
             'subject_grades': subject_grades
@@ -354,7 +345,7 @@ def get_current_enrollment(student, current_school_year):
         enrollment = model.objects.filter(
             student_id=student.id,
             school_year=current_school_year,
-            status='Active'
+            status__in=['Active', 'Transferee']  # Include both Active and Transferee statuses
         ).first()
         if enrollment:
             return enrollment
@@ -877,6 +868,12 @@ def student_grade_details(request, student_id):
     # Get current enrollment
     current_enrollment = get_current_enrollment(student, current_school_year)
     
+    # Only get subjects for the student's enrolled section
+    if current_enrollment:
+        subjects = Subject.objects.filter(schedules__section=current_enrollment.section).distinct()
+    else:
+        subjects = Subject.objects.none()
+    
     # Initialize data structures
     subject_grades = {}
     grade_analytics = {
@@ -890,8 +887,6 @@ def student_grade_details(request, student_id):
     }
     
     try:
-        # Get all subjects
-        subjects = Subject.objects.all()
         grade_analytics['total_subjects'] = subjects.count()
         
         # Initialize subject_grades dictionary
@@ -929,7 +924,6 @@ def student_grade_details(request, student_id):
                             'uploaded_at': uploaded_at,
                             'status': grade_status
                         }
-                        
                         # Update analytics
                         if grade_value > grade_analytics['highest_grade']:
                             grade_analytics['highest_grade'] = grade_value
@@ -947,7 +941,6 @@ def student_grade_details(request, student_id):
                 data['average'] = sum(valid_grades) / len(valid_grades)
                 total_grades.append(data['average'])
                 grade_analytics['subjects_with_grades'] += 1
-                
                 if data['average'] >= 75:
                     data['status'] = 'Passing'
                     grade_analytics['passing_subjects'] += 1
@@ -975,3 +968,59 @@ def student_grade_details(request, student_id):
     }
     
     return render(request, 'student_grade_details.html', context)
+
+@login_required
+def change_password(request, student_id):
+    student = get_object_or_404(Student, id=student_id)
+    
+    # Security check
+    if request.user != student.user and not request.user.is_staff:
+        messages.error(request, "You don't have permission to change this password.")
+        return redirect('login')
+    
+    if request.method == 'POST':
+        current_password = request.POST.get('current_password')
+        new_password = request.POST.get('new_password')
+        confirm_password = request.POST.get('confirm_password')
+        
+        # Verify current password
+        if not check_password(current_password, request.user.password):
+            messages.error(request, 'Current password is incorrect.')
+            return redirect('student_profile', student_id=student.id)
+        
+        # Check if new passwords match
+        if new_password != confirm_password:
+            messages.error(request, 'New passwords do not match.')
+            return redirect('student_profile', student_id=student.id)
+        
+        try:
+            # Validate the new password
+            validate_password(new_password, request.user)
+            
+            # Update the password
+            request.user.set_password(new_password)
+            request.user.save()
+            
+            # Update the session to prevent logout
+            update_session_auth_hash(request, request.user)
+            
+            messages.success(request, 'Password updated successfully!')
+            return redirect('student_profile', student_id=student.id)
+            
+        except ValidationError as e:
+            messages.error(request, '\n'.join(e.messages))
+            return redirect('student_profile', student_id=student.id)
+    
+    return redirect('student_profile', student_id=student.id)
+
+
+
+@login_required
+def send_feedback(request):
+    student = Student.objects.get(user=request.user)  # Add this line
+    if request.method == 'POST':
+        message = request.POST.get('message')
+        Feedback.objects.create(student=student, message=message)
+        messages.success(request, 'Feedback sent to admin successfully!')
+        return redirect('student_dashboard', student_id=student.id)
+    return render(request, 'send_feedback.html', {'student': student})  # Pass student to template

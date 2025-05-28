@@ -82,6 +82,10 @@
             border-radius: 1rem;
             box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
         }
+        .bg-pink {
+            background-color: #716b6b !important;
+            color: #fff !important;
+        }
 
         @media (max-width: 768px) {
             .main-content {
@@ -113,9 +117,9 @@
                 <div class="d-flex justify-content-between align-items-center mb-4">
                     <h2 class="mb-0">Students Management</h2>
                     <div class="d-flex gap-2">
-                        <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#uploadExcelModal">
+                        <!-- <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#uploadExcelModal">
                             <i class="fas fa-file-excel me-2"></i> Upload Excel
-                        </button>
+                        </button> -->
                         <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addStudentModal">
                             <i class="fas fa-plus me-2"></i> Add Student
                         </button>
@@ -163,6 +167,7 @@
                                                 {% elif student_statuses|get_item:student.id == 'Dropped' %}bg-danger
                                                 {% elif student_statuses|get_item:student.id == 'Transferred' %}bg-secondary
                                                 {% elif student_statuses|get_item:student.id == 'Graduated' %}bg-dark
+                                                {% elif student_statuses|get_item:student.id == 'Transferee' %}bg-pink
                                                 {% endif %} rounded-pill">
                                                 {{ student_statuses|get_item:student.id }}
                                             </span>
@@ -175,7 +180,7 @@
                                                     data-gender="{{ student.gender }}"
                                                     data-email="{{ student.email }}"
                                                     data-mobile="{{ student.mobile_number }}"
-                                                    data-status="{{ student.display_status }}">
+                                                    data-status="{{ student_statuses|get_item:student.id }}">
                                                     <i class="fas fa-eye"></i>
                                                 </button>
                                                 <button class="btn btn-sm btn-outline-warning edit-student-btn" data-bs-toggle="modal" data-bs-target="#editStudentModal" 
@@ -184,7 +189,7 @@
                                                     data-gender="{{ student.gender }}"
                                                     data-email="{{ student.email }}"
                                                     data-mobile="{{ student.mobile_number }}"
-                                                    data-status="{{ student.display_status }}">
+                                                    data-status="{{ student_statuses|get_item:student.id }}"
                                                     <i class="fas fa-edit"></i>
                                                 </button>
                                             </div>
@@ -306,12 +311,14 @@
                     <form id="add-student-form" method="POST" action="{% url 'dashboard:add_student' %}" enctype="multipart/form-data">
                         {% csrf_token %}
                         <div class="row g-2">
+                            <h6 class="fw-bold text-primary mb-3">Personal Information</h6>
+                            <small class="text-muted mb-3 d-block"><span class="text-danger">(*)</span> means required</small>
                             <div class="col-md-3">
-                                <label for="student-id" class="form-label">Student ID <span class="text-danger">*</span> <span class="badge bg-danger-subtle text-danger">required</span></label>
+                                <label for="student-id" class="form-label">Student ID <span class="text-danger">*</span></label>
                                 <input type="text" id="student-id" name="student_id" class="form-control" required autocomplete="off">
                             </div>
                             <div class="col-md-3">
-                                <label for="first-name" class="form-label">First Name <span class="text-danger">*</span> <span class="badge bg-danger-subtle text-danger">required</span></label>
+                                <label for="first-name" class="form-label">First Name <span class="text-danger">*</span></label>
                                 <input type="text" id="first-name" name="first_name" class="form-control" required autocomplete="given-name">
                             </div>
                             <div class="col-md-2">
@@ -319,7 +326,7 @@
                                 <input type="text" id="middle-name" name="middle_name" class="form-control" autocomplete="additional-name">
                             </div>
                             <div class="col-md-2">
-                                <label for="last-name" class="form-label">Last Name <span class="text-danger">*</span> <span class="badge bg-danger-subtle text-danger">required</span></label>
+                                <label for="last-name" class="form-label">Last Name <span class="text-danger">*</span></label>
                                 <input type="text" id="last-name" name="last_name" class="form-control" required autocomplete="family-name">
                             </div>
                             <div class="col-md-2">
@@ -337,7 +344,7 @@
                                 <input type="text" id="custom-suffix" name="custom_suffix" class="form-control mt-2" placeholder="Enter custom suffix" style="display:none;" autocomplete="honorific-suffix">
                             </div>
                             <div class="col-md-3">
-                                <label for="gender" class="form-label">Gender <span class="text-danger">*</span> <span class="badge bg-danger-subtle text-danger">required</span></label>
+                                <label for="gender" class="form-label">Gender <span class="text-danger">*</span></label>
                                 <select id="gender" name="gender" class="form-select" required autocomplete="sex">
                                     <option value="">Select Gender</option>
                                     <option value="Male">Male</option>
@@ -345,24 +352,24 @@
                                 </select>
                             </div>
                             <div class="col-md-3">
-                                <label for="religion" class="form-label">Religion <span class="text-danger">*</span> <span class="badge bg-danger-subtle text-danger">required</span></label>
+                                <label for="religion" class="form-label">Religion <span class="text-danger">*</span></label>
                                 <input type="text" id="religion" name="religion" class="form-control" required autocomplete="off">
                             </div>
                             <div class="col-md-3">
-                                <label for="date-of-birth" class="form-label">Date of Birth <span class="text-danger">*</span> <span class="badge bg-danger-subtle text-danger">required</span></label>
+                                <label for="date-of-birth" class="form-label">Date of Birth <span class="text-danger">*</span></label>
                                 <input type="date" id="date-of-birth" name="date_of_birth" class="form-control" required autocomplete="bday">
                             </div>
                             <div class="col-md-3">
-                                <label for="email" class="form-label">Email <span class="text-danger">*</span> <span class="badge bg-danger-subtle text-danger">required</span></label>
+                                <label for="email" class="form-label">Email <span class="text-danger">*</span></label>
                                 <input type="email" id="email" name="email" class="form-control" required autocomplete="email">
                                 <small class="form-text text-muted">Login credentials will be sent to this email address.</small>
                             </div>
                             <div class="col-md-3">
-                                <label for="mobile-number" class="form-label">Mobile Number <span class="text-danger">*</span> <span class="badge bg-danger-subtle text-danger">required</span></label>
+                                <label for="mobile-number" class="form-label">Mobile Number <span class="text-danger">*</span></label>
                                 <input type="text" id="mobile-number" name="mobile_number" class="form-control" required autocomplete="tel">
                             </div>
                             <div class="col-md-9">
-                                <label for="address" class="form-label">Address <span class="text-danger">*</span> <span class="badge bg-danger-subtle text-danger">required</span></label>
+                                <label for="address" class="form-label">Address <span class="text-danger">*</span></label>
                                 <textarea id="address" name="address" class="form-control" rows="1" required autocomplete="street-address"></textarea>
                             </div>
                             <div class="col-md-3">
@@ -370,7 +377,7 @@
                                 <input type="file" id="student-photo" name="student_photo" class="form-control" accept="image/*" autocomplete="off">
                             </div>
                             <div class="col-md-3">
-                                <label for="student-status" class="form-label">Status <span class="text-danger">*</span> <span class="badge bg-danger-subtle text-danger">required</span></label>
+                                <label for="student-status" class="form-label">Status <span class="text-danger">*</span></label>
                                 <select id="student-status" name="student_status" class="form-select" required autocomplete="off">
                                     <option value="">Select Status</option>
                                     <option value="New Student">New Student</option>
@@ -382,7 +389,6 @@
                                 <label for="enrollment-section" class="form-label">
                                     Enrollment Credentials (Section)
                                     <span class="text-danger">*</span>
-                                    <span class="badge bg-danger-subtle text-danger">required</span>
                                 </label>
                                 <select id="enrollment-section" name="enrollment_section" class="form-select" autocomplete="off">
                                     <option value="">Select Section</option>
@@ -415,18 +421,6 @@
         </div>
     </div>
     
-    <!-- Auto-refresh script: Reload page after 1 second if messages exist -->
-    <script>
-        document.addEventListener("DOMContentLoaded", function() {
-            const messageContainer = document.getElementById("messages-container");
-            if (messageContainer) {
-                setTimeout(() => {
-                    window.location.reload();
-                }, 1000);
-            }
-        });
-    </script>
-    
     <script>
         document.addEventListener("DOMContentLoaded", function() {
             document.querySelectorAll(".view-student-btn").forEach(button => {
@@ -449,7 +443,9 @@
                     else if (status === 'Dropped') statusSpan.classList.add('bg-danger');
                     else if (status === 'Transferred') statusSpan.classList.add('bg-secondary');
                     else if (status === 'Graduated') statusSpan.classList.add('bg-dark');
+                    else if (status === 'Transferee') statusSpan.classList.add('bg-pink');
                     else statusSpan.classList.add('bg-light', 'text-dark');
+                    
                 });
             });
             
@@ -725,6 +721,39 @@
     </script>
     
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+
+    <script>
+    // Fix for blinking DataTables inside modals
+    function initStudentModalTable(tableId) {
+        if ($.fn.DataTable && $('#' + tableId).length) {
+            if ($.fn.DataTable.isDataTable('#' + tableId)) {
+                $('#' + tableId).DataTable().destroy();
+            }
+            $('#' + tableId).DataTable({
+                responsive: true,
+                pageLength: 10,
+                lengthChange: false,
+                autoWidth: false,
+                ordering: true,
+                language: {
+                    emptyTable: "No data available",
+                    info: "Showing _START_ to _END_ of _TOTAL_ entries",
+                    infoEmpty: "Showing 0 to 0 of 0 entries",
+                    paginate: {
+                        first: "First",
+                        last: "Last",
+                        next: "Next",
+                        previous: "Previous"
+                    }
+                }
+            });
+        }
+    }
+    // Example usage: when modal is shown
+    $('#viewStudentModal').on('shown.bs.modal', function () {
+        initStudentModalTable('gradeTable8'); // Replace with your actual table ID
+    });
+    </script>
 
 </body>
 </html>

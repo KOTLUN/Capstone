@@ -8,7 +8,7 @@ from .views import (
     login_view, logout_view, home_view, 
     CustomPasswordResetView, CustomPasswordResetDoneView,
     CustomPasswordResetConfirmView, CustomPasswordResetCompleteView,
-    forgot_password
+    forgot_password, force_password_change, proceed_to_login
 )
 
 
@@ -17,6 +17,8 @@ urlpatterns = [
     path('', views.login_view, name='login'),
     path('logout/', views.logout_view, name='logout'),
     path('home/', views.home_view, name='home'),
+    path('force-password-change/', views.force_password_change, name='force_password_change'),
+    path('proceed-to-login/', views.proceed_to_login, name='proceed_to_login'),
 
     # Custom password reset URLs
     path('password-reset/', CustomPasswordResetView.as_view(), name='password_reset'),

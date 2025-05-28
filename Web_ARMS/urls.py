@@ -23,7 +23,7 @@ from login import views as login_views
 
 
 urlpatterns = [
-    path('', login_views.root_view, name='root'),
+    path('', login_views.login_view, name='root'),
     path('admin/', admin.site.urls),
     path('social-auth/', include('social_django.urls', namespace='social')),
     path('dashboard/', include(('dashboard.urls', 'dashboard'), namespace='dashboard')),

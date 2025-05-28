@@ -15,29 +15,30 @@
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
         :root {
-            --primary-color: rgb(255, 17, 166);
-            --primary-dark: #6018ee;
-            --gradient-bg: linear-gradient(180deg, #e73159, #e73159);
+            --primary-color: #0d6efd;
+            --primary-dark: #1769aa;
         }
 
         body {
             font-family: 'Poppins', sans-serif;
+            background: #f8f9e3;
         }
 
         .main-content {
             margin-left: 250px;
             padding: 20px;
-            background-color: #f8f9fa;
+            background-color: #f8f9e3;
         }
 
         .card {
             border: none;
             box-shadow: 0 0.15rem 1.75rem rgba(0, 0, 0, 0.1);
             margin-bottom: 20px;
+            background: #fff;
         }
 
         .card-header {
-            background: var(--gradient-bg);
+            background: var(--primary-color);
             color: white;
             border: none;
         }
@@ -75,6 +76,24 @@
             font-size: 0.8rem;
             padding: 0.3rem 0.6rem;
         }
+
+        .btn-primary {
+            background-color: var(--primary-color);
+            border-color: var(--primary-color);
+        }
+
+        .btn-primary:hover {
+            background-color: var(--primary-dark);
+            border-color: var(--primary-dark);
+        }
+
+        .text-primary {
+            color: var(--primary-color) !important;
+        }
+
+        .badge.bg-secondary {
+            background-color: var(--primary-color) !important;
+        }
     </style>
 </head>
 <body>
@@ -111,7 +130,7 @@
         <!-- Enrollment Form Card -->
         <div class="card shadow">
             <div class="card-header py-3">
-                <h6 class="m-0 fw-bold text-white">Enroll Student</h6>
+                <h6 class="m-0 fw-bold text-white" style="color: black;">Enroll Student</h6>
             </div>
             <div class="card-body">
                 <form method="POST" id="enrollmentForm">
@@ -284,23 +303,13 @@
             let searchTimeout;
             const searchModal = new bootstrap.Modal(document.getElementById('searchResultsModal'));
             
-            // Handle search input
-            $('#student-search').on('input', function() {
-                clearTimeout(searchTimeout);
-                const query = $(this).val().trim();
-                
-                if (query.length >= 2) {
-                    searchTimeout = setTimeout(function() {
-                        searchStudents(query);
-                    }, 300);
-                }
-            });
-            
             // Handle search button click
             $('#search-btn').on('click', function() {
                 const query = $('#student-search').val().trim();
                 if (query.length >= 2) {
                     searchStudents(query);
+                } else {
+                    alert('Please enter at least 2 characters to search');
                 }
             });
             
@@ -313,26 +322,32 @@
                                    data-student-id="${student.student_id}"
                                    data-student-name="${student.first_name} ${student.last_name}"
                                    data-student-gender="${student.gender}"
-                                   data-student-status="${student.status}">
+                                   data-student-status="${student.student_status}">
                                     <div class="d-flex justify-content-between align-items-center">
                                         <div>
                                             <h6 class="mb-1">${student.first_name} ${student.last_name}</h6>
                                             <small class="text-muted">ID: ${student.student_id}</small>
                                         </div>
-                                        <span class="badge bg-secondary">${student.status}</span>
+                                        <span class="badge ${student.student_status === 'New Student' ? 'bg-primary' : 
+                                                          student.student_status === 'Transferee' ? 'bg-warning' : 
+                                                          'bg-info'}">${student.student_status}</span>
                                     </div>
                                 </a>
                             `).join('');
                             
-                            $('#searchResults').html(resultsHtml);
+                            if (response.students.length > 0) {
+                                $('#searchResults').html(resultsHtml);
+                            } else {
+                                $('#searchResults').html('<div class="alert alert-warning">No students found</div>');
+                            }
                             searchModal.show();
                         } else {
-                            $('#searchResults').html('<div class="alert alert-warning">No students found</div>');
+                            $('#searchResults').html('<div class="alert alert-danger">' + (response.error || 'Error searching for students') + '</div>');
                             searchModal.show();
                         }
                     })
                     .fail(function() {
-                        $('#searchResults').html('<div class="alert alert-danger">Error searching for students</div>');
+                        $('#searchResults').html('<div class="alert alert-danger">Error connecting to server</div>');
                         searchModal.show();
                     });
             }

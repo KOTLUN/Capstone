@@ -50,18 +50,13 @@
                     </a>
                 </li>
                 <li class="nav-item">
-                    <a href="{% url 'dashboard:archive_view' %}" class="nav-link {% if request.path == '/dashboard/archive/' %}active{% endif %}">
-                        <i class="fas fa-archive me-2"></i>Archive
+                    <a href="{% url 'dashboard:students_enrollment_report' %}" class="nav-link {% if request.path == '/dashboard/reports/' %}active{% endif %}">
+                        <i class="fas fa-file-alt me-2"></i>Reports
                     </a>
                 </li>
             </div>
             <div class="sidebar-label clickable"><i class="fas fa-graduation-cap me-2"></i>Academic</div>
             <div class="sidebar-group">
-                <li class="nav-item">
-                    <a href="{% url 'dashboard:student_grades' %}" class="nav-link {% if request.path == '/dashboard/student-grades/' %}active{% endif %}">
-                        <i class="fas fa-graduation-cap me-2"></i>Student Grades
-                    </a>
-                </li>
                 <li class="nav-item">
                     <a href="{% url 'dashboard:subjects' %}" class="nav-link {% if request.path == '/dashboard/subjects/' %}active{% endif %}">
                         <i class="fas fa-book me-2"></i>Subjects
@@ -85,9 +80,17 @@
                         <i class="fas fa-calendar-alt me-2"></i>School Year Management
                     </a>
                 </li>
-                
+                <li class="nav-item">
+                    <a href="{% url 'dashboard:assign_registrar' %}" class="nav-link {% if request.path == '/dashboard/assign-registrar/' %}active{% endif %}">
+                        <i class="fas fa-user-plus me-2"></i>Assign Registrar
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="{% url 'dashboard:admin_view_feedbacks' %}" class="nav-link {% if request.path == '/dashboard/admin/feedbacks/' %}active{% endif %}">
+                        <i class="fas fa-comments me-2"></i> Student Feedbacks
+                    </a>
+                </li>
             </div>
-        </nav>
     </div>
 </div>
 

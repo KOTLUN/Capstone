@@ -1,0 +1,267 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Registrar Dashboard</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            background: #f8f9e3;
+            min-height: 100vh;
+            font-family: 'Poppins', sans-serif;
+            margin: 0;
+            padding: 0;
+        }
+
+        /* Content Wrapper Styles */
+        .content-wrapper {
+            margin-left: 250px; /* Match sidebar width */
+            padding: 20px;
+            min-height: 100vh;
+            transition: margin-left 0.3s ease;
+        }
+
+        @media (max-width: 768px) {
+            .content-wrapper {
+                margin-left: 0;
+            }
+        }
+
+        .registrar-container {
+            max-width: 1200px;
+            margin: 20px auto;
+            background: #fff;
+            border-radius: 18px;
+            box-shadow: 0 4px 32px rgba(0,0,0,0.10);
+            padding: 40px 32px 32px 32px;
+        }
+
+        .registrar-title {
+            font-size: 2rem;
+            font-weight: 700;
+            text-align: center;
+            margin-bottom: 1.5rem;
+        }
+
+        .registrar-actions {
+            margin-top: 2rem;
+        }
+
+        .action-card {
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+            padding: 24px;
+            background: #f8f9fa;
+            text-align: center;
+            transition: box-shadow 0.2s;
+        }
+
+        .action-card:hover {
+            box-shadow: 0 4px 16px rgba(0,0,0,0.12);
+        }
+
+        .action-icon {
+            font-size: 2.5rem;
+            color: #e75480;
+            margin-bottom: 12px;
+        }
+
+        .grade-search-section {
+            margin-top: 2rem;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 12px;
+        }
+
+        .grade-results {
+            margin-top: 2rem;
+        }
+
+        .grade-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 1rem;
+        }
+
+        .grade-table th, .grade-table td {
+            padding: 12px;
+            border: 1px solid #dee2e6;
+        }
+
+        .grade-table th {
+            background-color: #f8f9fa;
+            font-weight: 600;
+        }
+
+        .print-button {
+            margin-top: 1rem;
+        }
+
+        /* Form 10 specific styles */
+        .form10-header {
+            font-family: 'Times New Roman', Times, serif;
+        }
+
+        .form10-header h4 {
+            margin: 5px 0;
+            font-size: 1.1rem;
+        }
+
+        .grade-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 1rem;
+            font-family: 'Times New Roman', Times, serif;
+        }
+
+        .grade-table th, .grade-table td {
+            padding: 8px;
+            border: 1px solid #000;
+            text-align: center;
+        }
+
+        .grade-table th {
+            background-color: #f8f9fa;
+            font-weight: bold;
+        }
+
+        .signatures-section {
+            margin-top: 50px;
+        }
+
+        .signatures-section p {
+            margin: 0;
+        }
+
+        @media print {
+            .sidebar, .sidebars, .navbar, .footer {
+                display: none !important;
+            }
+        }
+    </style>
+</head>
+<body>
+    {% include 'structures/sidebars.html' %}
+    
+    <!-- Content Wrapper -->
+    <div class="content-wrapper">
+        <div class="registrar-container">
+            <div class="registrar-title">View & Print Student Grades</div>
+            <!-- <p class="text-center">Welcome, Registrar! Use the options below to manage student records and perform registrar tasks.</p> -->
+            
+            <!-- Grade Search Section -->
+            <div class="grade-search-section">
+                <h4 class="mb-4">View Student Grades</h4>
+                <form id="gradeSearchForm" class="row g-3">
+                    <div class="col-md-4">
+                        <label for="studentId" class="form-label">Student ID</label>
+                        <input type="text" class="form-control" id="studentId" name="student_id" required>
+                    </div>
+                    <div class="col-12">
+                        <button type="submit" class="btn btn-primary">Search Grades</button>
+                    </div>
+                </form>
+
+                <!-- Grade Results Section -->
+                <div id="gradeResults" class="grade-results" style="display: none;">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h5>Form 10 - Report Card</h5>
+                        <button class="btn btn-success print-button" onclick="window.print()">
+                            <i class="fas fa-print"></i> Print Report
+                        </button>
+                    </div>
+                    <div id="allGradeRecords"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Function to populate grade levels based on school year (if needed in the future)
+        function populateGradeLevels(selectElement) {
+            const gradeLevelSelect = document.getElementById('grade_level');
+            if (!gradeLevelSelect) return;
+            const startYear = selectElement.options[selectElement.selectedIndex].dataset.start;
+            const currentYear = new Date().getFullYear();
+            const yearDiff = currentYear - parseInt(startYear);
+            gradeLevelSelect.disabled = !startYear;
+            const gradeOptions = gradeLevelSelect.getElementsByClassName('grade-option');
+            for (let option of gradeOptions) {
+                const gradeLevel = parseInt(option.value);
+                option.style.display = (gradeLevel <= yearDiff + 7) ? '' : 'none';
+            }
+            gradeLevelSelect.value = '';
+        }
+
+        // Add event listener for school year change (if the element exists)
+        var schoolYearSelect = document.getElementById('school_year');
+        if (schoolYearSelect) {
+            schoolYearSelect.addEventListener('change', function() {
+                populateGradeLevels(this);
+            });
+        }
+
+        // Grade search form submit handler
+        var form = document.getElementById('gradeSearchForm');
+        if (form) {
+            form.addEventListener('submit', function(e) {
+                e.preventDefault();
+                const studentId = document.getElementById('studentId').value;
+                document.getElementById('gradeResults').style.display = 'none';
+                fetch(`/teacher/registrar/get_student_grades/?student_id=${studentId}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            const allGradeRecords = document.getElementById('allGradeRecords');
+                            allGradeRecords.innerHTML = '';
+                            data.records.forEach(record => {
+                                let html = `<div class='mb-4'>`;
+                                html += `<div class='form10-header text-center mb-2'>`;
+                                html += `<h4>School Year: ${record.school_year}</h4>`;
+                                html += `<h4>Grade Level: Grade ${record.grade_level}</h4>`;
+                                html += `<h4>Section: ${record.section}</h4>`;
+                                html += `</div>`;
+                                html += `<table class='grade-table'><thead><tr><th>Subject</th><th>Quarter</th><th>Grade</th></tr></thead><tbody>`;
+                                record.grades.forEach(grade => {
+                                    html += `<tr><td>${grade.subject}</td><td>${grade.quarter}</td><td>${grade.grade}</td></tr>`;
+                                });
+                                html += `</tbody></table></div>`;
+                                allGradeRecords.innerHTML += html;
+                            });
+                            document.getElementById('gradeResults').style.display = 'block';
+                        } else {
+                            alert(data.error || 'Error fetching grades');
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        alert('Error fetching grades. Please try again.');
+                    });
+            });
+        }
+    });
+
+    // Always show #gradeResults before printing
+    window.addEventListener('beforeprint', function() {
+        var gradeResults = document.getElementById('gradeResults');
+        if (gradeResults) {
+            gradeResults.style.display = 'block';
+        }
+    });
+    // Optionally, restore after print (for SPA/JS apps)
+    window.addEventListener('afterprint', function() {
+        var gradeResults = document.getElementById('gradeResults');
+        // Only hide if it wasn't already visible (optional, adjust as needed)
+        if (gradeResults && !gradeResults.classList.contains('show')) {
+            gradeResults.style.display = 'none';
+        }
+    });
+    </script>
+</body>
+</html>

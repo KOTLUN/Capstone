@@ -93,6 +93,11 @@ urlpatterns = [
     # File Upload URLs
     path('edit-subject/', views.edit_subject, name='edit_subject'),
     path('delete-subject/', views.delete_subject, name='delete_subject'),
+    path('registrar/assign/', views.assign_registrar, name='assign_registrar'),
+    path('registrar/remove/<int:registrar_id>/', views.remove_registrar, name='remove_registrar'),
+    path('reports/', views.students_enrollment_report, name='students_enrollment_report'),
+    path('admin/feedbacks/', views.view_feedbacks, name='admin_view_feedbacks'),
+    
 ]
 
 if settings.DEBUG:

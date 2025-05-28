@@ -10,6 +10,11 @@
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     {% load static %}
     <style>
+        :root {
+            --primary-color: #0d6efd;
+            --primary-dark: #1769aa;
+        }
+
         body {
             margin: 0;
             padding: 0;
@@ -34,8 +39,8 @@
         }
 
         .nav-tabs .nav-link.active {
-            color: #e73159;
-            border-bottom: 3px solid #e73159;
+            color: var(--primary-color);
+            border-bottom: 3px solid var(--primary-color);
             background-color: transparent;
         }
 
@@ -44,10 +49,13 @@
             overflow: hidden;
             border: none;
             box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+            background: #fff;
         }
 
         .card-header {
-            border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+            background: var(--primary-color);
+            color: white;
+            border: none;
         }
 
         .form-control, .form-select {
@@ -60,23 +68,23 @@
         }
 
         .btn-primary {
-            background: #e73159;
+            background: var(--primary-color);
             border: none;
         }
 
         .btn-primary:hover {
-            background: #c62a4a;
+            background: var(--primary-dark);
         }
 
         .btn-info {
-            background-color: #17a2b8;
-            border-color: #17a2b8;
+            background-color: var(--primary-color);
+            border-color: var(--primary-color);
             color: white;
         }
 
         .btn-info:hover {
-            background-color: #138496;
-            border-color: #117a8b;
+            background-color: var(--primary-dark);
+            border-color: var(--primary-dark);
             color: white;
         }
 
@@ -92,7 +100,7 @@
                 top: 1rem;
                 left: 1rem;
                 z-index: 1060;
-                background: #e73159;
+                background: var(--primary-color);
                 color: white;
                 width: 40px;
                 height: 40px;
@@ -146,7 +154,7 @@
                                         <div class="row g-3">
                                             <div class="col-md-3">
                                                 <div class="form-group">
-                                                  
+                                                    <label for="school_year" class="form-label">School Year</label>
                                                     <select name="school_year" id="school_year" class="form-select">
                                                         <option value="">Select School Year</option>
                                                         {% for year in school_years %}
@@ -280,7 +288,7 @@
                                         </div>
                                     </div>
 
-                                    <!-- <div class="table-responsive mt-3">
+                                    <div class="table-responsive mt-3">
                                         <table class="table table-bordered table-striped table-hover" id="subjectGradesTable">
                                             <thead class="table-light">
                                                 <tr>
@@ -295,8 +303,8 @@
                                             <tbody>
                                                 {% for grade in subject_grades %}
                                                 <tr>
-                                                    <td>{{ grade.student }}</td>
-                                                    <td>{{ grade.student }}</td>
+                                                    <td>{{ grade.student.student_id }}</td>
+                                                    <td>{{ grade.student.first_name }} {{ grade.student.last_name }}</td>
                                                     <td>{{ grade.grade }}</td>
                                                     <td>
                                                         <button class="btn btn-sm btn-info view-components" data-grade-id="{{ grade.id }}">
@@ -310,11 +318,15 @@
                                                         </button>
                                                     </td>
                                                 </tr>
+                                                {% empty %}
+                                                <tr>
+                                                    <td colspan="6" class="text-center">No grades found for the selected criteria.</td>
+                                                </tr>
                                                 {% endfor %}
                                             </tbody>
                                         </table>
                                     </div>
-                                </div> -->
+                                </div>
 
                                 <!-- Advisory Grades Tab -->
                                 <div class="tab-pane fade" id="advisory-grades" role="tabpanel">

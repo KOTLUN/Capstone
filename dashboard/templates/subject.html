@@ -100,11 +100,18 @@
         .table thead th {
             border-bottom: 2px solid #dee2e6;
             font-weight: 600;
+            padding: 10px;
+            font-size: 0.9rem;
         }
 
         .table td, .table th {
-            padding: 12px 15px;
+            padding: 8px 10px;
             vertical-align: middle;
+            font-size: 0.9rem;
+        }
+
+        .table tbody tr:hover {
+            background-color: rgba(0, 123, 255, 0.05);
         }
 
         .form-control:focus {
@@ -117,6 +124,10 @@
         }
         
         /* Pagination styles */
+        .pagination {
+            margin: 15px 0 0 0;
+        }
+        
         .pagination .page-item.active .page-link {
             background-color: #007bff;
             border-color: #007bff;
@@ -124,6 +135,8 @@
         
         .pagination .page-link {
             color: #007bff;
+            padding: 0.375rem 0.75rem;
+            font-size: 0.9rem;
         }
         
         .pagination .page-link:hover {
@@ -133,6 +146,29 @@
         
         .pagination .page-item.disabled .page-link {
             color: #6c757d;
+        }
+
+        /* Table container styles */
+        .table-responsive {
+            max-height: 500px;
+            overflow-y: auto;
+        }
+
+        .table-responsive::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .table-responsive::-webkit-scrollbar-track {
+            background: #f1f1f1;
+        }
+
+        .table-responsive::-webkit-scrollbar-thumb {
+            background: #888;
+            border-radius: 3px;
+        }
+
+        .table-responsive::-webkit-scrollbar-thumb:hover {
+            background: #555;
         }
     </style>
 </head>
@@ -340,21 +376,28 @@
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/x-www-form-urlencoded',
-                        'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                        'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                        'X-Requested-With': 'XMLHttpRequest'
                     },
                     body: `subject_id=${encodeURIComponent(subjectId)}&subject_name=${encodeURIComponent(subjectName)}`
                 })
-                .then(response => response.json())
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    return response.json();
+                })
                 .then(data => {
                     if (data.success) {
                         toastr.success(data.message);
                         setTimeout(() => window.location.reload(), 1000);
                     } else {
-                        toastr.error(data.message);
+                        toastr.error(data.message || 'Error adding subject');
                     }
                 })
                 .catch(error => {
-                    toastr.error('Error adding subject: ' + error);
+                    console.error('Error:', error);
+                    toastr.error('Error adding subject: ' + error.message);
                 });
             });
             

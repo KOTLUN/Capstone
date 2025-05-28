@@ -33,26 +33,29 @@ html, body {
   position: fixed;
     top: 0;
     left: 0;
-    background: #e73159;
+    background: #0d6efd;  /* Change this to your dashboard's sidebar color */
     width: 250px;
     height: 100vh;
-    overflow-y: auto;
     box-shadow: 0 0 15px rgba(0, 0, 0, 0.1);
     border-radius:5px;
     font-family: 'Poppins', sans-serif;
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
 }
 
 /* Logo area styling */
 .sidebar .logo-area {
   padding: 1.5rem;
   border-bottom: 1px solid #eee;
+  text-align: center;
 }
 
 .sidebar .logo-img {
   height: 110px;
   width: auto;
-  margin: 0;
-  padding-left: 40px;
+  margin: 0 auto;
+  display: block;
 }
 
 .sidebar .school-name {
@@ -60,7 +63,6 @@ html, body {
   font-size: 0.9rem;
   color: #FFFFF0;
   margin-top: 0.5rem;
-  padding-top: 10px;
   font-weight: 700;
   text-align: center;
   letter-spacing: 0.5px;
@@ -78,15 +80,16 @@ html, body {
   font-size: 0.95rem;
   font-weight: 500;
   letter-spacing: 0.3px;
+  white-space: nowrap;
 }
 
 /* Updated hover and active state styling */
 .sidebar .nav-link:hover,
 .sidebar .nav-link.active {
-  background-color: #f8f9e8;
-  color: #e73159;
-  border-left: 3px solid #e73159;
-  border-radius: 1px;
+  background-color: #1769aa;
+    color: #fff;
+    border-left: 3px solid #64b5f6;
+    border-radius: 1px;
 }
 
 /* Icon styling */
@@ -176,6 +179,49 @@ html, body {
     color: #e73159;
   }
 }
+
+.sidebar-label {
+  font-size: 0.92rem;
+  color: #fff;
+  background: transparent;
+  font-weight: 700;
+  padding: 0.45rem 1.1rem 0.15rem 1.1rem;
+  margin-top: 0.7rem;
+  margin-bottom: 0.15rem;
+  letter-spacing: 1px;
+  opacity: 1;
+  border-left: 4px solid #64b5f6;
+  cursor: pointer;
+  text-shadow: 0 1px 2px rgba(30, 105, 170, 0.15);
+  text-transform: uppercase;
+  display: flex;
+  align-items: center;
+}
+.sidebar-label i {
+  font-size: 1.1em;
+  margin-right: 0.5em;
+  vertical-align: middle;
+  
+}
+.sidebar-group {
+  display: none;
+}
+.sidebar-group.active {
+  display: block;
+}
+.sidebar-label.is-active {
+  background: #1769aa;
+  color: #fff;
+}
+
+.sidebar .nav-link.active {
+  background-color: #1769aa !important;
+  color: #fff !important;
+  border-left: 5px solid #ffeb3b;
+  font-weight: bold;
+  box-shadow: 0 2px 8px rgba(30, 105, 170, 0.10);
+  border-radius: 1px;
+}
   </style>
 </head>
 <body>
@@ -194,42 +240,93 @@ html, body {
             <h3 class="school-name">Santa Catalina Science <br> High School</h3>
           </div>
           <nav class="nav flex-column mt-2">
-            <a href="{% url 'TeacherPortal:profile' %}" class="nav-link {% if request.path == '/profile/' %}active{% endif %}">
-              <i class="fas fa-user"></i> <span>Profile</span>
-            </a>
-            <a href="{% url 'TeacherPortal:teacher_subjects' %}" class="nav-link {% if request.path == '/teacher_subjects/' %}active{% endif %}">
-              <i class="fas fa-book"></i> <span>Subjects & Advisory</span>
-            </a>  
-            <a href="{% url 'TeacherPortal:teacher_schedule' %}" class="nav-link {% if request.path == '/teacher_schedule/' %}active{% endif %}">
-              <i class="fas fa-calendar-alt"></i> <span>Schedule</span>
-            </a>
-            <a href="{% url 'TeacherPortal:grades' %}" class="nav-link {% if request.path == '/grades/' %}active{% endif %}">
-              <i class="fas fa-graduation-cap"></i> <span>Grades</span>
-            </a>
-            <a href="{% url 'TeacherPortal:advisory_enrollment' %}" class="nav-link {% if request.path == '/advisory_enrollment/' %}active{% endif %}">
-              <i class="fas fa-user-plus"></i> <span>Advisory Enrollment</span>
-            </a>
-            <a href="{% url 'TeacherPortal:forms' %}" class="nav-link {% if request.path == '/forms/' %}active{% endif %}">
-              <i class="fas fa-file-upload"></i> <span>Upload Forms</span>
-            </a>
-            <a href="#" class="nav-link" data-bs-toggle="modal" data-bs-target="#logoutModal">
-              <i class="fas fa-sign-out-alt"></i> <span>Logout</span>
-            </a>
+            <div class="sidebar-label clickable"><i class="fas fa-user"></i> Profile & Account</div>
+            <div class="sidebar-group">
+              <ul class="nav flex-column">
+                <li class="nav-item">
+                  <a href="{% url 'TeacherPortal:profile' %}" class="nav-link {% if request.path == '/teacher/profile/' %}active{% endif %}">
+                    <i class="fas fa-user"></i> Profile
+                  </a>
+                </li>
+                <li class="nav-item">
+                  <a href="{% url 'TeacherPortal:account_settings' %}" class="nav-link {% if request.path == '/teacher/account_settings/' %}active{% endif %}">
+                    <i class="fas fa-user-cog"></i> Account Settings
+                  </a>
+                </li>
+                {% if is_registrar %}
+                <li class="nav-item">
+                  <a href="{% url 'TeacherPortal:registrar' %}" class="nav-link {% if request.path == '/teacher/registrar/' %}active{% endif %}">
+                    <i class="fas fa-user-cog"></i> Registrar
+                  </a>
+                </li>
+                {% endif %}
+                <li class="nav-item">
+                  <a href="#" class="nav-link" data-bs-toggle="modal" data-bs-target="#logoutModal">
+                    <i class="fas fa-sign-out-alt"></i> Logout
+                  </a>
+                </li>
+              </ul>
+            </div>
+            <div class="sidebar-label clickable"><i class="fas fa-graduation-cap"></i> Academic</div>
+            <div class="sidebar-group">
+              <ul class="nav flex-column">
+                <li class="nav-item">
+                  <a href="{% url 'TeacherPortal:teacher_subjects' %}" class="nav-link {% if request.path == '/teacher/teacher_subjects/' %}active{% endif %}">
+                    <i class="fas fa-book"></i> Subjects & Advisory
+                  </a>
+                </li>
+                <li class="nav-item">
+                  <a href="{% url 'TeacherPortal:teacher_schedule' %}" class="nav-link {% if request.path == '/teacher/teacher_schedule/' %}active{% endif %}">
+                    <i class="fas fa-calendar-alt"></i> Schedule
+                  </a>
+                </li>
+                <li class="nav-item">
+                  <a href="{% url 'TeacherPortal:grades' %}" class="nav-link {% if request.path == '/teacher/grades/' %}active{% endif %}">
+                    <i class="fas fa-graduation-cap"></i> Grades
+                  </a>
+                </li>
+                <li class="nav-item">
+                  <a href="{% url 'TeacherPortal:advisory_enrollment' %}" class="nav-link {% if request.path == '/teacher/advisory_enrollment/' %}active{% endif %}">
+                    <i class="fas fa-user-plus"></i> Advisory Enrollment
+                  </a>
+                </li>
+              </ul>
+            </div>
+            <div class="sidebar-label clickable"><i class="fas fa-calendar-alt"></i> Events</div>
+            <div class="sidebar-group">
+              <ul class="nav flex-column">
+                <li class="nav-item">
+                  <a href="{% url 'TeacherPortal:teacher_calendar' %}" class="nav-link {% if request.path == '/teacher/calendar/' %}active{% endif %}">
+                    <i class="fas fa-calendar-alt"></i> Events
+                  </a>
+                </li>
+              </ul>
+            </div>
+            <div class="sidebar-label clickable"><i class="fas fa-file-upload"></i> Forms</div>
+            <div class="sidebar-group">
+              <ul class="nav flex-column">
+                <li class="nav-item">
+                  <a href="{% url 'TeacherPortal:forms' %}" class="nav-link {% if request.path == '/teacher/forms/' %}active{% endif %}">
+                    <i class="fas fa-file-upload"></i> Upload Forms
+                  </a>
+                </li>
+              </ul>
+            </div>
           </nav>
         </div>
       </div>
       
       <!-- Mobile Bottom Navigation -->
       <div class="mobile-nav d-md-none">
-        <a href="{% url 'TeacherPortal:profile' %}" class="{% if request.path == '/profile/' %}active{% endif %}">
+        <a href="{% url 'TeacherPortal:profile' %}" class="{% if request.path == '/teacher/profile/' %}active{% endif %}">
           <i class="fas fa-user"></i>
           <span>Profile</span>
         </a>
-        <a href="{% url 'TeacherPortal:grades' %}" class="{% if request.path == '/grades/' %}active{% endif %}">
+        <a href="{% url 'TeacherPortal:grades' %}" class="{% if request.path == '/teacher/grades/' %}active{% endif %}">
           <i class="fas fa-chart-line"></i>
           <span>Grades</span>
         </a>
-        <a href="{% url 'TeacherPortal:forms' %}" class="{% if request.path == '/forms/' %}active{% endif %}">
+        <a href="{% url 'TeacherPortal:forms' %}" class="{% if request.path == '/teacher/forms/' %}active{% endif %}">
           <i class="fas fa-file-upload"></i>
           <span>Forms</span>
         </a>
@@ -243,7 +340,7 @@ html, body {
   <div class="modal fade" id="logoutModal" tabindex="-1" aria-labelledby="logoutModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
       <div class="modal-content">
-        <div class="modal-header" style="background: #e73159; color: white;">
+        <div class="modal-header" style="background: #0d6efd; color: white;">
           <h5 class="modal-title" id="logoutModalLabel"><i class="fas fa-sign-out-alt me-2"></i>Logout Confirmation</h5>
           <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
         </div>
@@ -252,7 +349,7 @@ html, body {
         </div>
         <div class="modal-footer">
           <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-          <a href="{% url 'TeacherPortal:logout' %}" class="btn" style="background: #e73159; color: white;">Yes, Logout</a>
+          <a href="{% url 'TeacherPortal:logout' %}" class="btn" style="background: #0d6efd; color: white;">Yes, Logout</a>
         </div>
       </div>
     </div>
@@ -280,31 +377,28 @@ html, body {
         });
       }
       
-      // Get all nav links
-      const navLinks = document.querySelectorAll('.nav-link');
-      
-      // Add click event listener to each nav link
-      navLinks.forEach(link => {
-        link.addEventListener('click', function() {
-          // Remove active class from all links
-          navLinks.forEach(l => l.classList.remove('active'));
-          
-          // Add active class to clicked link
-          this.classList.add('active');
-          
-          // Store the active link in localStorage
-          localStorage.setItem('activeLink', this.getAttribute('href'));
+      // Accordion/collapsible sidebar: only one group open at a time
+        document.querySelectorAll('.sidebar-label.clickable').forEach(function(label) {
+          label.addEventListener('click', function() {
+              const group = label.nextElementSibling;
+              const isCurrentlyActive = group.classList.contains('active');
+
+      // Close all groups and remove is-active from all labels
+              document.querySelectorAll('.sidebar-group').forEach(function(g) {
+                g.classList.remove('active');
+              });
+              document.querySelectorAll('.sidebar-label').forEach(function(l) {
+                l.classList.remove('is-active');
+              });
+
+              // If it wasn't active, activate this one
+              if (!isCurrentlyActive) {
+                group.classList.add('active');
+                label.classList.add('is-active');
+              }
+            });
         });
-      });
-      
-      // Check localStorage on page load and set active class
-      const activeLink = localStorage.getItem('activeLink');
-      if (activeLink) {
-        const link = document.querySelector(`.nav-link[href="${activeLink}"]`);
-        if (link) {
-          link.classList.add('active');
-        }
-      }
+
     });
   </script>
   

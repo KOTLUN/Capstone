@@ -10,6 +10,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css">
     <style>
         body {
             font-family: 'Poppins', sans-serif;
@@ -555,10 +556,10 @@
 
             <div class="nav-links">
                 <div class="notification-section">
-                    <div class="notification-icon" id="notificationToggle">
+                    <!-- <div class="notification-icon" id="notificationToggle">
                         <i class="fas fa-bell"></i>
                         <span class="notification-badge hidden" id="notificationBadge">0</span>
-                    </div>
+                    </div> -->
                     <div class="notification-dropdown" id="notificationDropdown">
                         <div class="notification-header">
                             <div class="header-left">
@@ -621,14 +622,14 @@
                 <a href="{% url 'student_dashboard' student.id %}" class="nav-link {% if request.resolver_match.url_name == 'student_dashboard' %}active{% endif %}">
                     <i class="fas fa-tachometer-alt"></i>Overview
                 </a>
-                <!-- <a href="{% url 'student_grades' student.id %}" class="nav-link {% if request.resolver_match.url_name == 'student_grades' %}active{% endif %}">
-                    <i class="fas fa-graduation-cap"></i>Grades
-                </a> -->
                 <a href="{% url 'student_subjects' student.id %}" class="nav-link {% if request.resolver_match.url_name == 'student_subjects' %}active{% endif %}">
                     <i class="fas fa-book"></i>Subjects
                 </a>
                 <a href="{% url 'student_schedule' student.id %}" class="nav-link {% if request.resolver_match.url_name == 'student_schedule' %}active{% endif %}">
                     <i class="fas fa-calendar-alt"></i>Schedule
+                </a>
+                <a href="{% url 'send_feedback' %}" class="nav-link">
+                    <i class="fas fa-comment-dots"></i> Send Feedback
                 </a>
                 <a href="{% url 'logout' %}" class="nav-link">
                     <i class="fas fa-sign-out-alt"></i>Logout
@@ -636,6 +637,21 @@
             </div>
         </div>
     </nav>
+
+    <!-- Toastr JS -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
+
+    {% if messages %}
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            {% for message in messages %}
+                {% if message.tags in 'success,error,warning,info' %}
+                    toastr['{{ message.tags|escapejs }}']("{{ message|escapejs }}");
+                {% endif %}
+            {% endfor %}
+        });
+    </script>
+    {% endif %}
 
     <script>
         const navbarToggle = document.getElementById('navbarToggle');
